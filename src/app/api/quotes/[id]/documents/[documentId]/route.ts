@@ -10,8 +10,9 @@ import {
 // GET /api/quotes/[id]/documents/[documentId] - Download document
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; documentId: string } }
+  props: { params: Promise<{ id: string; documentId: string }> }
 ) {
+  const params = await props.params;
   try {
     return await withAuth(async (userId, userRole) => {
       // Get document with quote info
@@ -65,8 +66,9 @@ export async function GET(
 // DELETE /api/quotes/[id]/documents/[documentId] - Delete document
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; documentId: string } }
+  props: { params: Promise<{ id: string; documentId: string }> }
 ) {
+  const params = await props.params;
   try {
     return await withAuth(async (userId, userRole) => {
       // Get document with quote info

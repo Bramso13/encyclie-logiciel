@@ -6,11 +6,12 @@ import { headers } from "next/headers";
 // GET /api/products/[id] - Récupérer un produit spécifique
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
     });
 
     if (!session?.user) {
@@ -22,16 +23,16 @@ export async function GET(
 
     const product = await prisma.insuranceProduct.findUnique({
       where: {
-        id: params.id
+        id: params.id,
       },
       include: {
         createdBy: {
           select: {
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     if (!product) {
@@ -43,9 +44,8 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: product
+      data: product,
     });
-
   } catch (error) {
     console.error("Erreur lors de la récupération du produit:", error);
     return NextResponse.json(
@@ -58,11 +58,12 @@ export async function GET(
 // PUT /api/products/[id] - Modifier un produit (admin seulement)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
     });
 
     if (!session?.user) {
@@ -83,30 +84,29 @@ export async function PUT(
 
     const product = await prisma.insuranceProduct.update({
       where: {
-        id: params.id
+        id: params.id,
       },
       data: {
         ...body,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       include: {
         createdBy: {
           select: {
             name: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
-      data: product
+      data: product,
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la mise à jour du produit:", error);
-    
+
     if (error.code === "P2025") {
       return NextResponse.json(
         { success: false, error: "Produit non trouvé" },
@@ -124,11 +124,12 @@ export async function PUT(
 // DELETE /api/products/[id] - Supprimer un produit (admin seulement)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
     });
 
     if (!session?.user) {
@@ -148,31 +149,33 @@ export async function DELETE(
     // Vérifier s'il y a des devis liés à ce produit
     const quotesCount = await prisma.quote.count({
       where: {
-        productId: params.id
-      }
+        productId: params.id,
+      },
     });
 
     if (quotesCount > 0) {
       return NextResponse.json(
-        { success: false, error: "Impossible de supprimer - des devis utilisent ce produit" },
+        {
+          success: false,
+          error: "Impossible de supprimer - des devis utilisent ce produit",
+        },
         { status: 400 }
       );
     }
 
     await prisma.insuranceProduct.delete({
       where: {
-        id: params.id
-      }
+        id: params.id,
+      },
     });
 
     return NextResponse.json({
       success: true,
-      message: "Produit supprimé avec succès"
+      message: "Produit supprimé avec succès",
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erreur lors de la suppression du produit:", error);
-    
+
     if (error.code === "P2025") {
       return NextResponse.json(
         { success: false, error: "Produit non trouvé" },

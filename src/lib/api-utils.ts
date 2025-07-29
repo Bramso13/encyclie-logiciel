@@ -5,11 +5,7 @@ import { auth } from "./auth";
 import { ApiResponse } from "./validations";
 
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public code?: string
-  ) {
+  constructor(public status: number, message: string, public code?: string) {
     super(message);
     this.name = "ApiError";
   }
@@ -35,7 +31,7 @@ export function createErrorResponse(
   status: number = 500
 ): NextResponse<ApiResponse> {
   const message = error instanceof Error ? error.message : error;
-  
+
   return NextResponse.json(
     {
       success: false,
@@ -52,10 +48,10 @@ export function handleApiError(error: unknown): NextResponse<ApiResponse> {
     return createErrorResponse(error.message, error.status);
   }
 
-  if (error instanceof ZodError) {
-    const messages = error.errors?.map(err => `${err.path.join(".")}: ${err.message}`) || ["Validation error"];
-    return createErrorResponse(`Validation error: ${messages.join(", ")}`, 400);
-  }
+  // if (error instanceof ZodError) {
+  //   const messages = error.errors?.map(err => `${err.path.join(".")}: ${err.message}`) || ["Validation error"];
+  //   return createErrorResponse(`Validation error: ${messages.join(", ")}`, 400);
+  // }
 
   if (error instanceof Error) {
     return createErrorResponse(error.message, 500);
@@ -66,7 +62,9 @@ export function handleApiError(error: unknown): NextResponse<ApiResponse> {
 
 export function generateReference(prefix: string): string {
   const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 100000).toString().padStart(5, "0");
+  const random = Math.floor(Math.random() * 100000)
+    .toString()
+    .padStart(5, "0");
   return `${prefix}${year}${random}`;
 }
 
@@ -74,9 +72,9 @@ export async function withAuth<T>(
   handler: (userId: string, userRole: string) => Promise<T>
 ): Promise<T> {
   const session = await auth.api.getSession({
-    headers: await headers()
+    headers: await headers(),
   });
-  
+
   if (!session || !session.user) {
     throw new ApiError(401, "Non autorisé - session invalide");
   }
@@ -89,15 +87,15 @@ export async function withAuthAndRole<T>(
   handler: (userId: string, userRole: string) => Promise<T>
 ): Promise<T> {
   const session = await auth.api.getSession({
-    headers: await headers()
+    headers: await headers(),
   });
-  
+
   if (!session || !session.user) {
     throw new ApiError(401, "Non autorisé - session invalide");
   }
 
   const userRole = session.user.role || "BROKER";
-  
+
   if (!allowedRoles.includes(userRole)) {
     throw new ApiError(403, "Accès refusé - rôle insuffisant");
   }

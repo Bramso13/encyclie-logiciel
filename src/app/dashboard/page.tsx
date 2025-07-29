@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "@/lib/auth-client";
+import { useSession, signOut, authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import AdminScreen from "./AdminScreen";
@@ -8,7 +8,7 @@ import BrokerScreen from "./BrokerScreen";
 import ClientScreen from "./ClientScreen";
 
 export default function DashboardPage() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -84,9 +84,7 @@ export default function DashboardPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {renderDashboardContent()}
-        </div>
+        <div className="px-4 py-6 sm:px-0">{renderDashboardContent()}</div>
       </main>
     </div>
   );

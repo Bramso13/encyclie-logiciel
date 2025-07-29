@@ -11,10 +11,8 @@ import {
 } from "@/lib/api-utils";
 
 // POST /api/quotes/[id]/documents - Upload document for quote
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     return await withAuth(async (userId, userRole) => {
       const formData = await request.formData();
@@ -109,10 +107,8 @@ export async function POST(
 }
 
 // GET /api/quotes/[id]/documents - List documents for quote
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     return await withAuth(async (userId, userRole) => {
       // Check if quote exists and user has access
