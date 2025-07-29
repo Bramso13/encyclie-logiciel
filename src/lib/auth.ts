@@ -16,4 +16,35 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  user: {
+    modelName: "User",
+    additionalFields: {
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "BROKER",
+      },
+      companyName: {
+        type: "string",
+        required: false,
+      },
+      phone: {
+        type: "string",
+        required: false,
+      },
+      address: {
+        type: "string",
+        required: false,
+      },
+      siretNumber: {
+        type: "string",
+        required: false,
+      },
+      isActive: {
+        type: "boolean",
+        required: false,
+        defaultValue: true,
+      },
+    },
+  },
 });

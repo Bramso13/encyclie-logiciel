@@ -14,14 +14,15 @@ datasource db {
 }
 
 // BetterAuth tables
+
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String?
-  email         String    @unique
-  emailVerified DateTime?
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   accounts Account[]
   sessions Session[]
@@ -38,49 +39,18 @@ model User {
   projects Project[]
   messages Message[]
 
+  // Insurance relations
+  quotes          Quote[]
+  contracts       InsuranceContract[]
+  commissions     Commission[]
+  notifications   Notification[]
+  createdProducts InsuranceProduct[] // Produits créés par les admins
+
   @@map("users")
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String  @map("user_id")
-  type              String
-  provider          String
-  providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verificationtokens")
-}
-
 // Insurance platform models
+
 enum UserRole {
   BROKER
   ADMIN
@@ -196,4 +166,304 @@ model Message {
   sender  User    @relation(fields: [senderId], references: [id])
 
   @@map("messages")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+// Generic Insurance Product System
+
+enum QuoteStatus {
+  DRAFT
+  SUBMITTED
+  IN_PROGRESS
+  COMPLEMENT_REQUIRED
+  OFFER_READY
+  OFFER_SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum ContractStatus {
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  CANCELLED
+  PENDING_RENEWAL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  DISPUTED
+}
+
+enum CommissionStatus {
+  PENDING
+  EARNED
+  PAID
+}
+
+enum NotificationType {
+  CONTRACT_EXPIRATION
+  PAYMENT_DUE
+  OFFER_READY
+  COMPLEMENT_REQUIRED
+  RENEWAL_DUE
+  GENERAL
+}
+
+enum DocumentType {
+  KBIS
+  FINANCIAL_STATEMENT
+  INSURANCE_CERTIFICATE
+  SIGNED_QUOTE
+  CONTRACT
+  ATTESTATION
+  OTHER
+}
+
+// Core product definition - configurable by admin
+model InsuranceProduct {
+  id          String  @id @default(cuid())
+  name        String // "RC Décennale", "RC Professionnelle", etc.
+  code        String  @unique // "RCD", "RCP", "MR"
+  description String?
+  isActive    Boolean @default(true)
+
+  // Product configuration (JSON fields for flexibility)
+  formFields     Json // Dynamic form field definitions
+  pricingRules   Json // Pricing calculation rules
+  requiredDocs   Json // Required document types
+  workflowConfig Json? // Custom workflow steps
+
+  // Relations
+  quotes    Quote[]
+  contracts InsuranceContract[]
+
+  // Audit
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("insurance_products")
+}
+
+// Generic quote model that works for any insurance product
+model Quote {
+  id        String      @id @default(cuid())
+  reference String      @unique
+  status    QuoteStatus @default(DRAFT)
+
+  // Product relation
+  productId String           @map("product_id")
+  product   InsuranceProduct @relation(fields: [productId], references: [id])
+
+  // Client company information (dynamic based on product)
+  companyData Json // All company-specific data (name, siret, address, etc.)
+
+  // Quote specifics
+  formData          Json // All form data specific to the product
+  calculatedPremium Float?
+  validUntil        DateTime?
+
+  // Workflow
+  submittedAt  DateTime?
+  offerReadyAt DateTime?
+  offerSentAt  DateTime?
+  acceptedAt   DateTime?
+
+  // Relations
+  brokerId String @map("broker_id")
+  broker   User   @relation(fields: [brokerId], references: [id])
+
+  documents QuoteDocument[]
+  contract  InsuranceContract?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("quotes")
+}
+
+// Generic contract model
+model InsuranceContract {
+  id        String         @id @default(cuid())
+  reference String         @unique
+  status    ContractStatus @default(ACTIVE)
+
+  // Link to accepted quote
+  quoteId String @unique @map("quote_id")
+  quote   Quote  @relation(fields: [quoteId], references: [id])
+
+  // Contract terms
+  startDate     DateTime
+  endDate       DateTime
+  annualPremium Float
+  paymentStatus PaymentStatus @default(PENDING)
+  lastPaymentAt DateTime?
+
+  // Relations
+  brokerId String @map("broker_id")
+  broker   User   @relation(fields: [brokerId], references: [id])
+
+  documents   ContractDocument[]
+  commissions Commission[]
+
+  // Generated document URLs (local storage paths)
+  attestationPath        String? // Insurance certificate
+  contractPath           String? // Full contract
+  specificConditionsPath String? // Specific conditions
+  coverageNotePath       String? // Coverage note
+
+  // Renewal management  
+  renewalDate     DateTime?
+  isAutoRenewal   Boolean   @default(true)
+  renewalNotified Boolean   @default(false)
+
+  // Insurance product relation
+  productId String           @map("product_id")
+  product   InsuranceProduct @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("insurance_contracts")
+}
+
+// Generic document model for quotes
+model QuoteDocument {
+  id           String       @id @default(cuid())
+  fileName     String
+  originalName String
+  filePath     String // Local file path
+  fileType     String
+  fileSize     Int
+  documentType DocumentType
+
+  quoteId String @map("quote_id")
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  uploadedAt DateTime @default(now())
+
+  @@map("quote_documents")
+}
+
+// Generic document model for contracts
+model ContractDocument {
+  id           String       @id @default(cuid())
+  fileName     String
+  originalName String
+  filePath     String // Local file path
+  fileType     String
+  fileSize     Int
+  documentType DocumentType
+
+  contractId String            @map("contract_id")
+  contract   InsuranceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  uploadedAt DateTime @default(now())
+
+  @@map("contract_documents")
+}
+
+// Commission tracking
+model Commission {
+  id         String @id @default(cuid())
+  contractId String @map("contract_id")
+  brokerId   String @map("broker_id")
+
+  // Commission calculation
+  basePremium      Float
+  commissionRate   Float // Percentage
+  commissionAmount Float // Calculated amount
+
+  // Status and timing
+  status  CommissionStatus @default(PENDING)
+  dueDate DateTime
+  paidAt  DateTime?
+
+  // Relations
+  contract InsuranceContract @relation(fields: [contractId], references: [id])
+  broker   User              @relation(fields: [brokerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("commissions")
+}
+
+// Notification system
+model Notification {
+  id      String           @id @default(cuid())
+  type    NotificationType
+  title   String
+  message String
+
+  // Targeting
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Status
+  isRead   Boolean   @default(false)
+  isUrgent Boolean   @default(false)
+  readAt   DateTime?
+
+  // Related entity (optional)
+  relatedEntityType String? // "quote", "contract", "product"
+  relatedEntityId   String? // Entity ID
+
+  // Scheduling
+  scheduledFor DateTime?
+  sentAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notifications")
 }
