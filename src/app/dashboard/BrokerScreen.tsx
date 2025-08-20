@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useQuotesStore from "@/lib/stores/quotes-store";
 import useProductsStore from "@/lib/stores/products-store";
+import useMessagesStore from "@/lib/stores/messages-store";
 import QuotesList from "@/components/quotes/QuotesList";
 import QuoteForm from "@/components/quotes/QuoteForm";
+import QuoteSuccessPage from "@/components/quotes/QuoteSuccessPage";
 
 interface BrokerScreenProps {
   user: {
@@ -18,6 +20,8 @@ interface BrokerScreenProps {
 export default function BrokerScreen({ user }: BrokerScreenProps) {
   const [activeTab, setActiveTab] = useState("quotes");
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [showSuccessPage, setShowSuccessPage] = useState(false);
+  const [createdQuote, setCreatedQuote] = useState<any>(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   const router = useRouter();
 
@@ -30,10 +34,27 @@ export default function BrokerScreen({ user }: BrokerScreenProps) {
 
   const { activeProducts, fetchActiveProducts } = useProductsStore();
 
+  const {
+    receivedMessages,
+    unreadCount,
+    loading: messagesLoading,
+    fetchReceivedMessages,
+    fetchUnreadCount,
+    markMessageAsRead,
+    deleteMessage,
+  } = useMessagesStore();
+
   useEffect(() => {
     fetchQuotes();
     fetchActiveProducts();
-  }, [fetchQuotes, fetchActiveProducts]);
+    fetchReceivedMessages();
+    fetchUnreadCount();
+  }, [
+    fetchQuotes,
+    fetchActiveProducts,
+    fetchReceivedMessages,
+    fetchUnreadCount,
+  ]);
 
   // Calculate stats from real data
   const stats = {
@@ -48,18 +69,38 @@ export default function BrokerScreen({ user }: BrokerScreenProps) {
 
   const handleNewQuote = () => {
     setShowQuoteForm(true);
+    setShowSuccessPage(false);
+    setCreatedQuote(null);
     setActiveTab("quotes");
   };
 
   const handleQuoteCreated = (quote: any) => {
     setShowQuoteForm(false);
+    setCreatedQuote(quote);
+    setShowSuccessPage(true);
     // The store will automatically update with the new quote
   };
 
-  const handleQuoteSelect = (quoteId: string) => {
-    setSelectedQuoteId(quoteId);
-    // TODO: Navigate to quote detail view or open modal
+  const handleBackToDashboard = () => {
+    setShowSuccessPage(false);
+    setCreatedQuote(null);
+    setActiveTab("quotes");
   };
+
+  const handleQuoteSelect = (quoteId: string) => {
+    router.push(`/quotes/${quoteId}`);
+  };
+
+  if (showSuccessPage && createdQuote) {
+    return (
+      <div className="space-y-6">
+        <QuoteSuccessPage
+          quote={createdQuote}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      </div>
+    );
+  }
 
   if (showQuoteForm) {
     return (
@@ -335,13 +376,18 @@ export default function BrokerScreen({ user }: BrokerScreenProps) {
             </button>
             <button
               onClick={() => setActiveTab("notifications")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm relative ${
                 activeTab === "notifications"
                   ? "border-indigo-500 text-indigo-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              Messages & Notifications
+              Messages & Notifications ({receivedMessages.length})
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
             </button>
           </nav>
         </div>
@@ -426,26 +472,150 @@ export default function BrokerScreen({ user }: BrokerScreenProps) {
           )}
 
           {activeTab === "notifications" && (
-            <div className="text-center py-8">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 17h5l-5 5-5-5h5V3h10v14z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                Messages et notifications
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Aucune notification pour le moment.
-              </p>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Messages et Notifications
+                </h3>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => {
+                      receivedMessages
+                        .filter((m) => !m.isRead)
+                        .forEach((m) => markMessageAsRead(m.id));
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-900"
+                  >
+                    Marquer tout comme lu
+                  </button>
+                )}
+              </div>
+
+              {messagesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : receivedMessages.length === 0 ? (
+                <div className="text-center py-8">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-2.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 009.586 13H7"
+                    />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">
+                    Aucun message
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Vous n'avez reçu aucun message pour le moment.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {receivedMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`p-4 rounded-lg border ${
+                        !message.isRead
+                          ? "bg-blue-50 border-blue-200"
+                          : "bg-white border-gray-200"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h4
+                              className={`text-sm ${
+                                !message.isRead ? "font-bold" : "font-medium"
+                              } text-gray-900`}
+                            >
+                              {message.title}
+                            </h4>
+                            {message.isUrgent && (
+                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                Urgent
+                              </span>
+                            )}
+                            {!message.isRead && (
+                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                Nouveau
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {message.message}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(message.createdAt).toLocaleDateString(
+                              "fr-FR",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex space-x-2 ml-4">
+                          {!message.isRead && (
+                            <button
+                              onClick={() => markMessageAsRead(message.id)}
+                              className="text-green-600 hover:text-green-800 text-sm"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteMessage(message.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"
+                                clipRule="evenodd"
+                              />
+                              <path
+                                fillRule="evenodd"
+                                d="M10 5a1 1 0 011 1v6a1 1 0 11-2 0V6a1 1 0 011-1zm4 0a1 1 0 011 1v6a1 1 0 11-2 0V6a1 1 0 011-1zm-8 0a1 1 0 011 1v6a1 1 0 11-2 0V6a1 1 0 011-1z"
+                                clipRule="evenodd"
+                              />
+                              <path
+                                fillRule="evenodd"
+                                d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM4 7a1 1 0 000 2h12a1 1 0 100-2H4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

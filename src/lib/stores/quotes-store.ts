@@ -1,6 +1,22 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
+export type QuoteDocument = {
+  id: string;
+  fileName: string;
+  originalName: string;
+  filePath: string;
+  fileSize: number;
+  fileType: string;
+  documentType: string;
+  quoteId: string;
+  isVerified: boolean;
+  validationNotes?: string;
+  validatedAt?: string;
+  validatedById?: string;
+  uploadedAt: string;
+};
+
 // Types
 interface Quote {
   id: string;
@@ -10,6 +26,12 @@ interface Quote {
   product: {
     name: string;
     code: string;
+    requiredDocs: Array<{
+      id: string;
+      name: string;
+      description: string;
+      required: boolean;
+    }>;
   };
   companyData: Record<string, any>;
   formData: Record<string, any>;
@@ -19,12 +41,7 @@ interface Quote {
     name: string;
     companyName?: string;
   };
-  documents: Array<{
-    id: string;
-    fileName: string;
-    documentType: string;
-    uploadedAt: string;
-  }>;
+  documents: Array<QuoteDocument>;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,7 +52,7 @@ interface QuotesState {
   currentQuote: Quote | null;
   loading: boolean;
   error: string | null;
-  
+
   // Pagination
   pagination: {
     page: number;
@@ -43,7 +60,7 @@ interface QuotesState {
     total: number;
     totalPages: number;
   };
-  
+
   // Filters
   filters: {
     status?: string;
@@ -51,7 +68,7 @@ interface QuotesState {
     dateFrom?: string;
     dateTo?: string;
   };
-  
+
   // Actions
   setQuotes: (quotes: Quote[]) => void;
   setCurrentQuote: (quote: Quote | null) => void;
@@ -63,13 +80,15 @@ interface QuotesState {
   setPagination: (pagination: Partial<QuotesState["pagination"]>) => void;
   setFilters: (filters: Partial<QuotesState["filters"]>) => void;
   clearFilters: () => void;
-  
+
   // API calls
   fetchQuotes: () => Promise<void>;
   fetchQuote: (id: string) => Promise<void>;
   createQuote: (data: any) => Promise<Quote | null>;
+  saveDraft: (data: any) => Promise<Quote | null>;
   updateQuoteStatus: (id: string, status: string) => Promise<void>;
   deleteQuote: (id: string) => Promise<void>;
+  validateDocument: (quoteId: string, documentId: string, isVerified: boolean, notes?: string) => Promise<void>;
 }
 
 const useQuotesStore = create<QuotesState>()(
@@ -91,50 +110,60 @@ const useQuotesStore = create<QuotesState>()(
       // Basic setters
       setQuotes: (quotes) => set({ quotes }),
       setCurrentQuote: (quote) => set({ currentQuote: quote }),
-      addQuote: (quote) => set((state) => ({ 
-        quotes: [quote, ...state.quotes] 
-      })),
-      updateQuote: (id, updates) => set((state) => ({
-        quotes: state.quotes.map(q => 
-          q.id === id ? { ...q, ...updates } : q
-        ),
-        currentQuote: state.currentQuote?.id === id 
-          ? { ...state.currentQuote, ...updates }
-          : state.currentQuote
-      })),
-      removeQuote: (id) => set((state) => ({
-        quotes: state.quotes.filter(q => q.id !== id),
-        currentQuote: state.currentQuote?.id === id ? null : state.currentQuote
-      })),
+      addQuote: (quote) =>
+        set((state) => ({
+          quotes: [quote, ...state.quotes],
+        })),
+      updateQuote: (id, updates) =>
+        set((state) => ({
+          quotes: state.quotes.map((q) =>
+            q.id === id ? { ...q, ...updates } : q
+          ),
+          currentQuote:
+            state.currentQuote?.id === id
+              ? { ...state.currentQuote, ...updates }
+              : state.currentQuote,
+        })),
+      removeQuote: (id) =>
+        set((state) => ({
+          quotes: state.quotes.filter((q) => q.id !== id),
+          currentQuote:
+            state.currentQuote?.id === id ? null : state.currentQuote,
+        })),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
-      setPagination: (pagination) => set((state) => ({
-        pagination: { ...state.pagination, ...pagination }
-      })),
-      setFilters: (filters) => set((state) => ({
-        filters: { ...state.filters, ...filters }
-      })),
+      setPagination: (pagination) =>
+        set((state) => ({
+          pagination: { ...state.pagination, ...pagination },
+        })),
+      setFilters: (filters) =>
+        set((state) => ({
+          filters: { ...state.filters, ...filters },
+        })),
       clearFilters: () => set({ filters: {} }),
 
       // API calls
       fetchQuotes: async () => {
-        const { setLoading, setError, setPagination, filters, pagination } = get();
-        
+        const { setLoading, setError, setPagination, filters, pagination } =
+          get();
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const params = new URLSearchParams({
             page: pagination.page.toString(),
             limit: pagination.limit.toString(),
-            ...filters
+            ...filters,
           });
 
           const response = await fetch(`/api/quotes?${params}`);
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors du chargement des devis");
+            throw new Error(
+              result.error || "Erreur lors du chargement des devis"
+            );
           }
 
           set({ quotes: result.data.quotes });
@@ -148,16 +177,18 @@ const useQuotesStore = create<QuotesState>()(
 
       fetchQuote: async (id: string) => {
         const { setLoading, setError, setCurrentQuote } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`/api/quotes/${id}`);
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors du chargement du devis");
+            throw new Error(
+              result.error || "Erreur lors du chargement du devis"
+            );
           }
 
           setCurrentQuote(result.data);
@@ -170,10 +201,10 @@ const useQuotesStore = create<QuotesState>()(
 
       createQuote: async (data: any) => {
         const { setLoading, setError, addQuote } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch("/api/quotes", {
             method: "POST",
@@ -186,7 +217,42 @@ const useQuotesStore = create<QuotesState>()(
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors de la création du devis");
+            throw new Error(
+              result.error || "Erreur lors de la création du devis"
+            );
+          }
+
+          addQuote(result.data);
+          return result.data;
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "Erreur inconnue");
+          return null;
+        } finally {
+          setLoading(false);
+        }
+      },
+
+      saveDraft: async (data: any) => {
+        const { setLoading, setError, addQuote } = get();
+
+        setLoading(true);
+        setError(null);
+
+        try {
+          const response = await fetch("/api/quotes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ ...data, status: "DRAFT" }),
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(
+              result.error || "Erreur lors de la sauvegarde du brouillon"
+            );
           }
 
           addQuote(result.data);
@@ -201,10 +267,10 @@ const useQuotesStore = create<QuotesState>()(
 
       updateQuoteStatus: async (id: string, status: string) => {
         const { setLoading, setError, updateQuote } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`/api/quotes/${id}`, {
             method: "PUT",
@@ -217,7 +283,9 @@ const useQuotesStore = create<QuotesState>()(
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors de la mise à jour du devis");
+            throw new Error(
+              result.error || "Erreur lors de la mise à jour du devis"
+            );
           }
 
           updateQuote(id, result.data);
@@ -231,10 +299,10 @@ const useQuotesStore = create<QuotesState>()(
 
       deleteQuote: async (id: string) => {
         const { setLoading, setError, removeQuote } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`/api/quotes/${id}`, {
             method: "DELETE",
@@ -243,7 +311,9 @@ const useQuotesStore = create<QuotesState>()(
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors de la suppression du devis");
+            throw new Error(
+              result.error || "Erreur lors de la suppression du devis"
+            );
           }
 
           removeQuote(id);
@@ -252,6 +322,55 @@ const useQuotesStore = create<QuotesState>()(
           throw error;
         } finally {
           setLoading(false);
+        }
+      },
+
+      validateDocument: async (quoteId: string, documentId: string, isVerified: boolean, notes?: string) => {
+        const { setError, currentQuote, setCurrentQuote } = get();
+
+        setError(null);
+
+        try {
+          const response = await fetch(`/api/quotes/${quoteId}/documents/${documentId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ 
+              isVerified, 
+              validationNotes: notes 
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(
+              result.error || "Erreur lors de la validation du document"
+            );
+          }
+
+          // Update the current quote's documents if it's the same quote
+          if (currentQuote && currentQuote.id === quoteId) {
+            const updatedDocuments = currentQuote.documents.map(doc => 
+              doc.id === documentId 
+                ? {
+                    ...doc,
+                    isVerified,
+                    validationNotes: notes,
+                    validatedAt: new Date().toISOString()
+                  }
+                : doc
+            );
+            
+            setCurrentQuote({
+              ...currentQuote,
+              documents: updatedDocuments
+            });
+          }
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "Erreur inconnue");
+          throw error;
         }
       },
     }),

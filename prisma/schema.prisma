@@ -45,6 +45,7 @@ model User {
   commissions     Commission[]
   notifications   Notification[]
   createdProducts InsuranceProduct[] // Produits créés par les admins
+  validatedDocuments QuoteDocument[] @relation("DocumentValidator")
 
   @@map("users")
 }
@@ -66,6 +67,7 @@ enum ProjectType {
 
 enum ProjectStatus {
   DRAFT
+
   SUBMITTED
   UNDER_REVIEW
   APPROVED
@@ -217,6 +219,7 @@ model Account {
 
 enum QuoteStatus {
   DRAFT
+  INCOMPLETE
   SUBMITTED
   IN_PROGRESS
   COMPLEMENT_REQUIRED
@@ -276,10 +279,11 @@ model InsuranceProduct {
   isActive    Boolean @default(true)
 
   // Product configuration (JSON fields for flexibility)
-  formFields     Json // Dynamic form field definitions
+  formFields     Json // Dynamic form field definitions with step support
   pricingRules   Json // Pricing calculation rules
   requiredDocs   Json // Required document types
   workflowConfig Json? // Custom workflow steps
+  stepConfig     Json? // Multi-step form configuration
 
   // Relations
   quotes    Quote[]
@@ -378,16 +382,23 @@ model InsuranceContract {
 
 // Generic document model for quotes
 model QuoteDocument {
-  id           String       @id @default(cuid())
+  id           String @id @default(cuid())
   fileName     String
   originalName String
   filePath     String // Local file path
   fileType     String
   fileSize     Int
-  documentType DocumentType
+  documentType String //DocumentType
 
-  quoteId String @map("quote_id")
-  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId    String  @map("quote_id")
+  quote      Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  isVerified Boolean @default(false)
+
+  // Document validation fields
+  validationNotes String?
+  validatedAt     DateTime?
+  validatedById   String?   @map("validated_by_id")
+  validatedBy     User?     @relation("DocumentValidator", fields: [validatedById], references: [id])
 
   uploadedAt DateTime @default(now())
 

@@ -1,0 +1,222 @@
+{
+  "companyCreationDate": {
+    "type": "date",
+    "label": "Date de création de l'entreprise",
+    "help": "Date de création officielle de votre entreprise",
+    "required": true
+  },
+  "chiffreAffaires": {
+    "type": "number",
+    "label": "Chiffre d'affaires annuel déclaré (€)",
+    "help": "Chiffre d'affaires annuel déclaré ou prévisionnel",
+    "min": 0,
+    "max": 1000000,
+    "required": true
+  },
+  "nombreSalaries": {
+    "type": "number", 
+    "label": "Nombre d'ETP (Équivalents Temps Plein)",
+    "help": "Effectif en équivalents temps plein",
+    "min": 0,
+    "max": 8,
+    "required": true
+  },
+  "activities": {
+    "type": "activity_breakdown",
+    "label": "Répartition des activités par code",
+    "help": "Sélectionnez vos activités et indiquez la part du CA pour chaque activité (total = 100%)",
+    "options": [
+      {
+        "label": "Code 2 - Gros œuvre (Fondations, structures béton, maçonnerie portante)",
+        "value": "2"
+      },
+      {
+        "label": "Code 11 - Maçonnerie générale (Murs, cloisons, enduits)",
+        "value": "11"
+      },
+      {
+        "label": "Code 13 - Second œuvre (Plomberie, électricité, menuiserie, carrelage)",
+        "value": "13"
+      }
+    ],
+    "required": true,
+    "validation": {
+      "rule": "percentageSum100",
+      "message": "La somme des pourcentages doit être égale à 100%"
+    },
+    "minActivities": 1,
+    "maxActivities": 3
+  },
+  "territory": {
+    "type": "select",
+    "label": "Territoire d'exercice",
+    "help": "Zone géographique principale d'exercice de votre activité",
+    "options": [
+      {
+        "label": "La Réunion",
+        "value": "REUNION"
+      },
+      {
+        "label": "Mayotte", 
+        "value": "MAYOTTE"
+      },
+      {
+        "label": "Martinique",
+        "value": "MARTINIQUE"
+      },
+      {
+        "label": "Guadeloupe",
+        "value": "GUADELOUPE"
+      },
+      {
+        "label": "Guyane",
+        "value": "GUYANE"
+      },
+      {
+        "label": "Saint-Martin",
+        "value": "ST-MARTIN"
+      },
+      {
+        "label": "Saint-Barthélemy", 
+        "value": "ST-BARTH"
+      }
+    ],
+    "required": true
+  },
+  "subContractingPercent": {
+    "type": "number",
+    "label": "Pourcentage de sous-traitance (%)",
+    "help": "Part de votre activité réalisée en sous-traitance (maximum 15%)",
+    "min": 0,
+    "max": 15,
+    "default": 0,
+    "required": true
+  },
+  "tradingPercent": {
+    "type": "number",
+    "label": "Pourcentage de négoce (%)", 
+    "help": "Part de votre activité de négoce/revente (maximum 15%)",
+    "min": 0,
+    "max": 15,
+    "default": 0,
+    "required": true
+  },
+  "hasQualification": {
+    "type": "checkbox",
+    "label": "Qualification QUALIBAT/QUALIFELEC",
+    "help": "Possédez-vous une qualification QUALIBAT ou QUALIFELEC ? (Réduction de -5%)",
+    "default": false,
+    "required": false
+  },
+  "experienceMetier": {
+    "type": "number",
+    "label": "Années d'expérience du dirigeant",
+    "help": "Nombre d'années d'expérience du dirigeant principal dans le métier (minimum 1 an)",
+    "min": 1,
+    "max": 50,
+    "required": true,
+    "validation": {
+      "rule": "minValue",
+      "value": 1,
+      "message": "L'expérience minimale requise est de 1 an"
+    }
+  },
+  "previousRcdStatus": {
+    "type": "select",
+    "label": "Antécédents RC Décennale",
+    "help": "Situation concernant votre précédente assurance RC Décennale",
+    "options": [
+      {
+        "label": "Contrat en cours chez un autre assureur",
+        "value": "EN_COURS"
+      },
+      {
+        "label": "Contrat résilié/interrompu", 
+        "value": "RESILIE"
+      },
+      {
+        "label": "Jamais assuré en RC Décennale",
+        "value": "JAMAIS"
+      }
+    ],
+    "required": true
+  },
+  "previousResiliationDate": {
+    "type": "date",
+    "label": "Date de résiliation précédente", 
+    "help": "Date de résiliation de votre précédent contrat",
+    "required": false,
+    "conditional": {
+      "field": "previousRcdStatus",
+      "value": "RESILIE"
+    }
+  },
+  "lossHistory": {
+    "type": "loss_history",
+    "label": "Historique des sinistres",
+    "help": "Déclarez vos sinistres RC Décennale des 5 dernières années",
+    "required": false,
+    "fields": [
+      {
+        "name": "year",
+        "label": "Année",
+        "type": "number",
+        "min": 2020,
+        "max": 2025
+      },
+      {
+        "name": "numClaims", 
+        "label": "Nombre de sinistres",
+        "type": "number",
+        "min": 1,
+        "max": 10
+      },
+      {
+        "name": "totalCost",
+        "label": "Coût total (€)",
+        "type": "number",
+        "min": 0
+      }
+    ],
+    "maxEntries": 5
+  },
+  "dateEffetSouhaitee": {
+    "type": "date",
+    "label": "Date d'effet souhaitée",
+    "help": "Date de prise d'effet souhaitée pour le contrat",
+    "min": "2025-08-11",
+    "required": true
+  },
+  "periodicity": {
+    "type": "select",
+    "label": "Périodicité de paiement",
+    "help": "Fréquence de paiement des primes", 
+    "options": [
+      {
+        "label": "Paiement annuel (1 échéance)",
+        "value": "annuel"
+      },
+      {
+        "label": "Paiement semestriel (2 échéances)",
+        "value": "semestriel"
+      },
+      {
+        "label": "Paiement trimestriel (4 échéances)",
+        "value": "trimestriel" 
+      },
+      {
+        "label": "Paiement mensuel (12 échéances)",
+        "value": "mensuel"
+      }
+    ],
+    "default": "annuel",
+    "required": true
+  },
+  "includePJ": {
+    "type": "checkbox",
+    "label": "Protection juridique (106€ HT/an)",
+    "help": "Inclure la protection juridique - Fortement recommandé",
+    "default": true,
+    "required": false
+  }
+}

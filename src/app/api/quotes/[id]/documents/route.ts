@@ -1,43 +1,49 @@
 import { NextRequest } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
 import { prisma } from "@/lib/prisma";
-import { DocumentUploadSchema } from "@/lib/validations";
-import { 
-  createApiResponse, 
-  handleApiError, 
+import {
+  createApiResponse,
+  handleApiError,
   withAuth,
-  ApiError
+  ApiError,
 } from "@/lib/api-utils";
 
-// POST /api/quotes/[id]/documents - Upload document for quote
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+// POST /api/quotes/[id]/documents - Add document metadata for quote
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     return await withAuth(async (userId, userRole) => {
-      const formData = await request.formData();
-      const file = formData.get("file") as File;
-      const documentType = formData.get("documentType") as string;
-
-      if (!file) {
-        throw new ApiError(400, "Aucun fichier fourni");
-      }
-
-      // Validate document type
-      const validatedData = DocumentUploadSchema.parse({
+      const body = await request.json();
+      const {
+        fileName,
+        originalName,
+        filePath,
+        fileSize,
+        fileType,
         documentType,
-        relatedEntityId: params.id,
-        relatedEntityType: "quote"
-      });
+      } = body;
+
+      if (
+        !fileName ||
+        !originalName ||
+        !filePath ||
+        !fileSize ||
+        !fileType ||
+        !documentType
+      ) {
+        throw new ApiError(400, "Données de fichier manquantes");
+      }
 
       // Check if quote exists and user has access
       const quote = await prisma.quote.findUnique({
         where: { id: params.id },
-        select: { 
-          id: true, 
-          brokerId: true, 
-          reference: true 
-        }
+        select: {
+          id: true,
+          brokerId: true,
+          reference: true,
+        },
       });
 
       if (!quote) {
@@ -48,58 +54,20 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         throw new ApiError(403, "Accès refusé à ce devis");
       }
 
-      // File validation
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        throw new ApiError(400, "Le fichier est trop volumineux (max 10MB)");
-      }
-
-      const allowedTypes = [
-        "application/pdf",
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ];
-
-      if (!allowedTypes.includes(file.type)) {
-        throw new ApiError(400, "Type de fichier non autorisé");
-      }
-
-      // Create upload directory
-      const uploadDir = join(process.cwd(), "uploads", "quotes", params.id);
-      await mkdir(uploadDir, { recursive: true });
-
-      // Generate unique filename
-      const timestamp = Date.now();
-      const extension = file.name.split(".").pop();
-      const fileName = `${timestamp}-${Math.random().toString(36).substring(2)}.${extension}`;
-      const filePath = join(uploadDir, fileName);
-
-      // Write file
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
-
-      // Save to database
+      // Save document metadata to database
       const document = await prisma.quoteDocument.create({
         data: {
           fileName,
-          originalName: file.name,
-          filePath: filePath,
-          fileType: file.type,
-          fileSize: file.size,
-          documentType: validatedData.documentType as any,
-          quoteId: params.id
-        }
+          originalName,
+          filePath,
+          fileType,
+          fileSize,
+          documentType: documentType as any,
+          quoteId: params.id,
+        },
       });
 
-      return createApiResponse(
-        document,
-        "Document téléchargé avec succès",
-        201
-      );
+      return createApiResponse(document, "Document ajouté avec succès", 201);
     });
   } catch (error) {
     return handleApiError(error);
@@ -107,17 +75,20 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 }
 
 // GET /api/quotes/[id]/documents - List documents for quote
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     return await withAuth(async (userId, userRole) => {
       // Check if quote exists and user has access
       const quote = await prisma.quote.findUnique({
         where: { id: params.id },
-        select: { 
-          id: true, 
-          brokerId: true 
-        }
+        select: {
+          id: true,
+          brokerId: true,
+        },
       });
 
       if (!quote) {
@@ -137,9 +108,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           originalName: true,
           documentType: true,
           fileSize: true,
-          uploadedAt: true
+          uploadedAt: true,
         },
-        orderBy: { uploadedAt: "desc" }
+        orderBy: { uploadedAt: "desc" },
       });
 
       return createApiResponse(documents);

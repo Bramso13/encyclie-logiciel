@@ -30,20 +30,36 @@ export const CreateQuoteSchema = z.object({
   productId: IdSchema,
   companyData: QuoteCompanyDataSchema,
   formData: z.record(z.string(), z.any()), // Dynamic form data based on product
+  status: z
+    .enum([
+      "DRAFT",
+      "SUBMITTED",
+      "INCOMPLETE",
+      "IN_PROGRESS",
+      "COMPLEMENT_REQUIRED",
+      "OFFER_READY",
+      "OFFER_SENT",
+      "ACCEPTED",
+      "REJECTED",
+      "EXPIRED",
+    ])
+    .default("INCOMPLETE"),
 });
 
 export const UpdateQuoteSchema = z.object({
-  status: z.enum([
-    "DRAFT",
-    "SUBMITTED", 
-    "IN_PROGRESS",
-    "COMPLEMENT_REQUIRED",
-    "OFFER_READY",
-    "OFFER_SENT",
-    "ACCEPTED",
-    "REJECTED",
-    "EXPIRED"
-  ]).optional(),
+  status: z
+    .enum([
+      "DRAFT",
+      "SUBMITTED",
+      "IN_PROGRESS",
+      "COMPLEMENT_REQUIRED",
+      "OFFER_READY",
+      "OFFER_SENT",
+      "ACCEPTED",
+      "REJECTED",
+      "EXPIRED",
+    ])
+    .optional(),
   formData: z.record(z.string(), z.any()).optional(),
   calculatedPremium: z.number().positive().optional(),
   validUntil: z.string().optional(),
@@ -58,7 +74,9 @@ export const CreateContractSchema = z.object({
 });
 
 export const UpdateContractSchema = z.object({
-  status: z.enum(["ACTIVE", "SUSPENDED", "EXPIRED", "CANCELLED", "PENDING_RENEWAL"]).optional(),
+  status: z
+    .enum(["ACTIVE", "SUSPENDED", "EXPIRED", "CANCELLED", "PENDING_RENEWAL"])
+    .optional(),
   paymentStatus: z.enum(["PENDING", "PAID", "OVERDUE", "DISPUTED"]).optional(),
   renewalDate: z.string().optional(),
   isAutoRenewal: z.boolean().optional(),
@@ -68,12 +86,12 @@ export const UpdateContractSchema = z.object({
 export const DocumentUploadSchema = z.object({
   documentType: z.enum([
     "KBIS",
-    "FINANCIAL_STATEMENT", 
+    "FINANCIAL_STATEMENT",
     "INSURANCE_CERTIFICATE",
     "SIGNED_QUOTE",
     "CONTRACT",
     "ATTESTATION",
-    "OTHER"
+    "OTHER",
   ]),
   relatedEntityId: IdSchema,
   relatedEntityType: z.enum(["quote", "contract"]),
@@ -91,11 +109,11 @@ export const CreateCommissionSchema = z.object({
 export const CreateNotificationSchema = z.object({
   type: z.enum([
     "CONTRACT_EXPIRATION",
-    "PAYMENT_DUE", 
+    "PAYMENT_DUE",
     "OFFER_READY",
     "COMPLEMENT_REQUIRED",
     "RENEWAL_DUE",
-    "GENERAL"
+    "GENERAL",
   ]),
   title: z.string().min(1),
   message: z.string().min(1),
@@ -139,7 +157,9 @@ export const ContractFiltersSchema = z.object({
 
 // Type exports
 export type InsuranceProduct = z.infer<typeof InsuranceProductSchema>;
-export type CreateInsuranceProduct = z.infer<typeof CreateInsuranceProductSchema>;
+export type CreateInsuranceProduct = z.infer<
+  typeof CreateInsuranceProductSchema
+>;
 export type QuoteCompanyData = z.infer<typeof QuoteCompanyDataSchema>;
 export type CreateQuote = z.infer<typeof CreateQuoteSchema>;
 export type UpdateQuote = z.infer<typeof UpdateQuoteSchema>;

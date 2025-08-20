@@ -1,0 +1,115 @@
+{
+  "legalForm": {
+    "type": "select",
+    "label": "Forme juridique",
+    "options": [
+      { "label": "SARL", "value": "SARL" },
+      { "label": "SAS", "value": "SAS" },
+      { "label": "SA", "value": "SA" },
+      { "label": "EURL", "value": "EURL" },
+      { "label": "SNC", "value": "SNC" },
+      { "label": "Auto-entrepreneur", "value": "AUTO_ENTREPRENEUR" },
+      { "label": "Artisan", "value": "ARTISAN" }
+    ],
+    "required": true
+  },
+  "activities": {
+    "type": "multiselect",
+    "label": "Activités exercées",
+    "options": [
+      { "label": "Gros œuvre", "value": "GROS_OEUVRE" },
+      { "label": "Second œuvre", "value": "SECOND_OEUVRE" },
+      { "label": "Charpente", "value": "CHARPENTE" },
+      { "label": "Couverture", "value": "COUVERTURE" },
+      { "label": "Plomberie", "value": "PLOMBERIE" },
+      { "label": "Électricité", "value": "ELECTRICITE" },
+      { "label": "Maçonnerie", "value": "MACONNERIE" },
+      { "label": "Carrelage", "value": "CARRELAGE" },
+      { "label": "Peinture", "value": "PEINTURE" },
+      { "label": "Menuiserie", "value": "MENUISERIE" },
+      { "label": "Isolation", "value": "ISOLATION" },
+      { "label": "Terrassement", "value": "TERRASSEMENT" }
+    ],
+    "required": true
+  },
+  "typeChantiers": {
+    "type": "multiselect",
+    "label": "Types de chantiers",
+    "options": [
+      { "label": "Maisons individuelles", "value": "MAISONS_INDIVIDUELLES" },
+      { "label": "Logements collectifs", "value": "LOGEMENTS_COLLECTIFS" },
+      { "label": "Bureaux", "value": "BUREAUX" },
+      { "label": "Commerces", "value": "COMMERCES" },
+      { "label": "Bâtiments industriels", "value": "INDUSTRIEL" },
+      { "label": "Rénovation", "value": "RENOVATION" },
+      { "label": "Construction neuve", "value": "NEUF" }
+    ],
+    "required": true
+  },
+  "nombreSalaries": {
+    "min": 0,
+    "help": "Nombre de salariés actuels",
+    "type": "number",
+    "label": "Nombre de salariés",
+    "required": true
+  },
+  "chiffreAffaires": {
+    "min": 0,
+    "help": "Chiffre d'affaires de l'année précédente ou prévisionnel",
+    "type": "number",
+    "label": "Chiffre d'affaires annuel (€)",
+    "required": true
+  },
+  "experienceMetier": {
+    "max": 50,
+    "min": 0,
+    "help": "Nombre d'années d'expérience du dirigeant principal",
+    "type": "number",
+    "label": "Années d'expérience dans le métier",
+    "required": true
+  },
+  "assureurPrecedent": {
+    "help": "Nom de votre précédent assureur (si applicable)",
+    "type": "text",
+    "label": "Assureur précédent",
+    "required": false
+  },
+  "dateEffetSouhaitee": {
+    "min": "2025-08-03",
+    "type": "date",
+    "label": "Date d'effet souhaitée",
+    "required": true
+  },
+  "companyCreationDate": {
+    "help": "Date de création de votre entreprise",
+    "type": "date",
+    "label": "Date de création de l'entreprise",
+    "required": true
+  },
+  "garantiesSouhaitees": {
+    "type": "multiselect",
+    "label": "Garanties souhaitées",
+    "options": [
+      { "label": "RC Décennale", "value": "RC_DECENNALE" },
+      { "label": "RC Biennale", "value": "RC_BIENNALE" },
+      { "label": "RC d'exploitation", "value": "RC_EXPLOITATION" },
+      { "label": "Dommages-ouvrage", "value": "DOMMAGES_OUVRAGE" },
+      { "label": "Tous risques chantier", "value": "TOUS_RISQUES_CHANTIER" }
+    ],
+    "required": true
+  },
+  "sinistresAntecedents": {
+    "help": "Décrivez vos éventuels sinistres des 5 dernières années",
+    "rows": 3,
+    "type": "textarea",
+    "label": "Sinistres antécédents",
+    "required": false
+  },
+  "montantMoyenChantiers": {
+    "min": 0,
+    "help": "Montant moyen HT de vos chantiers",
+    "type": "number",
+    "label": "Montant moyen des chantiers (€)",
+    "required": true
+  }
+}

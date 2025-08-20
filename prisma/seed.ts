@@ -5,6 +5,12 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Clear existing data first (order matters due to foreign keys)
+  console.log('🗑️ Clearing existing data...');
+  await prisma.quote.deleteMany({});
+  await prisma.insuranceProduct.deleteMany({});
+  console.log('✅ Existing data cleared');
+
   // Create admin user first
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@dune-assurances.fr' },
@@ -23,17 +29,14 @@ async function main() {
 
   console.log('✅ Admin user created:', adminUser.email);
 
-  // Create RC Décennale product
-  const rcDecennaleProduct = await prisma.insuranceProduct.upsert({
-    where: { code: 'RC_DECENNALE' },
-    update: {},
-    create: {
+  // Create RC Décennale product with step configuration
+  const rcDecennaleProduct = await prisma.insuranceProduct.create({
+    data: {
       name: 'RC Décennale',
       code: 'RC_DECENNALE',
       description: 'Responsabilité Civile Décennale pour les professionnels du bâtiment',
       isActive: true,
       formFields: {
-        // Company information
         companyCreationDate: {
           type: 'date',
           label: 'Date de création de l\'entreprise',
@@ -54,8 +57,6 @@ async function main() {
             { value: 'ARTISAN', label: 'Artisan' }
           ]
         },
-        
-        // Business information
         chiffreAffaires: {
           type: 'number',
           label: 'Chiffre d\'affaires annuel (€)',
@@ -63,8 +64,6 @@ async function main() {
           min: 0,
           help: 'Chiffre d\'affaires de l\'année précédente ou prévisionnel'
         },
-        
-        // Activities
         activities: {
           type: 'multiselect',
           label: 'Activités exercées',
@@ -84,57 +83,6 @@ async function main() {
             { value: 'TERRASSEMENT', label: 'Terrassement' }
           ]
         },
-        
-        // Risk factors
-        nombreSalaries: {
-          type: 'number',
-          label: 'Nombre de salariés',
-          required: true,
-          min: 0,
-          help: 'Nombre de salariés actuels'
-        },
-        
-        experienceMetier: {
-          type: 'number',
-          label: 'Années d\'expérience dans le métier',
-          required: true,
-          min: 0,
-          max: 50,
-          help: 'Nombre d\'années d\'expérience du dirigeant principal'
-        },
-        
-        // Previous insurance
-        assureurPrecedent: {
-          type: 'text',
-          label: 'Assureur précédent',
-          required: false,
-          help: 'Nom de votre précédent assureur (si applicable)'
-        },
-        
-        // Claims history
-        sinistresAntecedents: {
-          type: 'textarea',
-          label: 'Sinistres antécédents',
-          required: false,
-          rows: 3,
-          help: 'Décrivez vos éventuels sinistres des 5 dernières années'
-        },
-        
-        // Coverage needs
-        garantiesSouhaitees: {
-          type: 'multiselect',
-          label: 'Garanties souhaitées',
-          required: true,
-          options: [
-            { value: 'RC_DECENNALE', label: 'RC Décennale' },
-            { value: 'RC_BIENNALE', label: 'RC Biennale' },
-            { value: 'RC_EXPLOITATION', label: 'RC d\'exploitation' },
-            { value: 'DOMMAGES_OUVRAGE', label: 'Dommages-ouvrage' },
-            { value: 'TOUS_RISQUES_CHANTIER', label: 'Tous risques chantier' }
-          ]
-        },
-        
-        // Project information
         typeChantiers: {
           type: 'multiselect',
           label: 'Types de chantiers',
@@ -149,7 +97,6 @@ async function main() {
             { value: 'NEUF', label: 'Construction neuve' }
           ]
         },
-        
         montantMoyenChantiers: {
           type: 'number',
           label: 'Montant moyen des chantiers (€)',
@@ -157,8 +104,46 @@ async function main() {
           min: 0,
           help: 'Montant moyen HT de vos chantiers'
         },
-        
-        // Date effect
+        nombreSalaries: {
+          type: 'number',
+          label: 'Nombre de salariés',
+          required: true,
+          min: 0,
+          help: 'Nombre de salariés actuels'
+        },
+        experienceMetier: {
+          type: 'number',
+          label: 'Années d\'expérience dans le métier',
+          required: true,
+          min: 0,
+          max: 50,
+          help: 'Nombre d\'années d\'expérience du dirigeant principal'
+        },
+        assureurPrecedent: {
+          type: 'text',
+          label: 'Assureur précédent',
+          required: false,
+          help: 'Nom de votre précédent assureur (si applicable)'
+        },
+        sinistresAntecedents: {
+          type: 'textarea',
+          label: 'Sinistres antécédents',
+          required: false,
+          rows: 3,
+          help: 'Décrivez vos éventuels sinistres des 5 dernières années'
+        },
+        garantiesSouhaitees: {
+          type: 'multiselect',
+          label: 'Garanties souhaitées',
+          required: true,
+          options: [
+            { value: 'RC_DECENNALE', label: 'RC Décennale' },
+            { value: 'RC_BIENNALE', label: 'RC Biennale' },
+            { value: 'RC_EXPLOITATION', label: 'RC d\'exploitation' },
+            { value: 'DOMMAGES_OUVRAGE', label: 'Dommages-ouvrage' },
+            { value: 'TOUS_RISQUES_CHANTIER', label: 'Tous risques chantier' }
+          ]
+        },
         dateEffetSouhaitee: {
           type: 'date',
           label: 'Date d\'effet souhaitée',
@@ -166,65 +151,9 @@ async function main() {
           min: new Date().toISOString().split('T')[0]
         }
       },
-      
       pricingRules: {
-        basePremium: 1500, // Base premium in euros
-        
-        // Activity risk multipliers
-        activityMultipliers: {
-          'GROS_OEUVRE': 2.5,
-          'SECOND_OEUVRE': 1.5,
-          'CHARPENTE': 2.2,
-          'COUVERTURE': 2.8,
-          'PLOMBERIE': 1.8,
-          'ELECTRICITE': 1.9,
-          'MACONNERIE': 2.3,
-          'CARRELAGE': 1.4,
-          'PEINTURE': 1.2,
-          'MENUISERIE': 1.6,
-          'ISOLATION': 1.7,
-          'TERRASSEMENT': 2.0
-        },
-        
-        // Turnover brackets
-        turnoverMultipliers: [
-          { max: 50000, multiplier: 0.8 },
-          { max: 150000, multiplier: 1.0 },
-          { max: 300000, multiplier: 1.3 },
-          { max: 500000, multiplier: 1.6 },
-          { max: 1000000, multiplier: 2.0 },
-          { max: 99999999, multiplier: 2.5 }
-        ],
-        
-        // Experience discounts
-        experienceDiscounts: [
-          { minYears: 0, maxYears: 2, discount: 0 },
-          { minYears: 3, maxYears: 5, discount: 0.05 },
-          { minYears: 6, maxYears: 10, discount: 0.10 },
-          { minYears: 11, maxYears: 20, discount: 0.15 },
-          { minYears: 21, maxYears: 99, discount: 0.20 }
-        ],
-        
-        // Employee count multipliers
-        employeeMultipliers: [
-          { max: 0, multiplier: 0.9 }, // Solo entrepreneur
-          { max: 2, multiplier: 1.0 },
-          { max: 5, multiplier: 1.2 },
-          { max: 10, multiplier: 1.4 },
-          { max: 20, multiplier: 1.7 },
-          { max: 99999, multiplier: 2.0 }
-        ],
-        
-        // Coverage multipliers
-        coverageMultipliers: {
-          'RC_DECENNALE': 1.0,
-          'RC_BIENNALE': 0.3,
-          'RC_EXPLOITATION': 0.4,
-          'DOMMAGES_OUVRAGE': 0.8,
-          'TOUS_RISQUES_CHANTIER': 0.6
-        }
+        basePremium: 1500
       },
-      
       requiredDocs: [
         'Extrait Kbis (moins de 3 mois)',
         'Attestation d\'assurance précédente',
@@ -233,7 +162,6 @@ async function main() {
         'Attestation de qualification professionnelle',
         'Liste des chantiers en cours'
       ],
-      
       workflowConfig: {
         steps: [
           {
@@ -268,7 +196,31 @@ async function main() {
           }
         ]
       },
-      
+      stepConfig: {
+        steps: [
+          {
+            title: "Informations entreprise",
+            description: "Renseignez les informations de base de votre entreprise",
+            includeCompanyInfo: true,
+            fields: ["companyCreationDate", "legalForm"]
+          },
+          {
+            title: "Activité professionnelle",
+            description: "Précisez votre secteur d'activité et vos spécialités",
+            fields: ["activities", "chiffreAffaires", "typeChantiers", "montantMoyenChantiers"]
+          },
+          {
+            title: "Expérience et équipe",
+            description: "Informations sur votre expérience professionnelle et votre équipe",
+            fields: ["experienceMetier", "nombreSalaries"]
+          },
+          {
+            title: "Historique et garanties",
+            description: "Votre historique d'assurance et les garanties souhaitées",
+            fields: ["assureurPrecedent", "sinistresAntecedents", "garantiesSouhaitees", "dateEffetSouhaitee"]
+          }
+        ]
+      },
       createdBy: {
         connect: {
           email: 'admin@dune-assurances.fr'
@@ -278,6 +230,134 @@ async function main() {
   });
 
   console.log('✅ RC Décennale product created:', rcDecennaleProduct.name);
+
+  // Create RC Professionnelle product
+  const rcProfessionnelleProduct = await prisma.insuranceProduct.create({
+    data: {
+      name: 'RC Professionnelle',
+      code: 'RC_PRO',
+      description: 'Responsabilité Civile Professionnelle',
+      isActive: true,
+      formFields: {
+        activities: {
+          type: 'multiselect',
+          label: 'Activités exercées',
+          required: true,
+          options: [
+            { value: 'CONSEIL', label: 'Conseil' },
+            { value: 'FORMATION', label: 'Formation' },
+            { value: 'EXPERTISE', label: 'Expertise' },
+            { value: 'COURTAGE', label: 'Courtage' },
+            { value: 'COMMERCE', label: 'Commerce' }
+          ]
+        },
+        chiffreAffaires: {
+          type: 'number',
+          label: 'Chiffre d\'affaires annuel (€)',
+          required: true,
+          min: 0
+        },
+        nombreSalaries: {
+          type: 'number',
+          label: 'Nombre de salariés',
+          required: true,
+          min: 0
+        }
+      },
+      pricingRules: {
+        basePremium: 800
+      },
+      requiredDocs: ['Extrait Kbis', 'Justificatif CA'],
+      stepConfig: {
+        steps: [
+          {
+            title: 'Entreprise',
+            description: 'Informations sur votre entreprise',
+            includeCompanyInfo: true,
+            fields: ['chiffreAffaires', 'nombreSalaries']
+          },
+          {
+            title: 'Activités',
+            description: 'Vos activités professionnelles',
+            fields: ['activities']
+          }
+        ]
+      },
+      createdBy: {
+        connect: {
+          email: 'admin@dune-assurances.fr'
+        }
+      }
+    }
+  });
+
+  console.log('✅ RC Professionnelle product created:', rcProfessionnelleProduct.name);
+
+  // Create Multirisque Professionnelle product
+  const multirisqueProduct = await prisma.insuranceProduct.create({
+    data: {
+      name: 'Multirisque Professionnelle',
+      code: 'MR_PRO',
+      description: 'Assurance Multirisque Professionnelle',
+      isActive: true,
+      formFields: {
+        typeLocal: {
+          type: 'select',
+          label: 'Type de local',
+          required: true,
+          options: [
+            { value: 'BUREAU', label: 'Bureau' },
+            { value: 'COMMERCE', label: 'Commerce' },
+            { value: 'ATELIER', label: 'Atelier' },
+            { value: 'ENTREPOT', label: 'Entrepôt' }
+          ]
+        },
+        superficie: {
+          type: 'number',
+          label: 'Superficie (m²)',
+          required: true,
+          min: 1
+        },
+        valeurMobilier: {
+          type: 'number',
+          label: 'Valeur du mobilier (€)',
+          required: true,
+          min: 0
+        },
+        chiffreAffaires: {
+          type: 'number',
+          label: 'Chiffre d\'affaires annuel (€)',
+          required: true,
+          min: 0
+        }
+      },
+      pricingRules: {
+        basePremium: 1200
+      },
+      requiredDocs: ['Plan du local', 'Inventaire mobilier'],
+      stepConfig: {
+        steps: [
+          {
+            title: 'Local professionnel',
+            description: 'Caractéristiques de votre local',
+            fields: ['typeLocal', 'superficie']
+          },
+          {
+            title: 'Biens à assurer',
+            description: 'Valeur des biens professionnels',
+            fields: ['valeurMobilier', 'chiffreAffaires']
+          }
+        ]
+      },
+      createdBy: {
+        connect: {
+          email: 'admin@dune-assurances.fr'
+        }
+      }
+    }
+  });
+
+  console.log('✅ Multirisque Professionnelle product created:', multirisqueProduct.name);
 
   // Create sample broker
   const brokerUser = await prisma.user.upsert({

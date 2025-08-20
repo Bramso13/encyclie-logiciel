@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
           take,
           include: {
             product: {
-              select: { name: true, code: true },
+              select: { name: true, code: true, requiredDocs: true },
             },
             broker: {
               select: { name: true, companyName: true },
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
           brokerId: userId,
           companyData: validatedData.companyData,
           formData: validatedData.formData,
-          status: "DRAFT",
+          status: validatedData.status,
         },
         include: {
           product: {

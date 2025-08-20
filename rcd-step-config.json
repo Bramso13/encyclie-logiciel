@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "title": "Informations entreprise",
+      "description": "Renseignez les informations de base de votre entreprise",
+      "includeCompanyInfo": true,
+      "fields": ["companyCreationDate"]
+    },
+    {
+      "title": "Activité professionnelle", 
+      "description": "Précisez votre secteur d'activité et votre chiffre d'affaires",
+      "fields": ["activities", "chiffreAffaires", "nombreSalaries", "territory"]
+    },
+    {
+      "title": "Expérience et coefficients",
+      "description": "Informations sur votre expérience et les coefficients applicables", 
+      "fields": ["experienceMetier", "subContractingPercent", "tradingPercent", "hasQualification"]
+    },
+    {
+      "title": "Historique et garanties",
+      "description": "Votre historique d'assurance et les garanties souhaitées",
+      "fields": ["previousRcdStatus", "previousResiliationDate", "lossHistory", "dateEffetSouhaitee", "periodicity", "includePJ"]
+    }
+  ]
+}

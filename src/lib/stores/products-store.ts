@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
 // Types
-interface InsuranceProduct {
+export interface InsuranceProduct {
   id: string;
   name: string;
   code: string;
@@ -26,7 +26,7 @@ interface ProductsState {
   currentProduct: InsuranceProduct | null;
   loading: boolean;
   error: string | null;
-  
+
   // Actions
   setProducts: (products: InsuranceProduct[]) => void;
   setCurrentProduct: (product: InsuranceProduct | null) => void;
@@ -35,7 +35,7 @@ interface ProductsState {
   removeProduct: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  
+
   // API calls
   fetchProducts: () => Promise<void>;
   fetchActiveProducts: () => Promise<void>;
@@ -58,49 +58,56 @@ const useProductsStore = create<ProductsState>()(
 
       // Basic setters
       setProducts: (products) => {
-        const activeProducts = products.filter(p => p.isActive);
+        const activeProducts = products.filter((p) => p.isActive);
         set({ products, activeProducts });
       },
       setCurrentProduct: (product) => set({ currentProduct: product }),
-      addProduct: (product) => set((state) => {
-        const products = [product, ...state.products];
-        const activeProducts = products.filter(p => p.isActive);
-        return { products, activeProducts };
-      }),
-      updateProduct: (id, updates) => set((state) => {
-        const products = state.products.map(p => 
-          p.id === id ? { ...p, ...updates } : p
-        );
-        const activeProducts = products.filter(p => p.isActive);
-        const currentProduct = state.currentProduct?.id === id 
-          ? { ...state.currentProduct, ...updates }
-          : state.currentProduct;
-        
-        return { products, activeProducts, currentProduct };
-      }),
-      removeProduct: (id) => set((state) => {
-        const products = state.products.filter(p => p.id !== id);
-        const activeProducts = products.filter(p => p.isActive);
-        const currentProduct = state.currentProduct?.id === id ? null : state.currentProduct;
-        
-        return { products, activeProducts, currentProduct };
-      }),
+      addProduct: (product) =>
+        set((state) => {
+          const products = [product, ...state.products];
+          const activeProducts = products.filter((p) => p.isActive);
+          return { products, activeProducts };
+        }),
+      updateProduct: (id, updates) =>
+        set((state) => {
+          const products = state.products.map((p) =>
+            p.id === id ? { ...p, ...updates } : p
+          );
+          const activeProducts = products.filter((p) => p.isActive);
+          const currentProduct =
+            state.currentProduct?.id === id
+              ? { ...state.currentProduct, ...updates }
+              : state.currentProduct;
+
+          return { products, activeProducts, currentProduct };
+        }),
+      removeProduct: (id) =>
+        set((state) => {
+          const products = state.products.filter((p) => p.id !== id);
+          const activeProducts = products.filter((p) => p.isActive);
+          const currentProduct =
+            state.currentProduct?.id === id ? null : state.currentProduct;
+
+          return { products, activeProducts, currentProduct };
+        }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
 
       // API calls
       fetchProducts: async () => {
         const { setLoading, setError, setProducts } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch("/api/products");
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors du chargement des produits");
+            throw new Error(
+              result.error || "Erreur lors du chargement des produits"
+            );
           }
 
           setProducts(result.data);
@@ -113,16 +120,18 @@ const useProductsStore = create<ProductsState>()(
 
       fetchActiveProducts: async () => {
         const { setLoading, setError } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch("/api/products?active=true");
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors du chargement des produits actifs");
+            throw new Error(
+              result.error || "Erreur lors du chargement des produits actifs"
+            );
           }
 
           set({ activeProducts: result.data });
@@ -135,16 +144,18 @@ const useProductsStore = create<ProductsState>()(
 
       fetchProduct: async (id: string) => {
         const { setLoading, setError, setCurrentProduct } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`/api/products/${id}`);
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors du chargement du produit");
+            throw new Error(
+              result.error || "Erreur lors du chargement du produit"
+            );
           }
 
           setCurrentProduct(result.data);
@@ -157,10 +168,10 @@ const useProductsStore = create<ProductsState>()(
 
       createProduct: async (data: any) => {
         const { setLoading, setError, addProduct } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch("/api/products", {
             method: "POST",
@@ -173,7 +184,9 @@ const useProductsStore = create<ProductsState>()(
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors de la création du produit");
+            throw new Error(
+              result.error || "Erreur lors de la création du produit"
+            );
           }
 
           addProduct(result.data);
@@ -188,10 +201,10 @@ const useProductsStore = create<ProductsState>()(
 
       updateProductData: async (id: string, data: any) => {
         const { setLoading, setError, updateProduct } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`/api/products/${id}`, {
             method: "PUT",
@@ -204,7 +217,9 @@ const useProductsStore = create<ProductsState>()(
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors de la mise à jour du produit");
+            throw new Error(
+              result.error || "Erreur lors de la mise à jour du produit"
+            );
           }
 
           updateProduct(id, result.data);
@@ -218,10 +233,10 @@ const useProductsStore = create<ProductsState>()(
 
       deleteProduct: async (id: string) => {
         const { setLoading, setError, removeProduct } = get();
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`/api/products/${id}`, {
             method: "DELETE",
@@ -230,7 +245,9 @@ const useProductsStore = create<ProductsState>()(
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors de la suppression du produit");
+            throw new Error(
+              result.error || "Erreur lors de la suppression du produit"
+            );
           }
 
           removeProduct(id);
@@ -244,13 +261,13 @@ const useProductsStore = create<ProductsState>()(
 
       toggleProductStatus: async (id: string) => {
         const { setLoading, setError, updateProduct, products } = get();
-        
-        const product = products.find(p => p.id === id);
+
+        const product = products.find((p) => p.id === id);
         if (!product) return;
-        
+
         setLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`/api/products/${id}`, {
             method: "PUT",
@@ -263,7 +280,9 @@ const useProductsStore = create<ProductsState>()(
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || "Erreur lors de la mise à jour du statut");
+            throw new Error(
+              result.error || "Erreur lors de la mise à jour du statut"
+            );
           }
 
           updateProduct(id, { isActive: !product.isActive });

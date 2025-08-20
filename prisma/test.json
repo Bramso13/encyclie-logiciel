@@ -1,0 +1,36 @@
+{
+  "steps": [
+    {
+      "title": "Informations entreprise",
+
+      "description": "Renseignez les informations de base de votre entreprise",
+      "includeCompanyInfo": true
+
+    },
+    {
+      "title": "Activité professionnelle",
+      "fields": [
+        "activities",
+        "chiffreAffaires",
+        "typeChantiers",
+        "montantMoyenChantiers"
+      ],
+      "description": "Précisez votre secteur d'activité et vos spécialités"
+    },
+    {
+      "title": "Expérience et équipe",
+      "fields": ["experienceMetier", "nombreSalaries"],
+      "description": "Informations sur votre expérience professionnelle et votre équipe"
+    },
+    {
+      "title": "Historique et garanties",
+      "fields": [
+        "assureurPrecedent",
+        "sinistresAntecedents",
+        "garantiesSouhaitees",
+        "dateEffetSouhaitee"
+      ],
+      "description": "Votre historique d'assurance et les garanties souhaitées"
+    }
+  ]
+}

@@ -27,6 +27,10 @@ export default function QuotesList({ onQuoteSelect }: QuotesListProps) {
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { color: string; text: string }> = {
       DRAFT: { color: "bg-gray-100 text-gray-800", text: "Brouillon" },
+      INCOMPLETE: {
+        color: "bg-yellow-100 text-yellow-800",
+        text: "A compléter",
+      },
       SUBMITTED: { color: "bg-blue-100 text-blue-800", text: "Soumis" },
       IN_PROGRESS: { color: "bg-yellow-100 text-yellow-800", text: "En cours" },
       COMPLEMENT_REQUIRED: {
@@ -206,7 +210,10 @@ export default function QuotesList({ onQuoteSelect }: QuotesListProps) {
                     {getStatusBadge(quote.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {quote.documents.length} document(s)
+                    {quote.documents &&
+                      `${quote.documents.length}/${
+                        quote.product.requiredDocs?.length || 0
+                      } document(s)`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
