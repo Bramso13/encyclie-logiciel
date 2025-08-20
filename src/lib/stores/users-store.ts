@@ -86,8 +86,12 @@ const useUsersStore = create<UsersState>()(
       addUser: (user) =>
         set((state) => ({
           users: [user, ...state.users],
-          brokers: user.role === "BROKER" ? [user, ...state.brokers] : state.brokers,
-          underwriters: user.role === "UNDERWRITER" ? [user, ...state.underwriters] : state.underwriters,
+          brokers:
+            user.role === "BROKER" ? [user, ...state.brokers] : state.brokers,
+          underwriters:
+            user.role === "UNDERWRITER"
+              ? [user, ...state.underwriters]
+              : state.underwriters,
         })),
       updateUser: (id, updates) =>
         set((state) => ({
@@ -131,7 +135,12 @@ const useUsersStore = create<UsersState>()(
           const params = new URLSearchParams({
             page: pagination.page.toString(),
             limit: pagination.limit.toString(),
-            ...filters,
+            ...Object.fromEntries(
+              Object.entries(filters).map(([key, value]) => [
+                key,
+                String(value),
+              ])
+            ),
           });
 
           const response = await fetch(`/api/users?${params}`);
@@ -203,7 +212,7 @@ const useUsersStore = create<UsersState>()(
       toggleUserStatus: async (id: string) => {
         const { setLoading, setError, updateUser, users } = get();
         const user = users.find((u) => u.id === id);
-        
+
         if (!user) return;
 
         setLoading(true);

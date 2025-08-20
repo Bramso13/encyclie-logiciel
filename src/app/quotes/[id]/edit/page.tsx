@@ -7,7 +7,7 @@ import useProductsStore, {
   InsuranceProduct,
 } from "@/lib/stores/products-store";
 
-export default function EditQuotePage({}: EditQuotePageProps) {
+export default function EditQuotePage() {
   const params = useParams();
   const router = useRouter();
   const quoteId = params.id as string;
