@@ -7,36 +7,56 @@ import MultiSelect from "./MultiSelect";
 
 // Composant pour la saisie des activités avec pourcentages
 interface ActivityBreakdownFieldProps {
-  options: Array<{label: string; value: string}>;
-  value: Array<{code: string; caSharePercent: number}>;
-  onChange: (value: Array<{code: string; caSharePercent: number}>) => void;
+  options: Array<{ label: string; value: string }>;
+  value: Array<{ code: string; caSharePercent: number }>;
+  onChange: (value: Array<{ code: string; caSharePercent: number }>) => void;
   error?: string;
 }
 
-function ActivityBreakdownField({ options, value, onChange, error }: ActivityBreakdownFieldProps) {
+function ActivityBreakdownField({
+  options,
+  value,
+  onChange,
+  error,
+}: ActivityBreakdownFieldProps) {
   const handleActivityToggle = (code: string) => {
-    const exists = value.find(v => v.code === code);
+    const exists = value.find((v) => v.code === code);
     if (exists) {
-      onChange(value.filter(v => v.code !== code));
+      onChange(value.filter((v) => v.code !== code));
     } else {
       onChange([...value, { code, caSharePercent: 0 }]);
     }
   };
 
   const handlePercentageChange = (code: string, percent: number) => {
-    onChange(value.map(v => 
-      v.code === code ? { ...v, caSharePercent: percent } : v
-    ));
+    onChange(
+      value.map((v) =>
+        v.code === code ? { ...v, caSharePercent: percent } : v
+      )
+    );
+  };
+  // Vérifie si les 8 premières activités représentent au moins 50% du total
+  const checkMainActivitiesShare = (
+    activities: Array<{ code: string; caSharePercent: number }>
+  ) => {
+    const mainActivitiesPercent = activities
+      .filter((a) => parseInt(a.code) <= 8)
+      .reduce((sum, act) => sum + act.caSharePercent, 0);
+
+    return mainActivitiesPercent >= 50;
   };
 
   const totalPercent = value.reduce((sum, v) => sum + v.caSharePercent, 0);
 
   return (
     <div className="space-y-3">
-      {options.map(option => {
-        const selected = value.find(v => v.code === option.value);
+      {options.map((option) => {
+        const selected = value.find((v) => v.code === option.value);
         return (
-          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg">
+          <div
+            key={option.value}
+            className="flex items-center space-x-3 p-3 border rounded-lg"
+          >
             <input
               type="checkbox"
               checked={!!selected}
@@ -52,8 +72,10 @@ function ActivityBreakdownField({ options, value, onChange, error }: ActivityBre
                   type="number"
                   min="0"
                   max="100"
-                  value={selected.caSharePercent || ''}
-                  onChange={(e) => handlePercentageChange(option.value, Number(e.target.value))}
+                  value={selected.caSharePercent || ""}
+                  onChange={(e) =>
+                    handlePercentageChange(option.value, Number(e.target.value))
+                  }
                   className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="0"
                 />
@@ -63,14 +85,25 @@ function ActivityBreakdownField({ options, value, onChange, error }: ActivityBre
           </div>
         );
       })}
-      <div className={`text-sm p-2 rounded ${
-        totalPercent === 100 ? 'bg-green-50 text-green-700' : 
-        totalPercent > 100 ? 'bg-red-50 text-red-700' : 
-        'bg-yellow-50 text-yellow-700'
-      }`}>
-        Total: {totalPercent}% {totalPercent === 100 ? '✓' : 
-        totalPercent > 100 ? '(Dépasse 100%)' : 
-        '(Doit égaler 100%)'}
+      <div
+        className={`text-sm p-2 rounded ${
+          totalPercent === 100 && checkMainActivitiesShare(value)
+            ? "bg-green-50 text-green-700"
+            : totalPercent > 100
+            ? "bg-red-50 text-red-700"
+            : "bg-yellow-50 text-yellow-700"
+        }`}
+      >
+        Total: {totalPercent}%{" "}
+        {totalPercent === 100 && checkMainActivitiesShare(value)
+          ? "✓ Répartition valide"
+          : totalPercent > 100
+          ? "La somme des pourcentages ne peut pas dépasser 100%"
+          : totalPercent < 100
+          ? "La somme des pourcentages doit atteindre 100%"
+          : !checkMainActivitiesShare(value)
+          ? "Les activités 1 à 8 doivent représenter au moins 50% du total"
+          : ""}
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
@@ -79,16 +112,32 @@ function ActivityBreakdownField({ options, value, onChange, error }: ActivityBre
 
 // Composant pour l'historique des sinistres
 interface LossHistoryFieldProps {
-  fields: Array<{name: string; label: string; type: string; min?: number; max?: number}>;
+  fields: Array<{
+    name: string;
+    label: string;
+    type: string;
+    min?: number;
+    max?: number;
+  }>;
   maxEntries?: number;
-  value: Array<{year: number; numClaims: number; totalCost: number}>;
-  onChange: (value: Array<{year: number; numClaims: number; totalCost: number}>) => void;
+  value: Array<{ year: number; numClaims: number; totalCost: number }>;
+  onChange: (
+    value: Array<{ year: number; numClaims: number; totalCost: number }>
+  ) => void;
 }
 
-function LossHistoryField({ fields, maxEntries = 5, value, onChange }: LossHistoryFieldProps) {
+function LossHistoryField({
+  fields,
+  maxEntries = 5,
+  value,
+  onChange,
+}: LossHistoryFieldProps) {
   const addEntry = () => {
     if (value.length < maxEntries) {
-      onChange([...value, { year: new Date().getFullYear(), numClaims: 1, totalCost: 0 }]);
+      onChange([
+        ...value,
+        { year: new Date().getFullYear(), numClaims: 1, totalCost: 0 },
+      ]);
     }
   };
 
@@ -97,15 +146,20 @@ function LossHistoryField({ fields, maxEntries = 5, value, onChange }: LossHisto
   };
 
   const updateEntry = (index: number, field: string, newValue: number) => {
-    onChange(value.map((entry, i) => 
-      i === index ? { ...entry, [field]: newValue } : entry
-    ));
+    onChange(
+      value.map((entry, i) =>
+        i === index ? { ...entry, [field]: newValue } : entry
+      )
+    );
   };
 
   return (
     <div className="space-y-3">
       {value.map((entry, index) => (
-        <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg bg-gray-50">
+        <div
+          key={index}
+          className="flex items-center space-x-3 p-3 border rounded-lg bg-gray-50"
+        >
           <div className="flex-1 grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Année</label>
@@ -114,7 +168,9 @@ function LossHistoryField({ fields, maxEntries = 5, value, onChange }: LossHisto
                 min="2020"
                 max="2025"
                 value={entry.year}
-                onChange={(e) => updateEntry(index, 'year', Number(e.target.value))}
+                onChange={(e) =>
+                  updateEntry(index, "year", Number(e.target.value))
+                }
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -125,17 +181,23 @@ function LossHistoryField({ fields, maxEntries = 5, value, onChange }: LossHisto
                 min="1"
                 max="10"
                 value={entry.numClaims}
-                onChange={(e) => updateEntry(index, 'numClaims', Number(e.target.value))}
+                onChange={(e) =>
+                  updateEntry(index, "numClaims", Number(e.target.value))
+                }
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Coût (€)</label>
+              <label className="block text-xs text-gray-500 mb-1">
+                Coût (€)
+              </label>
               <input
                 type="number"
                 min="0"
                 value={entry.totalCost}
-                onChange={(e) => updateEntry(index, 'totalCost', Number(e.target.value))}
+                onChange={(e) =>
+                  updateEntry(index, "totalCost", Number(e.target.value))
+                }
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -185,6 +247,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     address: "",
     legalForm: "",
     creationDate: "",
+    directorName: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -207,6 +270,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     setCompanyData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
+      console.log("errors company", errors);
     }
   };
 
@@ -214,6 +278,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     setFormData((prev) => ({ ...prev, [fieldName]: value }));
     if (errors[fieldName]) {
       setErrors((prev) => ({ ...prev, [fieldName]: "" }));
+      console.log("errors form", errors);
     }
   };
 
@@ -283,38 +348,63 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
 
             // Validate activity_breakdown
             if (fieldConfig.type === "activity_breakdown") {
-              const activities = formData[fieldName] as Array<{code: string; caSharePercent: number}>;
+              const activities = formData[fieldName] as Array<{
+                code: string;
+                caSharePercent: number;
+              }>;
               if (Array.isArray(activities)) {
                 if (activities.length === 0) {
-                  newErrors[fieldName] = "Vous devez sélectionner au moins une activité";
+                  newErrors[fieldName] =
+                    "Vous devez sélectionner au moins une activité";
                 } else {
-                  const totalPercent = activities.reduce((sum, activity) => sum + activity.caSharePercent, 0);
+                  const totalPercent = activities.reduce(
+                    (sum, activity) => sum + activity.caSharePercent,
+                    0
+                  );
                   if (totalPercent !== 100) {
-                    newErrors[fieldName] = `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
+                    newErrors[
+                      fieldName
+                    ] = `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
                   }
                   // Check individual activity percentages
                   activities.forEach((activity, index) => {
                     if (activity.caSharePercent <= 0) {
-                      newErrors[fieldName] = "Tous les pourcentages doivent être supérieurs à 0%";
+                      newErrors[fieldName] =
+                        "Tous les pourcentages doivent être supérieurs à 0%";
                     }
                   });
                 }
               }
             }
 
+            // Validate creationDate
+            if (fieldConfig.type === "date") {
+              const creationDate = formData[fieldName];
+              // if (creationDate > new Date().toISOString().split("T")[0]) {
+              //   newErrors[fieldName] =
+              //     "La date de création ne peut pas être dans le futur";
+              // }
+            }
             // Validate loss_history
             if (fieldConfig.type === "loss_history") {
-              const lossHistory = formData[fieldName] as Array<{year: number; numClaims: number; totalCost: number}>;
+              const lossHistory = formData[fieldName] as Array<{
+                year: number;
+                numClaims: number;
+                totalCost: number;
+              }>;
               if (Array.isArray(lossHistory) && lossHistory.length > 0) {
                 lossHistory.forEach((entry, index) => {
                   if (entry.year < 2020 || entry.year > 2025) {
-                    newErrors[fieldName] = "Les années doivent être comprises entre 2020 et 2025";
+                    newErrors[fieldName] =
+                      "Les années doivent être comprises entre 2020 et 2025";
                   }
                   if (entry.numClaims < 1) {
-                    newErrors[fieldName] = "Le nombre de sinistres doit être au minimum de 1";
+                    newErrors[fieldName] =
+                      "Le nombre de sinistres doit être au minimum de 1";
                   }
                   if (entry.totalCost < 0) {
-                    newErrors[fieldName] = "Le coût total ne peut pas être négatif";
+                    newErrors[fieldName] =
+                      "Le coût total ne peut pas être négatif";
                   }
                 });
               }
@@ -325,6 +415,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     }
 
     setErrors(newErrors);
+    console.log("errors validateForm", errors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -351,19 +442,29 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
         if (formData[fieldName] && fieldConfig) {
           // Validate activity_breakdown
           if (fieldConfig.type === "activity_breakdown") {
-            const activities = formData[fieldName] as Array<{code: string; caSharePercent: number}>;
+            const activities = formData[fieldName] as Array<{
+              code: string;
+              caSharePercent: number;
+            }>;
             if (Array.isArray(activities)) {
               if (activities.length === 0) {
-                newErrors[fieldName] = "Vous devez sélectionner au moins une activité";
+                newErrors[fieldName] =
+                  "Vous devez sélectionner au moins une activité";
               } else {
-                const totalPercent = activities.reduce((sum, activity) => sum + activity.caSharePercent, 0);
+                const totalPercent = activities.reduce(
+                  (sum, activity) => sum + activity.caSharePercent,
+                  0
+                );
                 if (totalPercent !== 100) {
-                  newErrors[fieldName] = `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
+                  newErrors[
+                    fieldName
+                  ] = `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
                 }
                 // Check individual activity percentages
                 activities.forEach((activity, index) => {
                   if (activity.caSharePercent <= 0) {
-                    newErrors[fieldName] = "Tous les pourcentages doivent être supérieurs à 0%";
+                    newErrors[fieldName] =
+                      "Tous les pourcentages doivent être supérieurs à 0%";
                   }
                 });
               }
@@ -372,17 +473,24 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
 
           // Validate loss_history
           if (fieldConfig.type === "loss_history") {
-            const lossHistory = formData[fieldName] as Array<{year: number; numClaims: number; totalCost: number}>;
+            const lossHistory = formData[fieldName] as Array<{
+              year: number;
+              numClaims: number;
+              totalCost: number;
+            }>;
             if (Array.isArray(lossHistory) && lossHistory.length > 0) {
               lossHistory.forEach((entry, index) => {
                 if (entry.year < 2020 || entry.year > 2025) {
-                  newErrors[fieldName] = "Les années doivent être comprises entre 2020 et 2025";
+                  newErrors[fieldName] =
+                    "Les années doivent être comprises entre 2020 et 2025";
                 }
                 if (entry.numClaims < 1) {
-                  newErrors[fieldName] = "Le nombre de sinistres doit être au minimum de 1";
+                  newErrors[fieldName] =
+                    "Le nombre de sinistres doit être au minimum de 1";
                 }
                 if (entry.totalCost < 0) {
-                  newErrors[fieldName] = "Le coût total ne peut pas être négatif";
+                  newErrors[fieldName] =
+                    "Le coût total ne peut pas être négatif";
                 }
               });
             }
@@ -407,6 +515,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     }
 
     setErrors(newErrors);
+    console.log("errors validateCurrentStep", errors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -425,65 +534,6 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     if (completedSteps.has(stepIndex) || stepIndex <= currentStep) {
       setCurrentStep(stepIndex);
     }
-  };
-
-  const isFormComplete = () => {
-    // Validate product selection
-    if (!selectedProductId) return false;
-
-    // Validate company data
-    if (
-      !companyData.companyName.trim() ||
-      !companyData.siret.trim() ||
-      !companyData.address.trim()
-    ) {
-      return false;
-    }
-
-    // Validate SIRET length
-    if (companyData.siret.length !== 14) return false;
-
-    // Validate dynamic form fields based on product configuration
-    if (selectedProduct?.formFields) {
-      const hasRequiredFields = Object.entries(
-        selectedProduct.formFields
-      ).every(([fieldName, fieldConfig]: [string, any]) => {
-        if (fieldConfig.required) {
-          const fieldValue = formData[fieldName];
-          
-          // Basic required field check
-          if (!fieldValue || fieldValue === "") return false;
-          
-          // Special validation for activity_breakdown
-          if (fieldConfig.type === "activity_breakdown") {
-            const activities = fieldValue as Array<{code: string; caSharePercent: number}>;
-            if (!Array.isArray(activities) || activities.length === 0) return false;
-            const totalPercent = activities.reduce((sum, activity) => sum + activity.caSharePercent, 0);
-            if (totalPercent !== 100) return false;
-            // Check all percentages are > 0
-            if (activities.some(activity => activity.caSharePercent <= 0)) return false;
-          }
-          
-          // Special validation for loss_history (if required)
-          if (fieldConfig.type === "loss_history") {
-            const lossHistory = fieldValue as Array<{year: number; numClaims: number; totalCost: number}>;
-            if (Array.isArray(lossHistory) && lossHistory.length > 0) {
-              // Validate each entry
-              const hasInvalidEntry = lossHistory.some(entry => 
-                entry.year < 2020 || entry.year > 2025 || 
-                entry.numClaims < 1 || 
-                entry.totalCost < 0
-              );
-              if (hasInvalidEntry) return false;
-            }
-          }
-        }
-        return true;
-      });
-      if (!hasRequiredFields) return false;
-    }
-
-    return true;
   };
 
   const handleSaveDraft = async () => {
@@ -560,6 +610,8 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             {...commonProps}
             rows={fieldConfig.rows || 3}
             placeholder={fieldConfig.placeholder}
+            value={formData[fieldName] || ""}
+            onChange={(e) => handleFormDataChange(fieldName, e.target.value)}
           />
         );
 
@@ -572,6 +624,8 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             max={fieldConfig.max}
             step={fieldConfig.step}
             placeholder={fieldConfig.placeholder}
+            value={formData[fieldName] || ""}
+            onChange={(e) => handleFormDataChange(fieldName, e.target.value)}
           />
         );
 
@@ -582,6 +636,8 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="date"
             min={fieldConfig.min}
             max={fieldConfig.max}
+            value={formData[fieldName] || ""}
+            onChange={(e) => handleFormDataChange(fieldName, e.target.value)}
           />
         );
 
@@ -847,6 +903,30 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
 
         <div>
           <label
+            htmlFor="companyName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Nom du dirigeant *
+          </label>
+          <input
+            type="text"
+            id="directorName"
+            value={companyData.directorName}
+            onChange={(e) => {
+              handleCompanyDataChange("directorName", e.target.value);
+              handleFormDataChange("directorName", e.target.value);
+            }}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.directorName ? "border-red-300" : "border-gray-300"
+            }`}
+          />
+          {errors.directorName && (
+            <p className="mt-1 text-sm text-red-600">{errors.directorName}</p>
+          )}
+        </div>
+
+        <div>
+          <label
             htmlFor="siret"
             className="block text-sm font-medium text-gray-700"
           >
@@ -920,6 +1000,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             <option value="EURL">EURL</option>
             <option value="SNC">SNC</option>
             <option value="AUTO_ENTREPRENEUR">Auto-entrepreneur</option>
+            <option value="EXPL_INDIVIDUELLE">Exploitation individuelle</option>
           </select>
         </div>
 
@@ -935,8 +1016,8 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             id="creationDate"
             value={companyData.creationDate}
             onChange={(e) => {
-              handleCompanyDataChange("companyCreationDate", e.target.value);
-              handleFormDataChange("companyCreationDate", e.target.value);
+              handleCompanyDataChange("creationDate", e.target.value);
+              handleFormDataChange("creationDate", e.target.value);
             }}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />

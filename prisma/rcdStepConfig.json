@@ -1,0 +1,44 @@
+{
+  "steps": [
+    {
+      "title": "Informations société et dirigeant",
+      "fields": ["companyCreationDate", "dateDeffet", "mailAdress", "phoneNumber"],
+      "description": "Renseignez les informations de base de votre société et du dirigeant",
+      "includeCompanyInfo": true
+    },
+    {
+      "title": "Activité professionnelle",
+      "fields": [
+        "activities",
+        "chiffreAffaires",
+        "nombreSalaries",
+        "territory"
+      ],
+      "description": "Précisez votre secteur d'activité et votre chiffre d'affaires"
+    },
+    {
+      "title": "Expérience et coefficients",
+      "fields": [
+        "experienceMetier",
+        "subContractingPercent",
+        "tradingPercent",
+        "hasQualification"
+      ],
+      "description": "Informations sur votre expérience et les coefficients applicables"
+    },
+    {
+      "title": "Historique et garanties",
+      "fields": [
+        "previousRcdStatus",
+        "previousResiliationDate",
+        "previousInsurer",
+        "resiliationReason",
+        "lossHistory",
+        "periodicity",
+        "includePJ"
+
+      ],
+      "description": "Votre historique d'assurance et les garanties souhaitées"
+    }
+  ]
+}

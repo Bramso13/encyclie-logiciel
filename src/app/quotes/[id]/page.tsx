@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
+import { authClient } from "@/lib/auth-client";
 
 interface CompanyData {
   siret: string;
@@ -82,6 +83,7 @@ interface CalculationResult {
 export default function QuoteDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = authClient.useSession();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [activeTab, setActiveTab] = useState("form-data");
   const [calculationResult, setCalculationResult] =
@@ -583,7 +585,13 @@ export default function QuoteDetailPage() {
                       {!calculationResult.refus && (
                         <>
                           <div className="text-3xl font-bold">
-                            {calculationResult.PrimeHT.toLocaleString("fr-FR")}{" "}
+                            {(
+                              calculationResult.PrimeHT *
+                              (1 +
+                                Object.values(
+                                  calculationResult.majorations
+                                ).reduce((sum, val) => sum + (val || 0), 0))
+                            ).toLocaleString("fr-FR")}{" "}
                             €
                           </div>
                           <div className="text-indigo-200 text-sm">
@@ -600,130 +608,53 @@ export default function QuoteDetailPage() {
                   </div>
                 </div>
 
-                {!calculationResult.refus && (
-                  <>
-                    {/* Grille des details */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Composition de la prime */}
-                      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            Composition de la prime
-                          </h3>
-                        </div>
-                        <div className="p-6 space-y-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">
-                              Prime minimum HT
-                            </span>
-                            <span className="font-semibold">
-                              {calculationResult.PminiHT.toLocaleString(
-                                "fr-FR"
-                              )}{" "}
-                              €
-                            </span>
+                {!calculationResult.refus &&
+                  session?.user?.role === "ADMIN" && (
+                    <>
+                      {/* Grille des details */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Composition de la prime */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                          <div className="px-6 py-4 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Composition de la prime
+                            </h3>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Prime au-delà</span>
-                            <span className="font-semibold">
-                              {calculationResult.returnTab
-                                .reduce((sum, act) => sum + act.Prime100Min, 0)
-                                .toLocaleString("fr-FR")}{" "}
-                              €
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Prime HT</span>
-                            <span className="font-semibold">
-                              {calculationResult.PrimeHT} €
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">
-                              Prime HT + majorations (
-                              {Object.values(
-                                calculationResult.majorations
-                              ).reduce((sum, val) => sum + (val || 0), 0) > 0
-                                ? "+"
-                                : ""}
-                              {(
-                                Object.values(
-                                  calculationResult.majorations
-                                ).reduce((sum, val) => sum + (val || 0), 0) *
-                                100
-                              ).toFixed(1)}
-                              %)
-                            </span>
-                            <span className="font-semibold">
-                              {(
-                                calculationResult.PrimeHT *
-                                (1 +
-                                  Object.values(
-                                    calculationResult.majorations
-                                  ).reduce((sum, val) => sum + (val || 0), 0))
-                              ).toLocaleString("fr-FR")}{" "}
-                              €
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Majorations appliquées */}
-                      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            Majorations appliquées
-                          </h3>
-                        </div>
-                        <div className="p-6 space-y-4">
-                          {Object.entries(calculationResult.majorations).map(
-                            ([key, value]) => (
-                              <div
-                                key={key}
-                                className="flex justify-between items-center"
-                              >
-                                <span className="text-gray-600 capitalize">
-                                  {key
-                                    .replace(/([A-Z])/g, " $1")
-                                    .replace(/^./, (str) => str.toUpperCase())}
-                                </span>
-                                <span
-                                  className={`font-semibold ${
-                                    value < 0
-                                      ? "text-green-600"
-                                      : value > 0
-                                      ? "text-red-600"
-                                      : "text-gray-600"
-                                  }`}
-                                >
-                                  {value > 0 ? "+" : ""}
-                                  {(value * 100).toFixed(1)}%
-                                </span>
-                              </div>
-                            )
-                          )}
-                          <div className="border-t pt-4">
-                            <div className="flex justify-between items-center font-bold">
-                              <span className="text-gray-900">
-                                Total majorations
+                          <div className="p-6 space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600">
+                                Prime minimum HT
                               </span>
-                              <span
-                                className={`text-lg ${
-                                  Object.values(
-                                    calculationResult.majorations
-                                  ).reduce((sum, val) => sum + (val || 0), 0) <
-                                  0
-                                    ? "text-green-600"
-                                    : Object.values(
-                                        calculationResult.majorations
-                                      ).reduce(
-                                        (sum, val) => sum + (val || 0),
-                                        0
-                                      ) > 0
-                                    ? "text-red-600"
-                                    : "text-gray-600"
-                                }`}
-                              >
+                              <span className="font-semibold">
+                                {calculationResult.PminiHT.toLocaleString(
+                                  "fr-FR"
+                                )}{" "}
+                                €
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600">
+                                Prime au-delà
+                              </span>
+                              <span className="font-semibold">
+                                {calculationResult.returnTab
+                                  .reduce(
+                                    (sum, act) => sum + act.Prime100Min,
+                                    0
+                                  )
+                                  .toLocaleString("fr-FR")}{" "}
+                                €
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600">Prime HT</span>
+                              <span className="font-semibold">
+                                {calculationResult.PrimeHT} €
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600">
+                                Prime HT + majorations (
                                 {Object.values(
                                   calculationResult.majorations
                                 ).reduce((sum, val) => sum + (val || 0), 0) > 0
@@ -735,19 +666,110 @@ export default function QuoteDetailPage() {
                                   ).reduce((sum, val) => sum + (val || 0), 0) *
                                   100
                                 ).toFixed(1)}
-                                %
+                                %)
+                              </span>
+                              <span className="font-semibold">
+                                {(
+                                  calculationResult.PrimeHT *
+                                  (1 +
+                                    Object.values(
+                                      calculationResult.majorations
+                                    ).reduce((sum, val) => sum + (val || 0), 0))
+                                ).toLocaleString("fr-FR")}{" "}
+                                €
                               </span>
                             </div>
                           </div>
                         </div>
+
+                        {/* Majorations appliquées */}
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                          <div className="px-6 py-4 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Majorations appliquées
+                            </h3>
+                          </div>
+                          <div className="p-6 space-y-4">
+                            {Object.entries(calculationResult.majorations).map(
+                              ([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="flex justify-between items-center"
+                                >
+                                  <span className="text-gray-600 capitalize">
+                                    {key
+                                      .replace(/([A-Z])/g, " $1")
+                                      .replace(/^./, (str) =>
+                                        str.toUpperCase()
+                                      )}
+                                  </span>
+                                  <span
+                                    className={`font-semibold ${
+                                      value < 0
+                                        ? "text-green-600"
+                                        : value > 0
+                                        ? "text-red-600"
+                                        : "text-gray-600"
+                                    }`}
+                                  >
+                                    {value > 0 ? "+" : ""}
+                                    {(value * 100).toFixed(1)}%
+                                  </span>
+                                </div>
+                              )
+                            )}
+                            <div className="border-t pt-4">
+                              <div className="flex justify-between items-center font-bold">
+                                <span className="text-gray-900">
+                                  Total majorations
+                                </span>
+                                <span
+                                  className={`text-lg ${
+                                    Object.values(
+                                      calculationResult.majorations
+                                    ).reduce(
+                                      (sum, val) => sum + (val || 0),
+                                      0
+                                    ) < 0
+                                      ? "text-green-600"
+                                      : Object.values(
+                                          calculationResult.majorations
+                                        ).reduce(
+                                          (sum, val) => sum + (val || 0),
+                                          0
+                                        ) > 0
+                                      ? "text-red-600"
+                                      : "text-gray-600"
+                                  }`}
+                                >
+                                  {Object.values(
+                                    calculationResult.majorations
+                                  ).reduce((sum, val) => sum + (val || 0), 0) >
+                                  0
+                                    ? "+"
+                                    : ""}
+                                  {(
+                                    Object.values(
+                                      calculationResult.majorations
+                                    ).reduce(
+                                      (sum, val) => sum + (val || 0),
+                                      0
+                                    ) * 100
+                                  ).toFixed(1)}
+                                  %
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
 
                 {/* Detail par activite */}
                 {!calculationResult.refus &&
-                  calculationResult.returnTab.length > 0 && (
+                  calculationResult.returnTab.length > 0 &&
+                  session?.user?.role === "ADMIN" && (
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                       <div className="px-6 py-4 border-b border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-900">

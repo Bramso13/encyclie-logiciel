@@ -1,0 +1,284 @@
+{
+  "mailAdress": {
+    "help": "Adresse email du dirigeant",
+    "type": "email",
+    "label": "Adresse email",
+    "required": true
+  },
+  "phoneNumber": {
+    "help": "Numéro de téléphone du dirigeant",
+    "type": "tel",
+    "label": "Numéro de téléphone",
+    "required": true
+  },
+  "includePJ": {
+    "help": "Inclure la protection juridique - Fortement recommandé",
+    "type": "checkbox",
+    "label": "Protection juridique (106€ HT/an)",
+    "default": true,
+    "required": false
+  },
+  "dateDeffet": {
+    "help": "Date de prise d'effet souhaitée pour le contrat",
+    "type": "date",
+    "label": "Date d'effet souhaitée",
+    "required": true
+  },
+  "territory": {
+    "help": "Zone géographique principale d'exercice de votre activité",
+    "type": "select",
+    "label": "Territoire d'exercice",
+    "options": [
+      { "label": "La Réunion", "value": "REUNION" },
+      { "label": "Mayotte", "value": "MAYOTTE" },
+      { "label": "Martinique", "value": "MARTINIQUE" },
+      { "label": "Guadeloupe", "value": "GUADELOUPE" },
+      { "label": "Guyane", "value": "GUYANE" },
+      { "label": "Saint-Martin", "value": "ST-MARTIN" },
+      { "label": "Saint-Barthélemy", "value": "ST-BARTH" }
+    ],
+    "required": true
+  },
+  "activities": {
+    "help": "Sélectionnez vos activités et indiquez la part du CA pour chaque activité (total = 100%)",
+    "type": "activity_breakdown",
+    "label": "Répartition des activités par code",
+    "options": [
+      {
+        "label": "Code 1 - Voiries Réseaux Divers (VRD)",
+        "value": "1"
+      },
+      {
+        "label": "Code 2 - Maçonnerie et béton armé",
+        "value": "2"
+      },
+      {
+        "label": "Code 3 - Charpente et structure en bois",
+        "value": "3"
+      },
+      {
+        "label": "Code 4 - Charpente et structure métallique",
+        "value": "4"
+      },
+      {
+        "label": "Code 5 - Couverture",
+        "value": "5"
+      },
+      {
+        "label": "Code 6 - Menuiseries extérieures bois et PVC",
+        "value": "6"
+      },
+      {
+        "label": "Code 7 - Menuiseries extérieures métalliques",
+        "value": "7"
+      },
+      {
+        "label": "Code 8 - Bardages de façades",
+        "value": "8"
+      },
+      {
+        "label": "Code 9 - Menuiseries intérieures",
+        "value": "9"
+      },
+      {
+        "label": "Code 10 - Plâtrerie – Staff – Stuc – Gypserie",
+        "value": "10"
+      },
+      {
+        "label": "Code 11 - Serrurerie - Métallerie",
+        "value": "11"
+      },
+      {
+        "label": "Code 12 - Vitrerie - Miroiterie",
+        "value": "12"
+      },
+      {
+        "label": "Code 13 - Peinture",
+        "value": "13"
+      },
+      {
+        "label": "Code 14 - Revêtement intérieur de surfaces en matériaux souples et parquets",
+        "value": "14"
+      },
+      {
+        "label": "Code 15 - Revêtement de surfaces en matériaux durs - Chapes et sols coulés",
+        "value": "15"
+      },
+      {
+        "label": "Code 16 - Isolation thermique et acoustique",
+        "value": "16"
+      },
+      {
+        "label": "Code 17 - Plomberie",
+        "value": "17"
+      },
+      {
+        "label": "Code 18 - Installations thermiques de génie climatique",
+        "value": "18"
+      },
+      {
+        "label": "Code 19 - Installations d'aéraulique et de conditionnement d'air",
+        "value": "19"
+      },
+      {
+        "label": "Code 20 - Electricité -Télécommunications",
+        "value": "20"
+      }
+    ],
+    "required": true,
+    "validation": {
+      "rule": "percentageSum100",
+      "message": "La somme des pourcentages doit être égale à 100%"
+    },
+    "maxActivities": 3,
+    "minActivities": 1
+  },
+  "lossHistory": {
+    "help": "Déclarez vos sinistres RC Décennale des 5 dernières années",
+    "type": "loss_history",
+    "label": "Historique des sinistres",
+    "fields": [
+      {
+        "max": 2025,
+        "min": 2020,
+        "name": "year",
+        "type": "number",
+        "label": "Année"
+      },
+      {
+        "max": 10,
+        "min": 1,
+        "name": "numClaims",
+        "type": "number",
+        "label": "Nombre de sinistres"
+      },
+      {
+        "min": 0,
+        "name": "totalCost",
+        "type": "number",
+        "label": "Coût total (€)"
+      }
+    ],
+    "required": false,
+    "maxEntries": 5
+  },
+  "periodicity": {
+    "help": "Fréquence de paiement des primes",
+    "type": "select",
+    "label": "Périodicité de paiement",
+    "default": "annuel",
+    "options": [
+      { "label": "Paiement annuel (1 échéance)", "value": "annuel" },
+      { "label": "Paiement semestriel (2 échéances)", "value": "semestriel" },
+      { "label": "Paiement trimestriel (4 échéances)", "value": "trimestriel" },
+      { "label": "Paiement mensuel (12 échéances)", "value": "mensuel" }
+    ],
+    "required": true
+  },
+  "nombreSalaries": {
+    "max": 8,
+    "min": 0,
+    "help": "Effectif en équivalents temps plein",
+    "type": "number",
+    "label": "Effectifs (Équivalents Temps Plein)",
+    "required": true
+  },
+  "tradingPercent": {
+    "max": 15,
+    "min": 0,
+    "help": "Part de votre activité de négoce/revente (maximum 15%)",
+    "type": "number",
+    "label": "Pourcentage de négoce (%)",
+    "default": 0,
+    "required": true
+  },
+  "chiffreAffaires": {
+    "max": 1000000,
+    "min": 0,
+    "help": "Chiffre d'affaires annuel déclaré ou prévisionnel",
+    "type": "number",
+    "label": "Chiffre d'affaires annuel déclaré (€)",
+    "required": true
+  },
+  "experienceMetier": {
+    "max": 50,
+    "min": 1,
+    "help": "Nombre d'années d'expérience du dirigeant principal dans le métier (minimum 1 an)",
+    "type": "number",
+    "label": "Années d'expérience",
+    "required": true,
+    "validation": {
+      "rule": "minValue",
+      "value": 1,
+      "message": "L'expérience minimale requise est de 1 an"
+    }
+  },
+  "hasQualification": {
+    "help": "Possédez-vous une qualification QUALIBAT ou QUALIFELEC ? (Réduction de -5%)",
+    "type": "checkbox",
+    "label": "Qualification QUALIBAT/QUALIFELEC",
+    "default": false,
+    "required": false
+  },
+  "previousRcdStatus": {
+    "help": "Situation concernant votre précédente assurance RC Décennale",
+    "type": "select",
+    "label": "Antécédents RC Décennale",
+    "options": [
+      {
+        "label": "Contrat en cours chez un autre assureur",
+        "value": "EN_COURS"
+      },
+      { "label": "Contrat résilié/interrompu", "value": "RESILIE" },
+      { "label": "Jamais assuré en RC Décennale", "value": "JAMAIS" }
+    ],
+    "required": true
+  },
+
+  "subContractingPercent": {
+    "max": 15,
+    "min": 0,
+    "help": "Part de votre activité réalisée en sous-traitance (maximum 15%)",
+    "type": "number",
+    "label": "Pourcentage de sous-traitance (%)",
+    "default": 0,
+    "required": true
+  },
+  "previousResiliationDate": {
+    "help": "Date de résiliation de votre précédent contrat",
+    "type": "date",
+    "label": "Date de résiliation précédente",
+    "required": false,
+    "conditional": { "field": "previousRcdStatus", "value": "RESILIE" }
+  },
+  "previousInsurer": {
+    "help": "Nom de votre précédent assureur",
+    "type": "select",
+    "label": "Précédent assureur",
+    "options": [
+      { "label": "AXA", "value": "AXA" },
+      { "label": "MAAF", "value": "MAAF" },
+      { "label": "MMA", "value": "MMA" },
+      { "label": "ALLIANZ", "value": "ALLIANZ" },
+      { "label": "GENERALI", "value": "GENERALI" },
+      { "label": "SMA BTP", "value": "SMA_BTP" },
+      { "label": "Autre", "value": "AUTRE" }
+    ],
+    "required": false,
+    "conditional": { "field": "previousRcdStatus", "value": "RESILIE" }
+  },
+  "resiliationReason": {
+    "help": "Motif de la résiliation de votre précédent contrat",
+    "type": "select",
+    "label": "Motif de résiliation",
+    "options": [
+      { "label": "Non paiement des cotisations", "value": "NON_PAIEMENT" },
+      { "label": "Sinistralité", "value": "SINISTRALITE" },
+      { "label": "Cessation d'activité", "value": "CESSATION" },
+      { "label": "A mon initiative", "value": "INITIATIVE_ASSURE" },
+      { "label": "Autre", "value": "AUTRE" }
+    ],
+    "required": false,
+    "conditional": { "field": "previousRcdStatus", "value": "RESILIE" }
+  }
+}
