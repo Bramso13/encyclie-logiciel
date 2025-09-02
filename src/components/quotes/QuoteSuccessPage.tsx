@@ -1,6 +1,6 @@
 "use client";
 
-import { calculateRcdPremium } from "@/lib/tarificateurs/rcd";
+import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
 import { useState, useEffect } from "react";
 
 interface QuoteSuccessPageProps {
@@ -24,96 +24,163 @@ interface QuoteSuccessPageProps {
   onBackToDashboard: () => void;
 }
 
-export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSuccessPageProps) {
-  const [calculatedPremium, setCalculatedPremium] = useState<number | null>(null);
+export default function QuoteSuccessPage({
+  quote,
+  onBackToDashboard,
+}: QuoteSuccessPageProps) {
+  const [calculatedPremium, setCalculatedPremium] = useState<number | null>(
+    null
+  );
   const [premiumDetails, setPremiumDetails] = useState<any>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
 
   useEffect(() => {
     // Only calculate for RCD products with formData
-    if (quote.product.code === 'RCD' && quote.formData) {
+    if (quote.formData) {
       try {
-        console.log('FormData reçu:', quote.formData);
-        
-        // Vérification des valeurs obligatoires
+        console.log("=== DEBUG CALCUL RCD SUCCESS PAGE ===");
+        console.log("FormData reçu:", quote.formData);
+        console.log("CompanyData reçu:", quote.companyData);
+
+        // Validation des données requises (même logique que page.tsx)
+        const validationErrors: string[] = [];
+
         if (!quote.formData.chiffreAffaires) {
-          throw new Error('Chiffre d\'affaires manquant');
-        }
-        if (!quote.formData.nombreSalaries && quote.formData.nombreSalaries !== 0) {
-          throw new Error('Nombre de salariés manquant');
-        }
-        if (!quote.formData.activities || !Array.isArray(quote.formData.activities) || quote.formData.activities.length === 0) {
-          throw new Error('Activités manquantes');
-        }
-        if (!quote.formData.territory) {
-          throw new Error('Territoire manquant');
-        }
-        if (!quote.formData.experienceMetier) {
-          throw new Error('Expérience métier manquante');
-        }
-        if (!quote.formData.dateEffetSouhaitee) {
-          throw new Error('Date d\'effet manquante');
-        }
-
-        // Tables de données pour le calcul RCD
-        const tables = {
-          actiscorByCode: {
-            "2": { baseRate: 0.0407, reducAt500k: 0.88, thresholdStart: 250000, reducAt1M: 0.80 },
-            "11": { baseRate: 0.0350, reducAt500k: 0.85, thresholdStart: 300000, reducAt1M: 0.75 },
-            "13": { baseRate: 0.0290, reducAt500k: 0.82, thresholdStart: 200000, reducAt1M: 0.72 }
-          },
-          taxByZone: {
-            REUNION: 0.045,
-            MAYOTTE: 0.045,
-            MARTINIQUE: 0.045,
-            GUADELOUPE: 0.045,
-            GUYANE: 0.045,
-            "ST-MARTIN": 0.045,
-            "ST-BARTH": 0.045
-          },
-          fraisGestionRate: 0.03,
-          echeanceUnitCost: 15,
-          periodicitySplits: { annuel: 1, semestriel: 2, trimestriel: 4, mensuel: 12 },
-          pminiPlancher: 2000,
-          plafondPmini: 70000,
-          plafondCA: 1000000,
-          pjEnabledByDefault: true
-        };
-
-        // Paramètres du calcul basés sur formData - valeurs exactes vérifiées
-        const params = {
-          caDeclared: quote.formData.chiffreAffaires,
-          headcountETP: quote.formData.nombreSalaries,
-          activities: quote.formData.activities,
-          territory: quote.formData.territory,
-          subContractingPercent: quote.formData.subContractingPercent ? quote.formData.subContractingPercent : 0,
-          tradingPercent: quote.formData.tradingPercent ? quote.formData.tradingPercent : 0,
-          tables,
-          coeff: {
-            hasQualification: !!quote.formData.hasQualification,
-            creationDateISO: quote.formData.companyCreationDate,
-            yearsExperience: quote.formData.experienceMetier,
-            previousRcdStatus: quote.formData.previousRcdStatus,
-            previousResiliationDate: quote.formData.previousResiliationDate,
-            lossHistory: quote.formData.lossHistory ? quote.formData.lossHistory : []
-          },
-          schedule: {
-            effectiveDateISO: quote.formData.dateEffetSouhaitee,
-            periodicity: quote.formData.periodicity,
-            includePJ: quote.formData.includePJ !== false
+          validationErrors.push("chiffreAffaires manquant");
+        } else {
+          const ca = Number(quote.formData.chiffreAffaires);
+          if (isNaN(ca) || ca <= 0) {
+            validationErrors.push(
+              "chiffreAffaires invalide: " + quote.formData.chiffreAffaires
+            );
           }
+        }
+
+        if (!quote.formData.nombreSalaries) {
+          validationErrors.push("nombreSalaries manquant");
+        } else {
+          const etp = Number(quote.formData.nombreSalaries);
+          if (isNaN(etp) || etp <= 0) {
+            validationErrors.push(
+              "nombreSalaries invalide: " + quote.formData.nombreSalaries
+            );
+          }
+        }
+
+        if (
+          !quote.formData.activities ||
+          !Array.isArray(quote.formData.activities)
+        ) {
+          validationErrors.push("activities manquant ou invalide");
+        } else if (quote.formData.activities.length === 0) {
+          validationErrors.push("aucune activite selectionnee");
+        }
+
+        if (!quote.formData.experienceMetier) {
+          validationErrors.push("experienceMetier manquant");
+        } else {
+          const exp = Number(quote.formData.experienceMetier);
+          if (isNaN(exp) || exp < 0) {
+            validationErrors.push(
+              "experienceMetier invalide: " + quote.formData.experienceMetier
+            );
+          }
+        }
+
+        // Validation de la date de création
+        const creationDate =
+          quote.formData.companyCreationDate ||
+          (quote.companyData as any).creationDate;
+        if (!creationDate) {
+          validationErrors.push("companyCreationDate manquante");
+        }
+
+        if (validationErrors.length > 0) {
+          throw new Error("Données manquantes: " + validationErrors.join(", "));
+        }
+
+        // Conversion des valeurs string en numbers
+        const chiffreAffaires = Number(quote.formData.chiffreAffaires);
+        const nombreSalaries = Number(quote.formData.nombreSalaries);
+        const experienceMetier = Number(quote.formData.experienceMetier);
+
+        console.log("Valeurs converties:");
+        console.log("- CA:", chiffreAffaires);
+        console.log("- ETP:", nombreSalaries);
+        console.log("- Exp:", experienceMetier);
+
+        // Mapper les activités au format attendu par calculPrimeRCD
+        const activitesFormatted = quote.formData.activities.map(
+          (activity: any) => ({
+            code: Number(activity.code),
+            caSharePercent: Number(activity.caSharePercent),
+          })
+        );
+
+        const calculParams = {
+          caDeclared: chiffreAffaires,
+          etp: nombreSalaries,
+          activites: activitesFormatted,
+          dateCreation: new Date(creationDate || "2020-01-01"),
+          tempsSansActivite12mois: Boolean(
+            quote.formData.tempsSansActivite12mois
+          ),
+          nomDeLAsurreur: quote.formData.assureurDefaillant
+            ? "Defaillant"
+            : "Non defaillant",
+          anneeExperience: experienceMetier,
+          assureurDefaillant: Boolean(quote.formData.assureurDefaillant),
+          nombreAnneeAssuranceContinue: Number(
+            quote.formData.nombreAnneeAssuranceContinue || 0
+          ),
+          qualif: Boolean(quote.formData.hasQualification),
+          ancienneAssurance: quote.formData.previousRcdStatus || "JAMAIS",
+          activiteSansEtreAssure: Boolean(
+            quote.formData.activiteSansEtreAssure
+          ),
+          experienceDirigeant: experienceMetier,
+          // Ajouter les paramètres manquants si nécessaire
+          dateEffet: quote.formData.dateEffetSouhaitee,
+          dateFinCouverturePrecedente: quote.formData.previousResiliationDate,
+          sinistresPrecedents: quote.formData.lossHistory || [],
+          tauxTI: quote.formData.tauxTI || 0,
+          coefficientAntecedent: quote.formData.coefficientAntecedent || 1,
         };
 
-        console.log('Paramètres calculés:', params);
-        const result = calculateRcdPremium(params);
-        console.log('Résultat calcul:', result);
-        
-        setCalculatedPremium(result.recapLikeExcel.ttcAnnuelAvecPJ);
+        console.log("Paramètres finaux:", calculParams);
+
+        const result = calculPrimeRCD(calculParams);
+        console.log("Résultat calcul:", result);
+
+        // Calculer la prime finale (avec majorations)
+        const majorationsTotal =
+          Object.values(result.majorations || {}).reduce(
+            (sum, val) => (sum || 0) + (Number(val) || 0),
+            0
+          ) || 0;
+        const primeFinale = (result.PrimeHT || 0) * (1 + majorationsTotal);
+
+        setCalculatedPremium(primeFinale);
         setPremiumDetails(result);
-        
       } catch (error) {
-        console.error('Erreur calcul RCD:', error);
-        setCalculationError(error instanceof Error ? error.message : 'Erreur de calcul');
+        console.error("=== ERREUR CALCUL RCD SUCCESS PAGE ===");
+        console.error("Type erreur:", typeof error);
+        console.error("Message erreur:", error);
+        console.error(
+          "Stack trace:",
+          error instanceof Error ? error.stack : "Pas de stack"
+        );
+
+        let errorMessage = "Erreur de calcul inconnue";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === "string") {
+          errorMessage = error;
+        } else {
+          errorMessage = String(error);
+        }
+
+        setCalculationError(errorMessage);
       }
     }
   }, [quote]);
@@ -122,11 +189,17 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
   const calculateEstimation = () => {
     const baseAmount = 1500;
     const companyFactor = quote.companyData.companyName.length * 10;
-    const productFactor = quote.product.name.includes('Responsabilité') ? 500 : 300;
+    const productFactor = quote.product.name.includes("Responsabilité")
+      ? 500
+      : 300;
     return Math.round((baseAmount + companyFactor + productFactor) / 100) * 100;
   };
 
-  const estimation = calculatedPremium ? calculatedPremium : (quote.estimatedPremium ? quote.estimatedPremium : calculateEstimation());
+  const estimation = calculatedPremium
+    ? calculatedPremium
+    : quote.estimatedPremium
+    ? quote.estimatedPremium
+    : calculateEstimation();
 
   return (
     <div className="space-y-6">
@@ -153,7 +226,8 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
               Devis créé avec succès !
             </h1>
             <p className="text-green-700 mt-1">
-              Votre demande de devis a été enregistrée et sera traitée dans les plus brefs délais.
+              Votre demande de devis a été enregistrée et sera traitée dans les
+              plus brefs délais.
             </p>
           </div>
         </div>
@@ -164,7 +238,7 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Détails de votre devis
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
@@ -172,25 +246,31 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
             </h3>
             <p className="text-lg font-mono text-gray-900">{quote.reference}</p>
           </div>
-          
+
           <div>
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
               Statut
             </h3>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              {quote.status === 'INCOMPLETE' ? 'En cours de traitement' : quote.status}
+              {quote.status === "INCOMPLETE"
+                ? "En cours de traitement"
+                : quote.status}
             </span>
           </div>
-          
+
           <div>
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
               Entreprise
             </h3>
-            <p className="text-lg text-gray-900">{quote.companyData.companyName}</p>
-            <p className="text-sm text-gray-600">SIRET: {quote.companyData.siret}</p>
+            <p className="text-lg text-gray-900">
+              {quote.companyData.companyName}
+            </p>
+            <p className="text-sm text-gray-600">
+              SIRET: {quote.companyData.siret}
+            </p>
             <p className="text-sm text-gray-600">{quote.companyData.address}</p>
           </div>
-          
+
           <div>
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
               Produit d'assurance
@@ -204,9 +284,9 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
       {/* Estimation */}
       <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
         <h2 className="text-xl font-semibold text-indigo-900 mb-4">
-          {premiumDetails ? 'Calcul de prime RCD' : 'Estimation préliminaire'}
+          {premiumDetails ? "Calcul de prime RCD" : "Estimation préliminaire"}
         </h2>
-        
+
         {calculationError && (
           <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
             <p className="text-sm text-red-800">
@@ -214,14 +294,15 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
             </p>
           </div>
         )}
-        
+
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-sm text-indigo-700 mb-1">
-              Prime d'assurance {premiumDetails ? 'calculée' : 'estimée'} (annuelle TTC)
+              Prime d'assurance {premiumDetails ? "calculée" : "estimée"}{" "}
+              (annuelle TTC)
             </p>
             <p className="text-3xl font-bold text-indigo-900">
-              {estimation.toLocaleString('fr-FR')} €
+              {estimation.toLocaleString("fr-FR")} €
             </p>
           </div>
           <div className="text-right">
@@ -243,62 +324,12 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
           </div>
         </div>
 
-        {premiumDetails && (
-          <div className="space-y-3">
-            {/* Détail du calcul */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-3 rounded border">
-                <h4 className="font-medium text-gray-900 mb-2">Prime de base</h4>
-                <p className="text-sm text-gray-600">RCD HT: <span className="font-medium">{premiumDetails.recapLikeExcel.baseRcdHT.toLocaleString('fr-FR')} €</span></p>
-                <p className="text-sm text-gray-600">Coefficients: <span className="font-medium">{premiumDetails.recapLikeExcel.coeffTotalPct > 0 ? '+' : ''}{premiumDetails.recapLikeExcel.coeffTotalPct}%</span></p>
-              </div>
-              
-              <div className="bg-white p-3 rounded border">
-                <h4 className="font-medium text-gray-900 mb-2">Frais et taxes</h4>
-                <p className="text-sm text-gray-600">Taxe territoriale ({premiumDetails.recapLikeExcel.taxeAssuranceTaux}%): <span className="font-medium">{premiumDetails.recapLikeExcel.taxeAssuranceMontant.toLocaleString('fr-FR')} €</span></p>
-                <p className="text-sm text-gray-600">Frais de gestion ({premiumDetails.recapLikeExcel.fraisGestionPct}%): <span className="font-medium">{premiumDetails.recapLikeExcel.fraisGestionMontant.toLocaleString('fr-FR')} €</span></p>
-                <p className="text-sm text-gray-600">Protection juridique: <span className="font-medium">{premiumDetails.recapLikeExcel.protectionJuridiqueTTC.toLocaleString('fr-FR')} €</span></p>
-              </div>
-            </div>
-            
-            {/* Activités */}
-            {premiumDetails.activityBreakdown && (
-              <div className="bg-white p-3 rounded border">
-                <h4 className="font-medium text-gray-900 mb-2">Répartition par activité</h4>
-                <div className="space-y-1">
-                  {premiumDetails.activityBreakdown.rows.map((activity: any, index: number) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>Code {activity.code} ({activity.caSharePercent}%)</span>
-                      <span>Taux appliqué: {(activity.appliedRate * 100).toFixed(3)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Échéancier */}
-            {premiumDetails.schedule && premiumDetails.schedule.length > 0 && (
-              <div className="bg-white p-3 rounded border">
-                <h4 className="font-medium text-gray-900 mb-2">Échéancier ({premiumDetails.recapLikeExcel.nbEcheances} échéance{premiumDetails.recapLikeExcel.nbEcheances > 1 ? 's' : ''})</h4>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {premiumDetails.schedule.map((echeance: any, index: number) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>{new Date(echeance.date).toLocaleDateString('fr-FR')}</span>
-                      <span className="font-medium">{echeance.totalTTC.toLocaleString('fr-FR')} € TTC</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        
         <div className="mt-4 p-3 bg-indigo-100 rounded-md">
           <p className="text-sm text-indigo-800">
-            <strong>Information :</strong> {premiumDetails ? 
-              'Ce calcul est basé sur les données saisies et les tarifs en vigueur. Le montant final pourra être ajusté après vérification des pièces justificatives.' :
-              'Cette estimation est indicative et basée sur les informations fournies. Le montant définitif sera calculé après analyse complète de votre dossier par nos experts.'
-            }
+            <strong>Information :</strong>{" "}
+            {premiumDetails
+              ? "Ce calcul est basé sur les données saisies et les tarifs en vigueur. Le montant final pourra être ajusté après vérification des pièces justificatives."
+              : "Cette estimation est indicative et basée sur les informations fournies. Le montant définitif sera calculé après analyse complète de votre dossier par nos experts."}
           </p>
         </div>
       </div>
@@ -308,7 +339,7 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Prochaines étapes
         </h2>
-        
+
         <div className="space-y-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
@@ -325,7 +356,7 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100">
@@ -337,11 +368,12 @@ export default function QuoteSuccessPage({ quote, onBackToDashboard }: QuoteSucc
                 Documents complémentaires
               </h3>
               <p className="text-sm text-gray-600">
-                Vous recevrez une notification si des documents supplémentaires sont nécessaires
+                Vous recevrez une notification si des documents supplémentaires
+                sont nécessaires
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100">
