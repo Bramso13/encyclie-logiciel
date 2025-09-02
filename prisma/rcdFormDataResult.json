@@ -1,0 +1,23 @@
+{
+  "siret": "81399383900014",
+  "address": "69 LOTISSEMENT GIBELIN 1-97351 MATOURY",
+  "includePJ": true,
+  "legalForm": "SAS",
+  "territory": "GUYANE",
+  "activities": [
+    { "code": "2", "caSharePercent": 70 },
+    { "code": "11", "caSharePercent": 30 }
+  ],
+  "companyName": "CLEAN 51",
+  "lossHistory": [{ "year": 2025, "numClaims": 1, "totalCost": 0 }],
+  "periodicity": "semestriel",
+  "nombreSalaries": "4",
+  "tradingPercent": "0",
+  "chiffreAffaires": "280000",
+  "experienceMetier": "6",
+  "previousRcdStatus": "EN_COURS",
+  "dateEffetSouhaitee": "2025-08-11",
+  "companyCreationDate": "2025-01-01",
+  "subContractingPercent": "0",
+  "previousResiliationDate": "0005-02-01"
+}

@@ -24,6 +24,8 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  brokerProfile BrokerProfile?
+
   accounts Account[]
   sessions Session[]
 
@@ -40,14 +42,24 @@ model User {
   messages Message[]
 
   // Insurance relations
-  quotes          Quote[]
-  contracts       InsuranceContract[]
-  commissions     Commission[]
-  notifications   Notification[]
-  createdProducts InsuranceProduct[] // Produits créés par les admins
-  validatedDocuments QuoteDocument[] @relation("DocumentValidator")
+  quotes             Quote[]
+  contracts          InsuranceContract[]
+  commissions        Commission[]
+  notifications      Notification[]
+  createdProducts    InsuranceProduct[] // Produits créés par les admins
+  validatedDocuments QuoteDocument[]     @relation("DocumentValidator")
+  passwordResets     PasswordReset[]
 
   @@map("users")
+}
+
+model BrokerProfile {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+  code   String
+
+  @@map("broker_profiles")
 }
 
 // Insurance platform models
@@ -477,4 +489,37 @@ model Notification {
   updatedAt DateTime @updatedAt
 
   @@map("notifications")
+}
+
+model PasswordReset {
+  id      String   @id @default(cuid())
+  userId  String   @map("user_id")
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token   String   @unique
+  expires DateTime
+  used    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("password_resets")
+}
+
+model BrokerInvitation {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  companyName String
+  phone       String
+  address     String
+  siretNumber String?
+  brokerCode  String   @unique
+  token       String   @unique
+  expires     DateTime
+  used        Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("broker_invitations")
 }

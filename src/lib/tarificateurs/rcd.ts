@@ -1214,7 +1214,8 @@ function verifRefus(params: {
   const refus = {
     activiteSansEtreAssure: activiteSansEtreAssure,
     experienceDirigeant: experienceDirigeant < 1,
-    ancienneAssurance: ancienneAssurance === "RESILIE",
+    // ancienneAssurance: ancienneAssurance === "RESILIE",
+    ancienneAssurance: false,
   };
 
   return refus;
@@ -1462,6 +1463,17 @@ const tableauDegAvant = [
     degressivity2: 0.7,
   },
 ];
+// Tableau des assureurs défaillants
+const assureursDefaillants = [
+  "ACASTA",
+  "ALPHA_INSURANCE",
+  "CBL",
+  "EIL",
+  "ELITE",
+  "GABLE",
+  "QUDOS",
+];
+
 const calculDeg = (params: {
   caDeclared: number;
   tableauDeg: {
@@ -1528,11 +1540,18 @@ export function calculPrimeRCD(params: {
   ancienneAssurance: string;
   activiteSansEtreAssure: boolean;
   experienceDirigeant: number;
+  // Nouveaux paramètres pour la reprise du passé
+  nomDeLAsurreur: string;
+  dateEffet?: string; // Date d'effet du contrat (ISO)
+  dateFinCouverturePrecedente?: string; // Date de fin de couverture précédente (ISO)
+  sinistresPrecedents?: SinistrePasse[]; // Sinistres des 5 dernières années
+  tauxTI?: number; // Taux TI par année (ex: 0.700 pour N)
+  coefficientAntecedent?: number; // Coefficient selon ancienneté
 }) {
   const {
     caDeclared,
     etp,
-    activites,
+    activites: activitesRaw,
     dateCreation,
     tempsSansActivite12mois,
     anneeExperience,
@@ -1542,7 +1561,27 @@ export function calculPrimeRCD(params: {
     ancienneAssurance,
     activiteSansEtreAssure,
     experienceDirigeant,
+    // Paramètres reprise du passé
+    nomDeLAsurreur,
+    dateEffet,
+    dateFinCouverturePrecedente,
+    sinistresPrecedents = [],
+    tauxTI = 0.7, // Valeur par défaut pour l'année N
+    coefficientAntecedent = 1.0,
   } = params;
+
+  const reformatedActivites = (
+    activites: { code: number; caSharePercent: number }[]
+  ) =>
+    activites.map((activite) => ({
+      ...activite,
+      caSharePercent:
+        activite.caSharePercent > 0
+          ? activite.caSharePercent / 100
+          : activite.caSharePercent,
+    }));
+
+  const activites = reformatedActivites(activitesRaw);
 
   const caCalculee = caDeclared;
 
@@ -1551,6 +1590,8 @@ export function calculPrimeRCD(params: {
     experienceDirigeant,
     ancienneAssurance,
   });
+
+  const isAssureurDefaillant = assureursDefaillants.includes(nomDeLAsurreur);
 
   const majorations = calculateMajorations({
     etp,
@@ -1577,10 +1618,12 @@ export function calculPrimeRCD(params: {
 
   type returnValue = {
     refus: boolean;
+    refusReason: string;
     returnTab: returnTab[];
     PminiHT: number;
     PrimeHT: number;
     majorations: typeof majorations;
+    reprisePasseResult?: ReprisePasseResult; // Résultat du calcul de reprise du passé
   };
 
   const plafond = 70_000;
@@ -1592,10 +1635,18 @@ export function calculPrimeRCD(params: {
       refus.activiteSansEtreAssure ||
       refus.experienceDirigeant ||
       refus.ancienneAssurance,
+    refusReason: refus.activiteSansEtreAssure
+      ? "Activité sans être assurée"
+      : refus.experienceDirigeant
+      ? "Expérience du dirigeant"
+      : refus.ancienneAssurance
+      ? "Ancienne assurance"
+      : "",
     returnTab: [],
     PminiHT: 0,
     PrimeHT: 0,
     majorations: majorations,
+    reprisePasseResult: undefined,
   };
 
   const calculSommeTauxActPartCa = (
@@ -1653,5 +1704,230 @@ export function calculPrimeRCD(params: {
     returnTab.reduce((acc, activite) => acc + activite.Prime100Min, 0);
   returnValue.returnTab = returnTab;
 
+  // Calcul de la reprise du passé si activée
+  if (isAssureurDefaillant && dateEffet && dateFinCouverturePrecedente) {
+    try {
+      const reprisePasseResult = calculReprisePasseRCD({
+        tauxTI,
+        primeAnnuelleHT: returnValue.PrimeHT,
+        dateEffet,
+        dateFinCouverturePrecedente,
+        sinistresPrecedents,
+        coefficientAntecedent,
+      });
+      returnValue.reprisePasseResult = reprisePasseResult;
+    } catch (error) {
+      console.error("Erreur lors du calcul de la reprise du passé:", error);
+      // On continue sans la reprise du passé en cas d'erreur
+      returnValue.reprisePasseResult = undefined;
+    }
+  }
+
   return returnValue;
+}
+
+// ========== CALCUL REPRISE DU PASSÉ ==========
+
+type SinistrePasse = {
+  year: number;
+  numClaims: number;
+  totalCost: number;
+};
+
+type ReprisePasseParams = {
+  tauxTI: number; // Taux TI par année (ex: 0.700 pour N, 0.686 pour N-1, etc.)
+  primeAnnuelleHT: number; // Prime annuelle calculée avec tous les coefficients
+  dateEffet: string; // Date d'effet du contrat (ISO)
+  dateFinCouverturePrecedente: string; // Date de fin de couverture précédente (ISO)
+  sinistresPrecedents: SinistrePasse[]; // Sinistres des 5 dernières années
+  coefficientAntecedent: number; // Coefficient selon ancienneté (0.3, 0.6, 1, 1.4, 1.7, etc.)
+};
+
+type ReprisePasseResult = {
+  // Calculs intermédiaires
+  pourcentageAnneeReprise: number; // % de l'année de reprise (ex: 10/12 = 83.33%)
+  tauxTIPondere: number; // Taux TI pondéré par le %
+
+  // Analyse sinistralité
+  ratioSP: number; // S/P = (coût sinistres cumulé) / (prime annuelle HT * coeff antécédent)
+  frequenceSinistres: number; // Min(Nb sinistres / Nb années ; Nb sinistres avec suite / Nb années)
+
+  // Classification selon le tableau
+  categorieAnciennete: string; // "< 3ans", "3 à 7 ans", "> 7 ans"
+  categorieFrequence: string; // "0", "0 à 0.5", "0.5 à 1", "1 à 2", "> 2"
+  categorieRatioSP: string; // "0", "0 à 0.5", "0.5 à 0.7", "0.7 à 1", "> 1"
+
+  // Résultat final
+  coefficientMajoration: number; // Coefficient de majoration à appliquer (0.8 à 1.3 ou "Analyse Cie")
+  analyseCompagnieRequise: boolean; // true si "Analyse Cie" dans le tableau
+  primeReprisePasseTTC: number; // Prime de reprise du passé TTC finale
+
+  // Détail du calcul
+  calculDetail: {
+    sommeDesTauxTI: number; // Somme des taux TI pondérés
+    primeAnnuelleAvecCoeff: number; // Prime * coefficient antécédent
+    primeRepriseAvantMajoration: number; // Somme(TI) × Prime annuelle calculée avec tous les coefficients
+    primeRepriseApresMajoration: number; // Avant majoration × coefficient majoration
+  };
+};
+
+/**
+ * Calcule la prime de reprise du passé selon les règles RCD
+ *
+ * @param params - Paramètres de calcul de la reprise du passé
+ * @returns Résultat détaillé du calcul de reprise du passé
+ */
+export function calculReprisePasseRCD(
+  params: ReprisePasseParams
+): ReprisePasseResult {
+  const {
+    tauxTI,
+    primeAnnuelleHT,
+    dateEffet,
+    dateFinCouverturePrecedente,
+    sinistresPrecedents,
+    coefficientAntecedent,
+  } = params;
+
+  // 1. Calcul du pourcentage de l'année de reprise
+  const dateEffetObj = parseISO(dateEffet);
+  const dateFinObj = parseISO(dateFinCouverturePrecedente);
+
+  // Calculer la différence en mois (exemple du document: 10/12 de N-9)
+  const diffMs = dateEffetObj.getTime() - dateFinObj.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const pourcentageAnneeReprise = Math.min(1, diffDays / 365); // Plafonné à 100%
+
+  // 2. Taux TI pondéré par le pourcentage
+  const tauxTIPondere = tauxTI * pourcentageAnneeReprise;
+
+  // 3. Analyse de la sinistralité
+  const nbAnnees =
+    sinistresPrecedents.length > 0
+      ? Math.max(
+          1,
+          new Date().getFullYear() -
+            Math.min(...sinistresPrecedents.map((s) => s.year))
+        )
+      : 1;
+
+  const totalCoutSinistres = sinistresPrecedents.reduce(
+    (sum, s) => sum + s.totalCost,
+    0
+  );
+  const totalNbSinistres = sinistresPrecedents.reduce(
+    (sum, s) => sum + s.numClaims,
+    0
+  );
+  const nbSinistresAvecSuite = sinistresPrecedents.filter(
+    (s) => s.numClaims > 0
+  ).length;
+
+  // Calcul S/P selon la formule du document
+  const primeAnnuelleAvecCoeff = primeAnnuelleHT * coefficientAntecedent;
+  const ratioSP =
+    primeAnnuelleAvecCoeff > 0
+      ? totalCoutSinistres / primeAnnuelleAvecCoeff
+      : 0;
+
+  // Calcul fréquence selon la formule du document
+  const freq1 = nbAnnees > 0 ? totalNbSinistres / nbAnnees : 0;
+  const freq2 = nbAnnees > 0 ? nbSinistresAvecSuite / nbAnnees : 0;
+  const frequenceSinistres = Math.min(freq1, freq2);
+
+  // 4. Classification selon les tableaux
+  let categorieAnciennete: string;
+  if (nbAnnees < 3) categorieAnciennete = "< 3ans";
+  else if (nbAnnees <= 7) categorieAnciennete = "3 à 7 ans";
+  else categorieAnciennete = "> 7 ans";
+
+  let categorieFrequence: string;
+  if (frequenceSinistres === 0) categorieFrequence = "0";
+  else if (frequenceSinistres <= 0.5) categorieFrequence = "0 à 0.5";
+  else if (frequenceSinistres <= 1) categorieFrequence = "0.5 à 1";
+  else if (frequenceSinistres <= 2) categorieFrequence = "1 à 2";
+  else categorieFrequence = "> 2";
+
+  let categorieRatioSP: string;
+  if (ratioSP === 0) categorieRatioSP = "0";
+  else if (ratioSP <= 0.5) categorieRatioSP = "0 à 0.5";
+  else if (ratioSP <= 0.7) categorieRatioSP = "0.5 à 0.7";
+  else if (ratioSP <= 1) categorieRatioSP = "0.7 à 1";
+  else categorieRatioSP = "> 1";
+
+  // 5. Détermination du coefficient de majoration selon le tableau
+  let coefficientMajoration = 1.0;
+  let analyseCompagnieRequise = false;
+
+  // Logique basée sur le tableau de la deuxième image
+  // Cette logique devrait être affinée selon les règles exactes du tableau
+  if (categorieAnciennete === "< 3ans") {
+    if (categorieFrequence === "0") {
+      coefficientMajoration = 1.0;
+    } else if (categorieFrequence === "0 à 0.5") {
+      if (categorieRatioSP === "0 à 0.5") coefficientMajoration = 1.1;
+      else if (categorieRatioSP === "0.5 à 0.7") coefficientMajoration = 1.2;
+      else if (categorieRatioSP === "0.7 à 1") coefficientMajoration = 1.3;
+      else analyseCompagnieRequise = true;
+    } else {
+      analyseCompagnieRequise = true;
+    }
+  } else if (categorieAnciennete === "3 à 7 ans") {
+    if (categorieFrequence === "0") {
+      coefficientMajoration = 0.9;
+    } else if (categorieFrequence === "0 à 0.5") {
+      if (categorieRatioSP === "0 à 0.5") coefficientMajoration = 0.97;
+      else if (categorieRatioSP === "0.5 à 0.7") coefficientMajoration = 1.1;
+      else if (categorieRatioSP === "0.7 à 1") coefficientMajoration = 1.2;
+      else analyseCompagnieRequise = true;
+    } else {
+      analyseCompagnieRequise = true;
+    }
+  } else {
+    // > 7 ans
+    if (categorieFrequence === "0") {
+      coefficientMajoration = 0.8;
+    } else if (categorieFrequence === "0 à 0.5") {
+      if (categorieRatioSP === "0 à 0.5") coefficientMajoration = 0.9;
+      else if (categorieRatioSP === "0.5 à 0.7") coefficientMajoration = 1.0;
+      else if (categorieRatioSP === "0.7 à 1") coefficientMajoration = 1.1;
+      else if (categorieRatioSP === "> 1") coefficientMajoration = 1.2;
+    } else if (categorieFrequence === "0.5 à 1") {
+      if (categorieRatioSP === "0.5 à 0.7") coefficientMajoration = 0.95;
+      else if (categorieRatioSP === "0.7 à 1") coefficientMajoration = 1.05;
+      else if (categorieRatioSP === "> 1") coefficientMajoration = 1.15;
+      else analyseCompagnieRequise = true;
+    } else {
+      analyseCompagnieRequise = true;
+    }
+  }
+
+  // 6. Calculs finaux
+  const sommeDesTauxTI = tauxTIPondere; // Dans cet exemple simple, on n'a qu'un taux
+  const primeRepriseAvantMajoration = sommeDesTauxTI * primeAnnuelleHT;
+  const primeRepriseApresMajoration = analyseCompagnieRequise
+    ? primeRepriseAvantMajoration
+    : primeRepriseAvantMajoration * coefficientMajoration;
+
+  // Prime TTC (exemple avec 20% de taxe, à adapter selon le territoire)
+  const primeReprisePasseTTC = primeRepriseApresMajoration * 1.2;
+
+  return {
+    pourcentageAnneeReprise: Math.round(pourcentageAnneeReprise * 10000) / 100, // en %
+    tauxTIPondere,
+    ratioSP: Math.round(ratioSP * 100) / 100,
+    frequenceSinistres: Math.round(frequenceSinistres * 100) / 100,
+    categorieAnciennete,
+    categorieFrequence,
+    categorieRatioSP,
+    coefficientMajoration,
+    analyseCompagnieRequise,
+    primeReprisePasseTTC: Math.round(primeReprisePasseTTC),
+    calculDetail: {
+      sommeDesTauxTI,
+      primeAnnuelleAvecCoeff,
+      primeRepriseAvantMajoration: Math.round(primeRepriseAvantMajoration),
+      primeRepriseApresMajoration: Math.round(primeRepriseApresMajoration),
+    },
+  };
 }

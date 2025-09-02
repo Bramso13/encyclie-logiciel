@@ -8,12 +8,12 @@ export async function middleware(request: NextRequest) {
   // Routes publiques qui ne nécessitent pas d'authentification
   const publicRoutes = [
     "/login",
-    "/register",
+
     "/api/auth",
     "/",
     "/_next",
     "/favicon.ico",
-    "/api/health"
+    "/api/health",
   ];
 
   // Routes qui nécessitent une authentification
@@ -22,16 +22,17 @@ export async function middleware(request: NextRequest) {
     "/projects",
     "/clients",
     "/profile",
-    "/admin"
+    "/admin",
+    "/register",
   ];
 
   // Vérifier si la route actuelle est publique
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname.startsWith(route) || pathname === route
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname.startsWith(route) || pathname === route
   );
 
   // Vérifier si la route actuelle est protégée
-  const isProtectedRoute = protectedRoutes.some(route => 
+  const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
@@ -45,6 +46,14 @@ export async function middleware(request: NextRequest) {
     const session = await auth.api.getSession({
       headers: request.headers,
     });
+
+    if (pathname === "/register") {
+      if (session) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      } else {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+    }
 
     // Si pas de session et route protégée, rediriger vers login
     if (!session && isProtectedRoute) {
@@ -68,14 +77,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   } catch (error) {
     console.error("Middleware error:", error);
-    
+
     // En cas d'erreur et si c'est une route protégée, rediriger vers login
     if (isProtectedRoute) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirectTo", pathname);
       return NextResponse.redirect(loginUrl);
     }
-    
+
     return NextResponse.next();
   }
 }

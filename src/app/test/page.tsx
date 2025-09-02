@@ -11,6 +11,7 @@ export default function TestPage() {
       { code: 17, caSharePercent: 0.375 },
     ],
     dateCreation: new Date("2023-01-01"),
+    nomDeLAsurreur: "AXA",
     tempsSansActivite12mois: false,
     anneeExperience: 2,
     assureurDefaillant: false,

@@ -234,6 +234,7 @@ export default function QuoteDetailPage() {
                 tempsSansActivite12mois: Boolean(
                   data.formData.tempsSansActivite12mois
                 ),
+                nomDeLAsurreur: data.formData.assureurDefaillant ? "Defaillant" : "Non defaillant",
                 anneeExperience: experienceMetier,
                 assureurDefaillant: Boolean(data.formData.assureurDefaillant),
                 nombreAnneeAssuranceContinue: Number(
