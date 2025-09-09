@@ -7,6 +7,7 @@ interface QuoteSuccessPageProps {
   quote: {
     id: string;
     reference: string;
+    productId: string;
     companyData: {
       companyName: string;
       siret: string;
@@ -33,157 +34,266 @@ export default function QuoteSuccessPage({
   );
   const [premiumDetails, setPremiumDetails] = useState<any>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
+  
+  // États pour le mapping dynamique (identique à page.tsx)
+  const [parameterMapping, setParameterMapping] = useState<Record<string, string>>({});
+  const [formFields, setFormFields] = useState<Record<string, any>>({});
+  const [calculationResult, setCalculationResult] = useState<any>(null);
+
+  // Fonction pour charger le mapping et les formFields du produit (identique à page.tsx)
+  const loadProductMapping = async (productId: string) => {
+    try {
+      const response = await fetch(`/api/products/${productId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const product = result.data;
+          setFormFields(product.formFields || {});
+          setParameterMapping(product.mappingFields || {});
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du mapping:', error);
+    }
+  };
+
+  // Fonction de calcul dynamique basée sur le mapping (identique à page.tsx)
+  const calculateWithMapping = (quoteData: any) => {
+    try {
+      console.log("=== CALCUL DYNAMIQUE AVEC MAPPING SUCCESS PAGE ===");
+      console.log("FormData:", quoteData.formData);
+      console.log("CompanyData:", quoteData.companyData);
+      console.log("ParameterMapping:", parameterMapping);
+      console.log("FormFields:", formFields);
+
+      // Construire les paramètres à partir du mapping
+      const mappedParams: any = {};
+      
+      Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
+        if (fieldKey && formFields[fieldKey]) {
+          const field = formFields[fieldKey];
+          const value = quoteData.formData[fieldKey] || field.default;
+          
+          // Conversion selon le type de champ et le paramètre
+          switch (paramKey) {
+            case 'caDeclared':
+            case 'etp':
+            case 'anneeExperience':
+            case 'nombreAnneeAssuranceContinue':
+            case 'partSoutraitance':
+            case 'partNegoce':
+              if (field.type === 'number') {
+                mappedParams[paramKey] = Number(value) || 0;
+              }
+              break;
+              
+            case 'dateCreation':
+            case 'dateEffet':
+              if (field.type === 'date') {
+                mappedParams[paramKey] = value ? new Date(value) : new Date();
+              }
+              break;
+              
+            case 'tempsSansActivite':
+            case 'sansActiviteDepuisPlusDe12MoisSansFermeture':
+            case 'absenceDeSinistreSurLes5DernieresAnnees':
+            case 'fractionnementPrime':
+              mappedParams[paramKey] = value;
+              break;
+              
+            case 'qualif':
+            case 'assureurDefaillant':
+            case 'protectionJuridique':
+            case 'nonFournitureBilanN_1':
+            case 'reprisePasse':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
+              
+            case 'nomDeLAsurreur':
+              if (field.type === 'text' || field.type === 'select') {
+                mappedParams[paramKey] = value || "";
+              }
+              break;
+              
+            case 'activites':
+              // Pour les activités, utiliser les données du formulaire
+              if (quoteData.formData.activities && Array.isArray(quoteData.formData.activities)) {
+                mappedParams[paramKey] = quoteData.formData.activities.map((a: any) => ({
+                  code: parseInt(a.code),
+                  caSharePercent: Number(a.caSharePercent)
+                }));
+              } else {
+                mappedParams[paramKey] = [];
+              }
+              break;
+
+            case 'dateFinCouverturePrecedente':
+              if (field.type === 'date') {
+                mappedParams[paramKey] = value ? new Date(value) : new Date();
+              }
+              break;
+
+            
+              
+            case 'sinistresPrecedents':
+              // Pour les sinistres, utiliser les données du formulaire
+              mappedParams[paramKey] = quoteData.formData.lossHistory || [];
+              break;
+          }
+        }
+      });
+      
+      // Vérifier que tous les paramètres obligatoires sont présents
+      const requiredParams = ['caDeclared', 'etp', 'activites'];
+      const missingParams = requiredParams.filter(param => !mappedParams[param]);
+      
+      if (missingParams.length > 0) {
+        throw new Error(`Paramètres obligatoires manquants : ${missingParams.join(', ')}`);
+      }
+
+      console.log("Paramètres mappés:", mappedParams);
+      
+      // Utiliser les valeurs par défaut pour les paramètres non mappés
+      const finalParams = {
+        // Valeurs par défaut
+        caDeclared: 500000,
+        etp: 3,
+        activites: [],
+        dateCreation: new Date(),
+        tempsSansActivite: "NON" as any,
+        anneeExperience: 5,
+        assureurDefaillant: false,
+        nombreAnneeAssuranceContinue: 3,
+        qualif: false,
+        nomDeLAsurreur: "AXA",
+        dateEffet: new Date(),
+        sinistresPrecedents: [],
+        sansActiviteDepuisPlusDe12MoisSansFermeture: "NON" as "OUI" | "NON" | "CREATION",
+        absenceDeSinistreSurLes5DernieresAnnees: "OUI" as "OUI" | "NON" | "CREATION" | "ASSUREUR_DEFAILLANT" | "A_DEFINIR",
+        protectionJuridique: true,
+        fractionnementPrime: "annuel" as "annuel" | "mensuel" | "trimestriel" | "semestriel",
+        partSoutraitance: 0,
+        partNegoce: 0,
+        nonFournitureBilanN_1: false,
+        reprisePasse: false,
+        // Remplacer par les valeurs mappées
+        ...mappedParams
+      };
+
+      console.log("Paramètres finaux:", finalParams);
+      
+      const result = calculPrimeRCD(finalParams);
+      console.log("Résultat calcul:", result);
+      return result;
+    } catch (error) {
+      console.error("Erreur calcul dynamique:", error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
-    // Only calculate for RCD products with formData
-    if (quote.formData) {
+    const fetchQuoteAndCalculate = async () => {
       try {
-        console.log("=== DEBUG CALCUL RCD SUCCESS PAGE ===");
+        console.log("=== CALCUL RCD SUCCESS PAGE ===");
         console.log("FormData reçu:", quote.formData);
         console.log("CompanyData reçu:", quote.companyData);
 
-        // Validation des données requises (même logique que page.tsx)
-        const validationErrors: string[] = [];
+        // Charger le mapping du produit (identique à page.tsx)
+        if (quote.productId) {
+          await loadProductMapping(quote.productId);
+        }
 
-        if (!quote.formData.chiffreAffaires) {
-          validationErrors.push("chiffreAffaires manquant");
-        } else {
-          const ca = Number(quote.formData.chiffreAffaires);
-          if (isNaN(ca) || ca <= 0) {
-            validationErrors.push(
-              "chiffreAffaires invalide: " + quote.formData.chiffreAffaires
+        // Si c'est un devis avec des données complètes, faire le calcul
+        if (quote.formData) {
+          try {
+            console.log("=== CALCUL AVEC MAPPING DYNAMIQUE SUCCESS PAGE ===");
+            console.log("FormData recu:", quote.formData);
+            console.log("CompanyData recu:", quote.companyData);
+
+            // Attendre que le mapping soit chargé avant de calculer
+            if (Object.keys(parameterMapping).length === 0) {
+              console.log("Mapping non encore chargé, calcul différé");
+              // Le calcul sera refait quand le mapping sera chargé
+              return;
+            }
+
+            const result = calculateWithMapping(quote);
+            setCalculationResult(result);
+            setCalculationError(null);
+
+            // Utiliser la nouvelle structure de retour
+            if (result.refus) {
+              setCalculationError(result.refusReason || "Demande refusée");
+              setCalculatedPremium(null);
+              setPremiumDetails(result);
+            } else {
+              // Utiliser le total TTC directement depuis la nouvelle structure
+              const primeFinale = result.totalTTC || result.primeTotal || 0;
+              setCalculatedPremium(primeFinale);
+              setPremiumDetails(result);
+            }
+          } catch (error) {
+            console.error("=== ERREUR CALCUL DYNAMIQUE SUCCESS PAGE ===");
+            console.error("Type erreur:", typeof error);
+            console.error("Message erreur:", error);
+            console.error(
+              "Stack trace:",
+              error instanceof Error ? error.stack : "Pas de stack"
             );
-          }
-        }
 
-        if (!quote.formData.nombreSalaries) {
-          validationErrors.push("nombreSalaries manquant");
+            let errorMessage = "Erreur de calcul inconnue";
+            if (error instanceof Error) {
+              errorMessage = error.message;
+            } else if (typeof error === "string") {
+              errorMessage = error;
+            } else {
+              errorMessage = String(error);
+            }
+
+            setCalculationError(errorMessage);
+          }
         } else {
-          const etp = Number(quote.formData.nombreSalaries);
-          if (isNaN(etp) || etp <= 0) {
-            validationErrors.push(
-              "nombreSalaries invalide: " + quote.formData.nombreSalaries
-            );
-          }
+          console.log("Pas de formData disponible");
+          setCalculationError("Aucune donnee de formulaire disponible");
         }
-
-        if (
-          !quote.formData.activities ||
-          !Array.isArray(quote.formData.activities)
-        ) {
-          validationErrors.push("activities manquant ou invalide");
-        } else if (quote.formData.activities.length === 0) {
-          validationErrors.push("aucune activite selectionnee");
-        }
-
-        if (!quote.formData.experienceMetier) {
-          validationErrors.push("experienceMetier manquant");
-        } else {
-          const exp = Number(quote.formData.experienceMetier);
-          if (isNaN(exp) || exp < 0) {
-            validationErrors.push(
-              "experienceMetier invalide: " + quote.formData.experienceMetier
-            );
-          }
-        }
-
-        // Validation de la date de création
-        const creationDate =
-          quote.formData.companyCreationDate ||
-          (quote.companyData as any).creationDate;
-        if (!creationDate) {
-          validationErrors.push("companyCreationDate manquante");
-        }
-
-        if (validationErrors.length > 0) {
-          throw new Error("Données manquantes: " + validationErrors.join(", "));
-        }
-
-        // Conversion des valeurs string en numbers
-        const chiffreAffaires = Number(quote.formData.chiffreAffaires);
-        const nombreSalaries = Number(quote.formData.nombreSalaries);
-        const experienceMetier = Number(quote.formData.experienceMetier);
-
-        console.log("Valeurs converties:");
-        console.log("- CA:", chiffreAffaires);
-        console.log("- ETP:", nombreSalaries);
-        console.log("- Exp:", experienceMetier);
-
-        // Mapper les activités au format attendu par calculPrimeRCD
-        const activitesFormatted = quote.formData.activities.map(
-          (activity: any) => ({
-            code: Number(activity.code),
-            caSharePercent: Number(activity.caSharePercent),
-          })
-        );
-
-        const calculParams = {
-          caDeclared: chiffreAffaires,
-          etp: nombreSalaries,
-          activites: activitesFormatted,
-          dateCreation: new Date(creationDate || "2020-01-01"),
-          tempsSansActivite12mois: Boolean(
-            quote.formData.tempsSansActivite12mois
-          ),
-          nomDeLAsurreur: quote.formData.assureurDefaillant
-            ? "Defaillant"
-            : "Non defaillant",
-          anneeExperience: experienceMetier,
-          assureurDefaillant: Boolean(quote.formData.assureurDefaillant),
-          nombreAnneeAssuranceContinue: Number(
-            quote.formData.nombreAnneeAssuranceContinue || 0
-          ),
-          qualif: Boolean(quote.formData.hasQualification),
-          ancienneAssurance: quote.formData.previousRcdStatus || "JAMAIS",
-          activiteSansEtreAssure: Boolean(
-            quote.formData.activiteSansEtreAssure
-          ),
-          experienceDirigeant: experienceMetier,
-          // Ajouter les paramètres manquants si nécessaire
-          dateEffet: quote.formData.dateEffetSouhaitee,
-          dateFinCouverturePrecedente: quote.formData.previousResiliationDate,
-          sinistresPrecedents: quote.formData.lossHistory || [],
-          tauxTI: quote.formData.tauxTI || 0,
-          coefficientAntecedent: quote.formData.coefficientAntecedent || 1,
-        };
-
-        console.log("Paramètres finaux:", calculParams);
-
-        const result = calculPrimeRCD(calculParams);
-        console.log("Résultat calcul:", result);
-
-        // Calculer la prime finale (avec majorations)
-        const majorationsTotal =
-          Object.values(result.majorations || {}).reduce(
-            (sum, val) => (sum || 0) + (Number(val) || 0),
-            0
-          ) || 0;
-        const primeFinale = (result.PrimeHT || 0) * (1 + majorationsTotal);
-
-        setCalculatedPremium(primeFinale);
-        setPremiumDetails(result);
       } catch (error) {
-        console.error("=== ERREUR CALCUL RCD SUCCESS PAGE ===");
-        console.error("Type erreur:", typeof error);
-        console.error("Message erreur:", error);
-        console.error(
-          "Stack trace:",
-          error instanceof Error ? error.stack : "Pas de stack"
-        );
-
-        let errorMessage = "Erreur de calcul inconnue";
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (typeof error === "string") {
-          errorMessage = error;
-        } else {
-          errorMessage = String(error);
-        }
-
-        setCalculationError(errorMessage);
+        console.error("Erreur:", error);
       }
+    };
+
+    if (quote) {
+      fetchQuoteAndCalculate();
     }
   }, [quote]);
+
+  // Recalculer quand le mapping est chargé (identique à page.tsx)
+  useEffect(() => {
+    if (quote && Object.keys(parameterMapping).length > 0 && quote.formData) {
+      try {
+        console.log("Recalcul avec mapping chargé SUCCESS PAGE");
+        const result = calculateWithMapping(quote);
+        setCalculationResult(result);
+        setCalculationError(null);
+
+        // Utiliser la nouvelle structure de retour
+        if (result.refus) {
+          setCalculationError(result.refusReason || "Demande refusée");
+          setCalculatedPremium(null);
+          setPremiumDetails(result);
+        } else {
+          // Utiliser le total TTC directement depuis la nouvelle structure
+          const primeFinale = result.totalTTC || result.primeTotal || 0;
+          setCalculatedPremium(primeFinale);
+          setPremiumDetails(result);
+        }
+      } catch (error) {
+        console.error("Erreur recalcul SUCCESS PAGE:", error);
+        setCalculationError(error instanceof Error ? error.message : "Erreur de calcul");
+      }
+    }
+  }, [parameterMapping, quote]);
 
   // Fallback calculation for non-RCD or missing data
   const calculateEstimation = () => {
@@ -282,9 +392,22 @@ export default function QuoteSuccessPage({
       </div>
 
       {/* Estimation */}
-      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-indigo-900 mb-4">
-          {premiumDetails ? "Calcul de prime RCD" : "Estimation préliminaire"}
+      <div className={`border rounded-lg p-6 ${
+        premiumDetails?.refus 
+          ? "bg-red-50 border-red-200" 
+          : "bg-indigo-50 border-indigo-200"
+      }`}>
+        <h2 className={`text-xl font-semibold mb-4 ${
+          premiumDetails?.refus 
+            ? "text-red-900" 
+            : "text-indigo-900"
+        }`}>
+          {premiumDetails?.refus 
+            ? "Demande non acceptée" 
+            : premiumDetails 
+              ? "Calcul de prime RCD" 
+              : "Estimation préliminaire"
+          }
         </h2>
 
         {calculationError && (
@@ -295,43 +418,88 @@ export default function QuoteSuccessPage({
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-sm text-indigo-700 mb-1">
-              Prime d'assurance {premiumDetails ? "calculée" : "estimée"}{" "}
-              (annuelle TTC)
-            </p>
-            <p className="text-3xl font-bold text-indigo-900">
-              {estimation.toLocaleString("fr-FR")} €
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="bg-indigo-100 rounded-full p-4">
-              <svg
-                className="h-8 w-8 text-indigo-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                />
+        {premiumDetails?.refus ? (
+          <div className="text-center">
+            <div className="mb-4">
+              <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
+            <p className="text-lg font-medium text-red-900 mb-2">
+              Demande non acceptée
+            </p>
+            <p className="text-red-700">
+              {premiumDetails.refusReason || "Votre demande ne peut pas être acceptée dans les conditions actuelles."}
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className={`text-sm mb-1 ${
+                  premiumDetails ? "text-indigo-700" : "text-indigo-700"
+                }`}>
+                  Prime d'assurance {premiumDetails ? "calculée" : "estimée"}{" "}
+                  (annuelle TTC)
+                </p>
+                <p className="text-3xl font-bold text-indigo-900">
+                  {estimation.toLocaleString("fr-FR")} €
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="bg-indigo-100 rounded-full p-4">
+                  <svg
+                    className="h-8 w-8 text-indigo-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
 
-        <div className="mt-4 p-3 bg-indigo-100 rounded-md">
-          <p className="text-sm text-indigo-800">
-            <strong>Information :</strong>{" "}
-            {premiumDetails
-              ? "Ce calcul est basé sur les données saisies et les tarifs en vigueur. Le montant final pourra être ajusté après vérification des pièces justificatives."
-              : "Cette estimation est indicative et basée sur les informations fournies. Le montant définitif sera calculé après analyse complète de votre dossier par nos experts."}
-          </p>
-        </div>
+            {/* Détails du calcul si disponible */}
+            {premiumDetails && !premiumDetails.refus && (
+              <div className="mb-4 p-4 bg-white rounded-lg border border-indigo-200">
+                <h3 className="text-sm font-medium text-indigo-900 mb-3">Détails du calcul :</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">CA calculé :</span>
+                    <span className="ml-2 font-medium">{premiumDetails.caCalculee?.toLocaleString("fr-FR") || "0"} €</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Prime HT :</span>
+                    <span className="ml-2 font-medium">{premiumDetails.primeTotal?.toLocaleString("fr-FR") || "0"} €</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Protection Juridique :</span>
+                    <span className="ml-2 font-medium">{premiumDetails.protectionJuridique?.toLocaleString("fr-FR") || "0"} €</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Total TTC :</span>
+                    <span className="ml-2 font-bold text-indigo-600">{premiumDetails.totalTTC?.toLocaleString("fr-FR") || "0"} €</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 p-3 bg-indigo-100 rounded-md">
+              <p className="text-sm text-indigo-800">
+                <strong>Information :</strong>{" "}
+                {premiumDetails
+                  ? "Ce calcul est basé sur les données saisies et les tarifs en vigueur. Le montant final pourra être ajusté après vérification des pièces justificatives."
+                  : "Cette estimation est indicative et basée sur les informations fournies. Le montant définitif sera calculé après analyse complète de votre dossier par nos experts."}
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Next Steps */}
