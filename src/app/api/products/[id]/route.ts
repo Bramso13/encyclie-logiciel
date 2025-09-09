@@ -3,31 +3,74 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
-// GET /api/products/[id] - Récupérer un produit spécifique
-export async function GET(
+export async function PATCH(
   request: NextRequest,
-  props: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const params = await props.params;
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
+    const { id } = params;
+    const body = await request.json();
+    const { formFields, stepConfig, mappingFields, ...otherFields } = body;
+
+    // Vérifier que le produit existe
+    const existingProduct = await prisma.insuranceProduct.findUnique({
+      where: { id },
     });
 
-    if (!session?.user) {
+    if (!existingProduct) {
       return NextResponse.json(
-        { success: false, error: "Non autorisé" },
-        { status: 401 }
+        { success: false, error: "Produit non trouvé" },
+        { status: 404 }
       );
     }
 
+    // Préparer les données de mise à jour
+    const updateData: any = { ...otherFields };
+    
+    if (formFields !== undefined) {
+      updateData.formFields = formFields;
+    }
+    
+    if (stepConfig !== undefined) {
+      updateData.stepConfig = stepConfig;
+    }
+    
+    if (mappingFields !== undefined) {
+      updateData.mappingFields = mappingFields;
+    }
+
+    // Mettre à jour le produit
+    const updatedProduct = await prisma.insuranceProduct.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du produit:", error);
+    return NextResponse.json(
+      { success: false, error: "Erreur interne du serveur" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+
     const product = await prisma.insuranceProduct.findUnique({
-      where: {
-        id: params.id,
-      },
+      where: { id },
       include: {
         createdBy: {
           select: {
+            id: true,
             name: true,
             email: true,
           },
@@ -49,7 +92,7 @@ export async function GET(
   } catch (error) {
     console.error("Erreur lors de la récupération du produit:", error);
     return NextResponse.json(
-      { success: false, error: "Erreur serveur" },
+      { success: false, error: "Erreur interne du serveur" },
       { status: 500 }
     );
   }

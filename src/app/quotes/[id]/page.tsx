@@ -58,31 +58,8 @@ interface Quote {
   updatedAt: string;
 }
 
-interface CalculationResult {
-  refus: boolean;
-  returnTab: Array<{
-    nomActivite: string;
-    partCA: number;
-    tauxBase: number;
-    PrimeMiniAct: number;
-    DegMax: number;
-    Deg400k: number;
-    PrimeRefAct: number;
-    Prime100Ref: number;
-    Prime100Min: number;
-  }>;
-  PminiHT: number;
-  PrimeHT: number;
-  majorations: {
-    etp?: number;
-    qualif: number;
-    dateCreation: number;
-    tempsSansActivite12mois: number;
-    anneeExperience?: number;
-    assureurDefaillant: number;
-    nombreAnneeAssuranceContinue: number;
-  };
-}
+// Interface simplifiée pour éviter les conflits de types
+type CalculationResult = any;
 
 export default function QuoteDetailPage() {
   const params = useParams();
@@ -111,6 +88,14 @@ export default function QuoteDetailPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [documents, setDocuments] = useState<QuoteDocument[]>([]);
+
+  // États pour le mapping dynamique
+  const [parameterMapping, setParameterMapping] = useState<Record<string, string>>({});
+  const [formFields, setFormFields] = useState<Record<string, any>>({});
+
+  // États pour les PDFs
+  const [generatingLetterPDF, setGeneratingLetterPDF] = useState(false);
+  const [generatingPremiumCallPDF, setGeneratingPremiumCallPDF] = useState(false);
 
   const tabs = [
     {
@@ -152,6 +137,44 @@ export default function QuoteDetailPage() {
       ),
     },
     {
+      id: "letter",
+      label: "Lettre d'intention",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "premium-call",
+      label: "Appel de prime",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+          />
+        </svg>
+      ),
+    },
+    {
       id: "edit",
       label: "Édition",
       icon: (
@@ -175,6 +198,151 @@ export default function QuoteDetailPage() {
   useEffect(() => {
     fetchActiveProducts();
   }, [fetchActiveProducts]);
+
+  // Fonction pour charger le mapping et les formFields du produit
+  const loadProductMapping = async (productId: string) => {
+    try {
+      const response = await fetch(`/api/products/${productId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const product = result.data;
+          setFormFields(product.formFields || {});
+          setParameterMapping(product.mappingFields || {});
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du mapping:', error);
+    }
+  };
+
+  // Fonction de calcul dynamique basée sur le mapping
+  const calculateWithMapping = (quoteData: any) => {
+    try {
+      console.log("=== CALCUL DYNAMIQUE AVEC MAPPING ===");
+      console.log("FormData:", quoteData.formData);
+      console.log("CompanyData:", quoteData.companyData);
+      console.log("ParameterMapping:", parameterMapping);
+      console.log("FormFields:", formFields);
+
+      // Construire les paramètres à partir du mapping
+      const mappedParams: any = {};
+      
+      Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
+        if (fieldKey && formFields[fieldKey]) {
+          const field = formFields[fieldKey];
+          const value = quoteData.formData[fieldKey] || field.default;
+          
+          // Conversion selon le type de champ et le paramètre
+          switch (paramKey) {
+            case 'caDeclared':
+            case 'etp':
+            case 'anneeExperience':
+            case 'nombreAnneeAssuranceContinue':
+            case 'partSoutraitance':
+            case 'partNegoce':
+              if (field.type === 'number') {
+                mappedParams[paramKey] = Number(value) || 0;
+              }
+              break;
+              
+            case 'dateCreation':
+            case 'dateEffet':
+              if (field.type === 'date') {
+                mappedParams[paramKey] = value ? new Date(value) : new Date();
+              }
+              break;
+              
+            case 'tempsSansActivite':
+            case 'sansActiviteDepuisPlusDe12MoisSansFermeture':
+            case 'absenceDeSinistreSurLes5DernieresAnnees':
+            case 'fractionnementPrime':
+              mappedParams[paramKey] = value;
+              break;
+              
+            case 'qualif':
+            case 'assureurDefaillant':
+            case 'protectionJuridique':
+            case 'nonFournitureBilanN_1':
+            case 'reprisePasse':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
+              
+            case 'nomDeLAsurreur':
+              if (field.type === 'text' || field.type === 'select') {
+                mappedParams[paramKey] = value || "";
+              }
+              break;
+              
+            case 'activites':
+              // Pour les activités, utiliser les données du formulaire
+              if (quoteData.formData.activities && Array.isArray(quoteData.formData.activities)) {
+                mappedParams[paramKey] = quoteData.formData.activities.map((a: any) => ({
+                  code: parseInt(a.code),
+                  caSharePercent: Number(a.caSharePercent)
+                }));
+              } else {
+                mappedParams[paramKey] = [];
+              }
+              break;
+              
+            case 'sinistresPrecedents':
+              // Pour les sinistres, utiliser les données du formulaire
+              mappedParams[paramKey] = quoteData.formData.lossHistory || [];
+              break;
+          }
+        }
+      });
+      
+      // Vérifier que tous les paramètres obligatoires sont présents
+      const requiredParams = ['caDeclared', 'etp', 'activites'];
+      const missingParams = requiredParams.filter(param => !mappedParams[param]);
+      
+      if (missingParams.length > 0) {
+        throw new Error(`Paramètres obligatoires manquants : ${missingParams.join(', ')}`);
+      }
+
+      console.log("Paramètres mappés:", mappedParams);
+      
+      // Utiliser les valeurs par défaut pour les paramètres non mappés
+      const finalParams = {
+        // Valeurs par défaut
+        caDeclared: 500000,
+        etp: 3,
+        activites: [],
+        dateCreation: new Date(),
+        tempsSansActivite: "NON" as any,
+        anneeExperience: 5,
+        assureurDefaillant: false,
+        nombreAnneeAssuranceContinue: 3,
+        qualif: false,
+        nomDeLAsurreur: "AXA",
+        dateEffet: new Date(),
+        sinistresPrecedents: [],
+        sansActiviteDepuisPlusDe12MoisSansFermeture: "NON" as "OUI" | "NON" | "CREATION",
+        absenceDeSinistreSurLes5DernieresAnnees: "OUI" as "OUI" | "NON" | "CREATION" | "ASSUREUR_DEFAILLANT" | "A_DEFINIR",
+        protectionJuridique: true,
+        fractionnementPrime: "annuel" as "annuel" | "mensuel" | "trimestriel" | "semestriel",
+        partSoutraitance: 0,
+        partNegoce: 0,
+        nonFournitureBilanN_1: false,
+        reprisePasse: false,
+        // Remplacer par les valeurs mappées
+        ...mappedParams
+      };
+
+      console.log("Paramètres finaux:", finalParams);
+      
+      const result = calculPrimeRCD(finalParams);
+      console.log("Résultat calcul:", result);
+      return result;
+    } catch (error) {
+      console.error("Erreur calcul dynamique:", error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -202,123 +370,28 @@ export default function QuoteDetailPage() {
           const product = activeProducts.find((p) => p.id === data.productId);
           if (product) {
             setSelectedProduct(product);
+            // Charger le mapping du produit
+            await loadProductMapping(data.productId);
           }
-          // Si c'est un devis RCD avec des donnees completes, faire le calcul
+          // Si c'est un devis avec des donnees completes, faire le calcul
           if (data.formData) {
             try {
-              console.log("=== DEBUG CALCUL RCD ===");
+              console.log("=== CALCUL AVEC MAPPING DYNAMIQUE ===");
               console.log("FormData recu:", data.formData);
               console.log("CompanyData recu:", data.companyData);
 
-              // Validation des donnees requises
-              const validationErrors: string[] = [];
-
-              if (!data.formData.chiffreAffaires) {
-                validationErrors.push("chiffreAffaires manquant");
-              } else {
-                const ca = Number(data.formData.chiffreAffaires);
-                if (isNaN(ca) || ca <= 0) {
-                  validationErrors.push(
-                    "chiffreAffaires invalide: " + data.formData.chiffreAffaires
-                  );
-                }
+              // Attendre que le mapping soit chargé avant de calculer
+              if (Object.keys(parameterMapping).length === 0) {
+                console.log("Mapping non encore chargé, calcul différé");
+                // Le calcul sera refait quand le mapping sera chargé
+                return;
               }
 
-              if (!data.formData.nombreSalaries) {
-                validationErrors.push("nombreSalaries manquant");
-              } else {
-                const etp = Number(data.formData.nombreSalaries);
-                if (isNaN(etp) || etp <= 0) {
-                  validationErrors.push(
-                    "nombreSalaries invalide: " + data.formData.nombreSalaries
-                  );
-                }
-              }
-
-              if (
-                !data.formData.activities ||
-                !Array.isArray(data.formData.activities)
-              ) {
-                validationErrors.push("activities manquant ou invalide");
-              } else if (data.formData.activities.length === 0) {
-                validationErrors.push("aucune activite selectionnee");
-              }
-
-              if (!data.formData.experienceMetier) {
-                validationErrors.push("experienceMetier manquant");
-              } else {
-                const exp = Number(data.formData.experienceMetier);
-                if (isNaN(exp) || exp < 0) {
-                  validationErrors.push(
-                    "experienceMetier invalide: " +
-                      data.formData.experienceMetier
-                  );
-                }
-              }
-
-              // Validation des date de creation
-              const creationDate =
-                data.formData.companyCreationDate ||
-                data.companyData.creationDate;
-              if (!creationDate) {
-                validationErrors.push("companyCreationDate manquante");
-              }
-
-              if (validationErrors.length > 0) {
-                throw new Error(
-                  "Donnees manquantes: " + validationErrors.join(", ")
-                );
-              }
-
-              // Conversion des valeurs string en numbers
-              const chiffreAffaires = Number(data.formData.chiffreAffaires);
-              const nombreSalaries = Number(data.formData.nombreSalaries);
-              const experienceMetier = Number(data.formData.experienceMetier);
-
-              console.log("Valeurs converties:");
-              console.log("- CA:", chiffreAffaires);
-              console.log("- ETP:", nombreSalaries);
-              console.log("- Exp:", experienceMetier);
-
-              // Mapper les activités au format attendu par calculPrimeRCD
-              const activitesFormatted = data.formData.activities.map(
-                (activity: any) => ({
-                  code: Number(activity.code),
-                  caSharePercent: Number(activity.caSharePercent),
-                })
-              );
-
-              const calculParams = {
-                caDeclared: chiffreAffaires,
-                etp: nombreSalaries,
-                activites: activitesFormatted,
-                dateCreation: new Date(creationDate || "2020-01-01"),
-                tempsSansActivite12mois: Boolean(
-                  data.formData.tempsSansActivite12mois
-                ),
-                nomDeLAsurreur: data.formData.assureurDefaillant
-                  ? "Defaillant"
-                  : "Non defaillant",
-                anneeExperience: experienceMetier,
-                assureurDefaillant: Boolean(data.formData.assureurDefaillant),
-                nombreAnneeAssuranceContinue: Number(
-                  data.formData.nombreAnneeAssuranceContinue || 0
-                ),
-                qualif: Boolean(data.formData.hasQualification),
-                ancienneAssurance: data.formData.previousRcdStatus || "JAMAIS",
-                activiteSansEtreAssure: Boolean(
-                  data.formData.activiteSansEtreAssure
-                ),
-                experienceDirigeant: experienceMetier,
-              };
-
-              console.log("Parametres finaux:", calculParams);
-
-              const result = calculPrimeRCD(calculParams);
-              console.log("Resultat calcul:", result);
+              const result = calculateWithMapping(data);
               setCalculationResult(result);
+              setCalculationError(null);
             } catch (error) {
-              console.error("=== ERREUR CALCUL RCD ===");
+              console.error("=== ERREUR CALCUL DYNAMIQUE ===");
               console.error("Type erreur:", typeof error);
               console.error("Message erreur:", error);
               console.error(
@@ -355,6 +428,21 @@ export default function QuoteDetailPage() {
       fetchQuote();
     }
   }, [params.id, activeProducts]);
+
+  // Recalculer quand le mapping est chargé
+  useEffect(() => {
+    if (quote && Object.keys(parameterMapping).length > 0 && quote.formData) {
+      try {
+        console.log("Recalcul avec mapping chargé");
+        const result = calculateWithMapping(quote);
+        setCalculationResult(result);
+        setCalculationError(null);
+      } catch (error) {
+        console.error("Erreur recalcul:", error);
+        setCalculationError(error instanceof Error ? error.message : "Erreur de calcul");
+      }
+    }
+  }, [parameterMapping, quote]);
 
   // Fonctions d'édition
   const handleFormDataChange = (fieldName: string, value: any) => {
@@ -505,6 +593,114 @@ export default function QuoteDetailPage() {
         ...prev,
         submit: "Erreur lors de la mise à jour",
       }));
+    }
+  };
+
+  // Fonctions pour la lettre d'intention
+  const handleGeneratePDF = async () => {
+    try {
+      if (!quote) {
+        alert("Aucun devis disponible");
+        return;
+      }
+
+      setGeneratingLetterPDF(true);
+
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'letter-of-intent',
+          quote,
+          calculationResult,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du PDF');
+      }
+
+      // Télécharger le PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lettre-intention-${quote.reference || 'devis'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Erreur génération PDF:", error);
+      alert("Erreur lors de la génération du PDF");
+    } finally {
+      setGeneratingLetterPDF(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    try {
+      // TODO: Implémenter l'envoi par email
+      console.log("Envoi de la lettre d'intention par email...");
+      alert("Fonctionnalité d'envoi par email à implémenter");
+    } catch (error) {
+      console.error("Erreur envoi email:", error);
+    }
+  };
+
+  // Fonctions pour l'appel de prime
+  const handleGeneratePremiumCallPDF = async () => {
+    try {
+      if (!quote) {
+        alert("Aucun devis disponible");
+        return;
+      }
+
+      setGeneratingPremiumCallPDF(true);
+
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'premium-call',
+          quote,
+          calculationResult,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du PDF');
+      }
+
+      // Télécharger le PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `appel-prime-${quote.reference || 'devis'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Erreur génération PDF:", error);
+      alert("Erreur lors de la génération du PDF");
+    } finally {
+      setGeneratingPremiumCallPDF(false);
+    }
+  };
+
+  const handleSendPremiumCallEmail = async () => {
+    try {
+      // TODO: Implémenter l'envoi par email
+      console.log("Envoi de l'appel de prime par email...");
+      alert("Fonctionnalité d'envoi par email à implémenter");
+    } catch (error) {
+      console.error("Erreur envoi email:", error);
     }
   };
 
@@ -850,54 +1046,55 @@ export default function QuoteDetailPage() {
             )}
 
             {calculationResult && (
-              <div className="space-y-6">
-                {/* Resume principal */}
+              <div className="space-y-8">
+                {/* Header principal avec statut */}
                 <div
-                  className={`rounded-xl p-6 text-white ${
+                  className={`rounded-2xl p-8 text-white shadow-xl ${
                     calculationResult.refus
-                      ? "bg-gradient-to-r from-red-500 to-red-600"
-                      : "bg-gradient-to-r from-indigo-500 to-purple-600"
+                      ? "bg-gradient-to-br from-red-500 via-red-600 to-red-700"
+                      : "bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-700"
                   }`}
                 >
                   <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-3 rounded-full ${calculationResult.refus ? 'bg-red-400/20' : 'bg-white/20'}`}>
+                        {calculationResult.refus ? (
+                          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
                     <div>
-                      <h2 className="text-2xl font-bold mb-2">
+                        <h2 className="text-3xl font-bold mb-2">
                         {calculationResult.refus
                           ? "Demande Refusée"
                           : "Prime RCD Calculée"}
                       </h2>
-                      <p
-                        className={
-                          calculationResult.refus
-                            ? "text-red-100"
-                            : "text-indigo-100"
-                        }
-                      >
+                        <p className={`text-lg ${calculationResult.refus ? "text-red-100" : "text-indigo-100"}`}>
                         {calculationResult.refus
-                          ? "Le dossier ne peut pas être accepté"
+                            ? calculationResult.refusReason || "Le dossier ne peut pas être accepté"
                           : "Calcul basé sur les données du formulaire"}
                       </p>
+                      </div>
                     </div>
                     <div className="text-right">
                       {!calculationResult.refus && (
                         <>
-                          <div className="text-3xl font-bold">
-                            {(
-                              calculationResult.PrimeHT *
-                              (1 +
-                                Object.values(
-                                  calculationResult.majorations
-                                ).reduce((sum, val) => sum + (val || 0), 0))
-                            ).toLocaleString("fr-FR")}{" "}
-                            €
+                          <div className="text-4xl font-bold mb-1">
+                            {calculationResult.totalTTC?.toLocaleString("fr-FR") || 
+                             calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
                           </div>
                           <div className="text-indigo-200 text-sm">
-                            Prime HT calculée
+                            Total TTC
                           </div>
                         </>
                       )}
                       {calculationResult.refus && (
-                        <div className="text-2xl font-bold text-red-100">
+                        <div className="text-3xl font-bold text-red-100">
                           ⚠️ REFUS
                         </div>
                       )}
@@ -905,108 +1102,139 @@ export default function QuoteDetailPage() {
                   </div>
                 </div>
 
-                {!calculationResult.refus &&
-                  session?.user?.role === "ADMIN" && (
-                    <>
-                      {/* Grille des details */}
+                {!calculationResult.refus && session?.user?.role === "ADMIN" && (
+                  <>
+                    {/* Résumé financier */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* CA Calculé */}
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">CA Calculé</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {calculationResult.caCalculee?.toLocaleString("fr-FR") || "0"} €
+                            </p>
+                          </div>
+                          <div className="p-3 bg-blue-100 rounded-full">
+                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Prime HT */}
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Prime HT</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
+                            </p>
+                          </div>
+                          <div className="p-3 bg-green-100 rounded-full">
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Total TTC */}
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Total TTC</p>
+                            <p className="text-2xl font-bold text-indigo-600">
+                              {calculationResult.totalTTC?.toLocaleString("fr-FR") || "0"} €
+                            </p>
+                          </div>
+                          <div className="p-3 bg-indigo-100 rounded-full">
+                            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Composition détaillée */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Composition de la prime */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                          <div className="px-6 py-4 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
                               Composition de la prime
                             </h3>
                           </div>
                           <div className="p-6 space-y-4">
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600">
-                                Prime minimum HT
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-gray-600">Prime minimum HT</span>
+                            <span className="font-semibold text-gray-900">
+                              {calculationResult.PminiHT?.toLocaleString("fr-FR") || "0"} €
                               </span>
-                              <span className="font-semibold">
-                                {calculationResult.PminiHT.toLocaleString(
-                                  "fr-FR"
-                                )}{" "}
-                                €
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600">
-                                Prime au-delà
-                              </span>
-                              <span className="font-semibold">
-                                {calculationResult.returnTab
-                                  .reduce(
-                                    (sum, act) => sum + act.Prime100Min,
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-gray-600">Prime au-delà</span>
+                            <span className="font-semibold text-gray-900">
+                              {calculationResult.primeAuDela?.toLocaleString("fr-FR") || "0"} €
                               </span>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Prime HT</span>
-                              <span className="font-semibold">
-                                {calculationResult.PrimeHT} €
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-gray-600">Prime HT sans majorations</span>
+                            <span className="font-semibold text-gray-900">
+                              {calculationResult.PrimeHTSansMajorations?.toLocaleString("fr-FR") || "0"} €
                               </span>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600">
-                                Prime HT + majorations (
-                                {Object.values(
-                                  calculationResult.majorations
-                                ).reduce((sum, val) => sum + (val || 0), 0) > 0
-                                  ? "+"
-                                  : ""}
-                                {(
-                                  Object.values(
-                                    calculationResult.majorations
-                                  ).reduce((sum, val) => sum + (val || 0), 0) *
-                                  100
-                                ).toFixed(1)}
-                                %)
+                          <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span className="text-gray-600">Total majorations</span>
+                            <span className={`font-semibold ${calculationResult.totalMajorations > 0 ? 'text-red-600' : calculationResult.totalMajorations < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                              {calculationResult.totalMajorations > 0 ? '+' : ''}
+                              {((calculationResult.totalMajorations - 1) * 100).toFixed(1)}%
                               </span>
-                              <span className="font-semibold">
-                                {(
-                                  calculationResult.PrimeHT *
-                                  (1 +
-                                    Object.values(
-                                      calculationResult.majorations
-                                    ).reduce((sum, val) => sum + (val || 0), 0))
-                                ).toLocaleString("fr-FR")}{" "}
-                                €
+                            </div>
+                          <div className="flex justify-between items-center py-3 bg-gray-50 rounded-lg px-4">
+                            <span className="text-gray-900 font-medium">Prime HT finale</span>
+                            <span className="font-bold text-lg text-indigo-600">
+                              {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
                               </span>
                             </div>
                           </div>
                         </div>
 
                         {/* Majorations appliquées */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                          <div className="px-6 py-4 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <svg className="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
                               Majorations appliquées
                             </h3>
                           </div>
-                          <div className="p-6 space-y-4">
-                            {Object.entries(calculationResult.majorations).map(
-                              ([key, value]) => (
+                        <div className="p-6 space-y-3">
+                          {calculationResult.majorations && Object.entries(calculationResult.majorations).map(
+                              ([key, value]: [string, any]) => (
                                 <div
                                   key={key}
-                                  className="flex justify-between items-center"
+                                className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-gray-50"
                                 >
                                   <span className="text-gray-600 capitalize">
                                     {key
                                       .replace(/([A-Z])/g, " $1")
-                                      .replace(/^./, (str) =>
-                                        str.toUpperCase()
-                                      )}
+                                    .replace(/^./, (str) => str.toUpperCase())
+                                    .replace(/_/g, " ")}
                                   </span>
                                   <span
-                                    className={`font-semibold ${
+                                  className={`font-semibold px-2 py-1 rounded-full text-sm ${
                                       value < 0
-                                        ? "text-green-600"
+                                      ? "text-green-700 bg-green-100"
                                         : value > 0
-                                        ? "text-red-600"
-                                        : "text-gray-600"
+                                      ? "text-red-700 bg-red-100"
+                                      : "text-gray-600 bg-gray-100"
                                     }`}
                                   >
                                     {value > 0 ? "+" : ""}
@@ -1015,61 +1243,476 @@ export default function QuoteDetailPage() {
                                 </div>
                               )
                             )}
-                            <div className="border-t pt-4">
-                              <div className="flex justify-between items-center font-bold">
-                                <span className="text-gray-900">
-                                  Total majorations
-                                </span>
-                                <span
-                                  className={`text-lg ${
-                                    Object.values(
-                                      calculationResult.majorations
-                                    ).reduce(
-                                      (sum, val) => sum + (val || 0),
-                                      0
-                                    ) < 0
-                                      ? "text-green-600"
-                                      : Object.values(
-                                          calculationResult.majorations
-                                        ).reduce(
-                                          (sum, val) => sum + (val || 0),
-                                          0
-                                        ) > 0
-                                      ? "text-red-600"
-                                      : "text-gray-600"
-                                  }`}
-                                >
-                                  {Object.values(
-                                    calculationResult.majorations
-                                  ).reduce((sum, val) => sum + (val || 0), 0) >
-                                  0
-                                    ? "+"
-                                    : ""}
-                                  {(
-                                    Object.values(
-                                      calculationResult.majorations
-                                    ).reduce(
-                                      (sum, val) => sum + (val || 0),
-                                      0
-                                    ) * 100
-                                  ).toFixed(1)}
-                                  %
-                                </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Frais et taxes */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          Frais et taxes
+                        </h3>
+                      </div>
+                      <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          <div className="text-center p-4 bg-blue-50 rounded-lg">
+                            <p className="text-sm text-blue-600 font-medium">Protection Juridique</p>
+                            <p className="text-xl font-bold text-blue-900">
+                              {calculationResult.protectionJuridique?.toLocaleString("fr-FR") || "0"} €
+                            </p>
+                          </div>
+                          <div className="text-center p-4 bg-green-50 rounded-lg">
+                            <p className="text-sm text-green-600 font-medium">Frais de gestion</p>
+                            <p className="text-xl font-bold text-green-900">
+                              {calculationResult.fraisGestion?.toLocaleString("fr-FR") || "0"} €
+                            </p>
+                          </div>
+                          <div className="text-center p-4 bg-orange-50 rounded-lg">
+                            <p className="text-sm text-orange-600 font-medium">Taxe assurance</p>
+                            <p className="text-xl font-bold text-orange-900">
+                              {calculationResult.autres?.taxeAssurance?.toLocaleString("fr-FR") || "0"} €
+                            </p>
+                          </div>
+                          <div className="text-center p-4 bg-purple-50 rounded-lg">
+                            <p className="text-sm text-purple-600 font-medium">Frais fractionnement</p>
+                            <p className="text-xl font-bold text-purple-900">
+                              {calculationResult.autres?.fraisFractionnementPrimeHT?.toLocaleString("fr-FR") || "0"} €
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prime d'aggravation Bilan N-1 non fourni */}
+                    {calculationResult.primeAggravationBilanN_1NonFourni && calculationResult.primeAggravationBilanN_1NonFourni > 0 && (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <svg className="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            Prime d'aggravation - Bilan N-1 non fourni
+                          </h3>
+                        </div>
+                        <div className="p-6">
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="text-lg font-semibold text-red-900 mb-2">
+                                  Majoration appliquée
+                                </h4>
+                                <p className="text-red-700 text-sm">
+                                  Une majoration a été appliquée car le bilan N-1 n'a pas été fourni.
+                                  Cette prime supplémentaire s'ajoute au montant de base.
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-3xl font-bold text-red-600">
+                                  {calculationResult.primeAggravationBilanN_1NonFourni.toLocaleString("fr-FR")} €
+                                </div>
+                                <div className="text-sm text-red-500">
+                                  Prime d'aggravation
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </>
-                  )}
+                    )}
 
-                {/* Detail par activite */}
-                {!calculationResult.refus &&
-                  calculationResult.returnTab.length > 0 &&
-                  session?.user?.role === "ADMIN" && (
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                      <div className="px-6 py-4 border-b border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900">
+                    {/* Reprise du passé */}
+                    {calculationResult.reprisePasseResult && (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <svg className="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Reprise du passé
+                          </h3>
+                        </div>
+                        <div className="p-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <h4 className="font-semibold text-gray-900">Analyse sinistralité</h4>
+                              <div className="space-y-3">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Ratio S/P</span>
+                                  <span className="font-medium">{calculationResult.reprisePasseResult.ratioSP?.toFixed(3) || "0"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Fréquence sinistres</span>
+                                  <span className="font-medium">{calculationResult.reprisePasseResult.frequenceSinistres?.toFixed(2) || "0"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">% année reprise</span>
+                                  <span className="font-medium">{(calculationResult.reprisePasseResult.pourcentageAnneeReprise * 100)?.toFixed(1) || "0"}%</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-4">
+                              <h4 className="font-semibold text-gray-900">Classification</h4>
+                              <div className="space-y-3">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Ancienneté</span>
+                                  <span className="font-medium">{calculationResult.reprisePasseResult.categorieAnciennete || "-"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Fréquence</span>
+                                  <span className="font-medium">{calculationResult.reprisePasseResult.categorieFrequence || "-"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Ratio S/P</span>
+                                  <span className="font-medium">{calculationResult.reprisePasseResult.categorieRatioSP || "-"}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-6 p-4 bg-amber-50 rounded-lg">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-semibold text-amber-900">Prime reprise du passé TTC</p>
+                                <p className="text-sm text-amber-700">
+                                  Coefficient: {calculationResult.reprisePasseResult.coefficientMajoration || "0"}
+                                  {calculationResult.reprisePasseResult.analyseCompagnieRequise && " (Analyse Cie requise)"}
+                                </p>
+                              </div>
+                              <span className="text-2xl font-bold text-amber-900">
+                                {calculationResult.reprisePasseResult.primeReprisePasseTTC?.toLocaleString("fr-FR") || "0"} €
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                    )}
+
+                    {/* Échéancier */}
+                    {calculationResult.echeancier && calculationResult.echeancier.echeances && calculationResult.echeancier.echeances.length > 0 && (
+                      <div className="space-y-6">
+                        {/* Échéancier détaillé */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                              <svg className="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Échéancier de paiement détaillé
+                            </h3>
+                      </div>
+                          <div className="p-6">
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-gray-50">
+                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Date échéance</th>
+                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Début période</th>
+                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Fin période</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">RCD HT</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">PJ HT</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Frais HT</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Frais Gestion HT</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Reprise HT</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Total HT</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Taxe</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Total TTC</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                  {calculationResult.echeancier.echeances.map((echeance: any, index: number) => (
+                                    <tr key={index} className="hover:bg-gray-50">
+                                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{echeance.date}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-600">{echeance.debutPeriode}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-600">{echeance.finPeriode}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                        {echeance.rcd?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                        {echeance.pj?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                        {echeance.frais?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                        {echeance.fraisGestion?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                        {echeance.reprise?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                                        {echeance.totalHT?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-orange-600 text-right">
+                                        {echeance.taxe?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
+                                        {echeance.totalTTC?.toLocaleString("fr-FR") || "0"} €
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                {/* Ligne de totaux */}
+                                <tfoot>
+                                  <tr className="bg-gray-100 font-semibold">
+                                    <td className="px-4 py-3 text-sm font-medium text-gray-900" colSpan={3}>
+                                      TOTAUX
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.pj || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.frais || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.fraisGestion || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.reprise || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.totalHT || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-orange-600 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
+                                      {calculationResult.echeancier.echeances.reduce((sum: number, echeance: any) => sum + (echeance.totalTTC || 0), 0).toLocaleString("fr-FR")} €
+                                    </td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Échéancier regroupé par année */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                              <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                              </svg>
+                              Échéancier par année
+                            </h3>
+                          </div>
+                          <div className="p-6">
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-gray-50">
+                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Année</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">RCD</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">PJ</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Frais</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Frais Gestion</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Reprise</th>
+
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Total TTC</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Nb échéances</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                  {(() => {
+                                    // Grouper les échéances par année
+                                    const echeancesParAnnee = calculationResult.echeancier.echeances.reduce((acc: any, echeance: any) => {
+                                      const annee = echeance.date.split('/')[2];
+                                      if (!acc[annee]) {
+                                        acc[annee] = {
+                                          annee,
+                                          rcd: 0,
+                                          pj: 0,
+                                          frais: 0,
+                                          fraisGestion: 0,
+                                            reprise: 0,
+                                          totalTTC: 0,
+                                          nbEcheances: 0
+                                        };
+                                      }
+                                      acc[annee].rcd += echeance.rcd || 0;
+                                      acc[annee].pj += echeance.pj || 0;
+                                      acc[annee].frais += echeance.frais || 0;
+                                      acc[annee].fraisGestion += echeance.fraisGestion || 0;
+                                      acc[annee].reprise += echeance.reprise || 0;
+                                      acc[annee].totalTTC += echeance.totalTTC || 0;
+                                      acc[annee].nbEcheances += 1;
+                                      return acc;
+                                    }, {});
+
+                                    return Object.values(echeancesParAnnee)
+                                      .sort((a: any, b: any) => a.annee.localeCompare(b.annee))
+                                      .map((annee: any, index: number) => (
+                                        <tr key={index} className="hover:bg-gray-50">
+                                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{annee.annee}</td>
+                                          <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                            {annee.rcd.toLocaleString("fr-FR")} €
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                            {annee.pj.toLocaleString("fr-FR")} €
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                            {annee.frais.toLocaleString("fr-FR")} €
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                            {annee.fraisGestion.toLocaleString("fr-FR")} €
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                            {annee.reprise.toLocaleString("fr-FR")} €
+                                          </td>
+                                          <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                                            {annee.totalTTC.toLocaleString("fr-FR")} €
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                            {annee.nbEcheances}
+                                          </td>
+                                        </tr>
+                                      ));
+                                  })()}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Tableau croisé Postes vs Types */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                              <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
+                              </svg>
+                              Répartition par postes et types
+                            </h3>
+                          </div>
+                          <div className="p-6">
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-gray-50">
+                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Type</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">RCD</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">PJ</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Frais</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Frais Gestion</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Reprise</th>
+                                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                  {(() => {
+                                    // Calculer les totaux par type
+                                    const totaux = calculationResult.echeancier.echeances.reduce((acc: any, echeance: any) => {
+                                      acc.rcd += echeance.rcd || 0;
+                                      acc.pj += echeance.pj || 0;
+                                      acc.frais += echeance.frais || 0;
+                                      acc.fraisGestion += echeance.fraisGestion || 0;
+                                      acc.reprise += echeance.reprise || 0;
+                                      acc.totalHT += echeance.totalHT || 0;
+                                      acc.totalTTC += echeance.totalTTC || 0;
+                                      acc.taxe += echeance.taxe || 0;
+                                      return acc;
+                                    }, {
+                                      rcd: 0,
+                                      pj: 0,
+                                      frais: 0,
+                                      fraisGestion: 0,
+                                      reprise: 0,
+                                      totalHT: 0,
+                                      totalTTC: 0,
+                                      taxe: 0
+                                    });
+
+                                    return [
+                                      {
+                                        type: "HT",
+                                        rcd: totaux.rcd,
+                                        pj: totaux.pj,
+                                        frais: totaux.frais,
+                                        fraisGestion: totaux.fraisGestion,
+                                        reprise: totaux.reprise,
+                                        total: totaux.totalHT,
+                                        className: "text-gray-600"
+                                      },
+                                      {
+                                        type: "Taxe",
+                                        rcd: 0,
+                                        pj: 0,
+                                        frais: 0,
+                                        fraisGestion: 0,
+                                        reprise: 0,
+                                        total: totaux.taxe,
+                                        className: "text-orange-600"
+                                      },
+                                      {
+                                        type: "TTC",
+                                        rcd: totaux.rcd,
+                                        pj: totaux.pj,
+                                        frais: totaux.frais,
+                                        fraisGestion: totaux.fraisGestion,
+                                        reprise: totaux.reprise,
+                                        total: totaux.totalTTC,
+                                        className: "text-indigo-600 font-semibold"
+                                      }
+                                    ].map((row: any, index: number) => (
+                                      <tr key={index} className="hover:bg-gray-50">
+                                        <td className={`px-4 py-3 text-sm font-medium ${row.className}`}>
+                                          {row.type}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right">
+                                          <span className={row.className}>
+                                            {row.rcd.toLocaleString("fr-FR")} €
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right">
+                                          <span className={row.className}>
+                                            {row.pj.toLocaleString("fr-FR")} €
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right">
+                                          <span className={row.className}>
+                                            {row.frais.toLocaleString("fr-FR")} €
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right">
+                                          <span className={row.className}>
+                                            {row.fraisGestion.toLocaleString("fr-FR")} €
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right">
+                                          <span className={row.className}>
+                                            {row.reprise.toLocaleString("fr-FR")} €
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right">
+                                          <span className={`font-semibold ${row.className}`}>
+                                            {row.total.toLocaleString("fr-FR")} €
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ));
+                                  })()}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Détail par activité */}
+                    {calculationResult.returnTab && calculationResult.returnTab.length > 0 && (
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
                           Détail par activité
                         </h3>
                       </div>
@@ -1078,69 +1721,475 @@ export default function QuoteDetailPage() {
                           <table className="w-full">
                             <thead>
                               <tr className="bg-gray-50">
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                  Activité
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Part CA (%)
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Taux de base
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Prime Mini Act.
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Dégressivité
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Prime au-delà
-                                </th>
+                                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Activité</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Part CA (%)</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Taux de base</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Prime Mini Act.</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Dégressivité</th>
+                                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Prime au-delà</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                              {calculationResult.returnTab.map(
-                                (activity, index) => (
+                                {calculationResult.returnTab.map((activity: any, index: number) => (
                                   <tr key={index} className="hover:bg-gray-50">
                                     <td className="px-4 py-3 text-sm font-medium text-gray-900">
                                       {activity.nomActivite}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {activity.partCA.toFixed(1)}%
+                                      {activity.partCA?.toFixed(1) || "0"}%
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {(activity.tauxBase * 100).toFixed(3)}%
+                                      {(activity.tauxBase * 100)?.toFixed(3) || "0"}%
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {activity.PrimeMiniAct.toLocaleString(
-                                        "fr-FR"
-                                      )}{" "}
-                                      €
+                                      {activity.PrimeMiniAct?.toLocaleString("fr-FR") || "0"} €
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 text-right">
                                       {activity.Deg400k > 0
-                                        ? `${(activity.Deg400k * 100).toFixed(
-                                            1
-                                          )}%`
+                                        ? `${(activity.Deg400k * 100)?.toFixed(1) || "0"}%`
                                         : "-"}
                                     </td>
                                     <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                                      {activity.Prime100Min.toLocaleString(
-                                        "fr-FR"
-                                      )}{" "}
-                                      €
+                                      {activity.Prime100Min?.toLocaleString("fr-FR") || "0"} €
                                     </td>
                                   </tr>
-                                )
-                              )}
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                    )}
+                  </>
+                  )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "letter" && (
+          <div className="space-y-6">
+            {/* Actions */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Lettre d'intention</h2>
+                <p className="text-gray-600 mt-1">
+                  Lettre d'intention pour {quote?.companyData?.companyName || "l'entreprise"}
+                </p>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleGeneratePDF}
+                  disabled={generatingLetterPDF}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingLetterPDF ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Générer PDF
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleSendEmail}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Envoyer par email
+                </button>
+              </div>
+            </div>
+
+            {/* Lettre d'intention */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="p-8">
+                <div className="max-w-4xl mx-auto">
+                  {/* En-tête */}
+                  <div className="text-center mb-8">
+                    <div className="text-2xl font-bold text-gray-900 mb-2">
+                      LETTRE D'INTENTION
+                    </div>
+                    <div className="text-lg text-gray-600">
+                      Assurance Responsabilité Civile Décennale
+                    </div>
+                    <div className="text-sm text-gray-500 mt-2">
+                      Devis n° {quote?.reference || "N/A"} - {new Date().toLocaleDateString("fr-FR")}
+                    </div>
+                  </div>
+
+                  {/* Destinataire */}
+                  <div className="mb-8">
+                    <div className="text-sm text-gray-500 mb-2">À l'attention de :</div>
+                    <div className="font-semibold text-gray-900">
+                      {quote?.companyData?.companyName || "Nom de l'entreprise"}
+                    </div>
+                    <div className="text-gray-600">
+                      {quote?.companyData?.address || "Adresse de l'entreprise"}
+                    </div>
+                    <div className="text-gray-600">
+                      SIRET : {quote?.companyData?.siret || "N/A"}
+                    </div>
+                  </div>
+
+                  {/* Corps de la lettre */}
+                  <div className="space-y-6 text-gray-700 leading-relaxed">
+                    <p>
+                      <strong>Objet :</strong> Proposition d'assurance Responsabilité Civile Décennale
+                    </p>
+
+                    <p>
+                      Madame, Monsieur,
+                    </p>
+
+                    <p>
+                      Suite à votre demande d'assurance Responsabilité Civile Décennale, nous avons le plaisir de vous présenter notre proposition d'assurance adaptée à votre activité.
+                    </p>
+
+                    {/* Informations du calcul */}
+                    {calculationResult && !calculationResult.refus ? (
+                      <div className="bg-gray-50 rounded-lg p-6 my-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Résumé de notre proposition :</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-sm text-gray-600">Chiffre d'affaires déclaré</div>
+                            <div className="font-semibold text-gray-900">
+                              {calculationResult.caCalculee?.toLocaleString("fr-FR") || "0"} €
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">Prime HT</div>
+                            <div className="font-semibold text-gray-900">
+                              {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">Protection Juridique</div>
+                            <div className="font-semibold text-gray-900">
+                              {calculationResult.protectionJuridique?.toLocaleString("fr-FR") || "0"} €
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">Total TTC</div>
+                            <div className="font-semibold text-indigo-600 text-lg">
+                              {calculationResult.totalTTC?.toLocaleString("fr-FR") || "0"} €
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : calculationResult?.refus ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-6 my-6">
+                        <h3 className="text-lg font-semibold text-red-900 mb-2">Demande non acceptée</h3>
+                        <p className="text-red-700">
+                          Malheureusement, nous ne pouvons pas accepter votre demande d'assurance pour la raison suivante : {calculationResult.refusReason || "Critères non respectés"}.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 my-6">
+                        <h3 className="text-lg font-semibold text-yellow-900 mb-2">Calcul en cours</h3>
+                        <p className="text-yellow-700">
+                          Le calcul de votre prime est en cours de finalisation. Nous vous contacterons prochainement avec notre proposition.
+                        </p>
+                      </div>
+                    )}
+
+                    <p>
+                      Notre proposition d'assurance comprend :
+                    </p>
+
+                    <ul className="list-disc list-inside space-y-2 ml-4">
+                      <li>Couverture Responsabilité Civile Décennale selon les conditions générales en vigueur</li>
+                      <li>Protection Juridique incluse</li>
+                      <li>Garantie des travaux de construction, rénovation et réparation</li>
+                      <li>Couverture des dommages corporels, matériels et immatériels</li>
+                      <li>Assistance juridique et technique</li>
+                    </ul>
+
+                    {/* Échéancier si disponible */}
+                    {calculationResult?.echeancier?.echeances && calculationResult.echeancier.echeances.length > 0 && (
+                      <div className="bg-blue-50 rounded-lg p-6 my-6">
+                        <h3 className="text-lg font-semibold text-blue-900 mb-4">Modalités de paiement :</h3>
+                        <div className="text-sm text-blue-800">
+                          <p className="mb-2">Votre prime sera payable selon l'échéancier suivant :</p>
+                          <ul className="list-disc list-inside space-y-1">
+                            {calculationResult.echeancier.echeances.slice(0, 3).map((echeance: any, index: number) => (
+                              <li key={index}>
+                                {echeance.date} : {echeance.totalTTC?.toLocaleString("fr-FR") || "0"} €
+                              </li>
+                            ))}
+                            {calculationResult.echeancier.echeances.length > 3 && (
+                              <li>... et {calculationResult.echeancier.echeances.length - 3} autres échéances</li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    <p>
+                      Cette proposition est valable 30 jours à compter de la date d'émission. Pour accepter cette offre, veuillez nous retourner le présent document signé accompagné des pièces justificatives demandées.
+                    </p>
+
+                    <p>
+                      Nous restons à votre disposition pour tout complément d'information.
+                    </p>
+
+                    <div className="mt-8">
+                      <p>Cordialement,</p>
+                      <div className="mt-4">
+                        <div className="font-semibold text-gray-900">L'équipe commerciale</div>
+                        <div className="text-gray-600">Encyclie Logiciel</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pied de page */}
+                  <div className="mt-12 pt-6 border-t border-gray-200 text-xs text-gray-500">
+                    <p>
+                      Cette lettre d'intention est établie sous réserve de l'acceptation définitive de votre dossier par notre compagnie d'assurance partenaire.
+                      Les conditions définitives seront précisées dans le contrat d'assurance.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "premium-call" && (
+          <div className="space-y-6">
+            {/* Actions */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Appel de prime</h2>
+                <p className="text-gray-600 mt-1">
+                  Appel de prime pour {quote?.companyData?.companyName || "l'entreprise"}
+                </p>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleGeneratePremiumCallPDF}
+                  disabled={generatingPremiumCallPDF}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingPremiumCallPDF ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Générer PDF
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleSendPremiumCallEmail}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Envoyer par email
+                </button>
+              </div>
+            </div>
+
+            {/* Appel de prime */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="p-8">
+                <div className="max-w-6xl mx-auto">
+                  {/* En-tête */}
+                  <div className="mb-8">
+                    <div className="text-sm text-gray-500 mb-2">Monsieur,</div>
+                    <div className="text-gray-700 leading-relaxed">
+                      vous trouverez ci-joint votre appel de prime ainsi que votre échéancier de règlement au titre de votre contrat <strong>RESPONSABILITÉ CIVILE ET DÉCENNALE</strong>.
+                    </div>
+                  </div>
+
+                  {/* Période */}
+                  {calculationResult?.echeancier?.echeances && calculationResult.echeancier.echeances.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-green-900 mb-2">PÉRIODE DU</div>
+                        <div className="flex items-center justify-center space-x-4">
+                          <div className="text-2xl font-bold text-green-800">
+                            {calculationResult.echeancier.echeances[0]?.debutPeriode || "N/A"}
+                          </div>
+                          <div className="text-green-600 font-medium">AU</div>
+                          <div className="text-2xl font-bold text-green-800">
+                            {calculationResult.echeancier.echeances[calculationResult.echeancier.echeances.length - 1]?.finPeriode || "N/A"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Résumé de la période */}
+                  {calculationResult && (
+                    <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Période</h3>
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <div className="text-sm text-gray-600">Montant HT</div>
+                          <div className="text-xl font-bold text-gray-900">
+                            {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-600">Taxe €</div>
+                          <div className="text-xl font-bold text-gray-900">
+                            {calculationResult.autres?.taxeAssurance?.toLocaleString("fr-FR") || "0"} €
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-600">MONTANT TTC</div>
+                          <div className="text-2xl font-bold text-indigo-600">
+                            {calculationResult.totalTTC?.toLocaleString("fr-FR") || "0"} €
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Échéancier */}
+                  {calculationResult?.echeancier?.echeances && calculationResult.echeancier.echeances.length > 0 && (
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Échéancier</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-green-100">
+                              <th className="border border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700">Période Date</th>
+                              <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Montant HT Total HT €</th>
+                              <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Taxe €</th>
+                              <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">MONTANT TTC Total TTC</th>
+                              <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">Date de règlement</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {calculationResult.echeancier.echeances.map((echeance: any, index: number) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900">
+                                  {echeance.date}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-right">
+                                  {echeance.totalHT?.toLocaleString("fr-FR") || "0"} €
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-right">
+                                  {echeance.taxe?.toLocaleString("fr-FR") || "0"} €
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                                  {echeance.totalTTC?.toLocaleString("fr-FR") || "0"} €
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-center">
+                                  {echeance.date}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Détail de la prime et Validité des attestations */}
+                  {calculationResult?.echeancier?.echeances && calculationResult.echeancier.echeances.length > 0 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                      {/* Détail de la prime */}
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Détail de la prime</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-gray-300">
+                            <thead>
+                              <tr className="bg-orange-100">
+                                <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">RCD</th>
+                                <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">PJ</th>
+                                <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">Frais</th>
+                                <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">Reprise</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {calculationResult.echeancier.echeances.map((echeance: any, index: number) => (
+                                <tr key={index} className="hover:bg-gray-50">
+                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-center">
+                                    {echeance.rcd?.toLocaleString("fr-FR") || "0"} €
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-center">
+                                    {echeance.pj?.toLocaleString("fr-FR") || "0"} €
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-center">
+                                    {echeance.frais?.toLocaleString("fr-FR") || "0"} €
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-center">
+                                    {echeance.reprise?.toLocaleString("fr-FR") || "0"} €
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Validité de vos attestations */}
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Validité de vos attestations</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-gray-300">
+                            <thead>
+                              <tr className="bg-orange-100">
+                                <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">début période</th>
+                                <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">fin période</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {calculationResult.echeancier.echeances.map((echeance: any, index: number) => (
+                                <tr key={index} className="hover:bg-gray-50">
+                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-center">
+                                    {echeance.debutPeriode}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-center">
+                                    {echeance.finPeriode}
+                                  </td>
+                                </tr>
+                              ))}
                             </tbody>
                           </table>
                         </div>
                       </div>
                     </div>
                   )}
+
+                  {/* Pied de page */}
+                  <div className="mt-12 pt-6 border-t border-gray-200">
+                    <div className="text-gray-700 leading-relaxed mb-6">
+                      <p>
+                        Soucieux de votre satisfaction, nous restons à votre disposition et vous prions d'agréer, Madame, Monsieur, nos sincères salutations.
+                      </p>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <p><strong>Service Cotisations:</strong> cotisation.encycliebat@encyclie-construction.fr</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         )}
 

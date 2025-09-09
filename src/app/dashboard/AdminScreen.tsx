@@ -8,6 +8,7 @@ import useMessagesStore from "@/lib/stores/messages-store";
 import MessageComposer from "@/components/messages/MessageComposer";
 import AddBrokerModal from "@/components/modals/AddBrokerModal";
 import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
+import ProductConfigTab from "@/components/admin/ProductConfigTab";
 
 // Types exacts de la fonction calculPrimeRCD
 interface SimulatorParams {
@@ -210,7 +211,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     }));
 
     // lancer le calcul immédiatement
-    setTimeout(() => handleSimulate(), 0);
+    // setTimeout(() => handleSimulate(), 0);
   };
 
   const {
@@ -286,43 +287,43 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     }
   };
 
-  // Function to simulate premium calculation
-  const handleSimulate = () => {
-    try {
-      // Préparer les paramètres comme dans page.tsx
-      const calculParams = {
-        caDeclared: simulatorData.caDeclared,
-        etp: simulatorData.etp,
-        activites: simulatorData.activites,
-        dateCreation: simulatorData.dateCreation,
-        tempsSansActivite12mois: simulatorData.tempsSansActivite12mois,
-        anneeExperience: simulatorData.anneeExperience,
-        assureurDefaillant: simulatorData.assureurDefaillant,
-        nombreAnneeAssuranceContinue:
-          simulatorData.nombreAnneeAssuranceContinue,
-        qualif: simulatorData.qualif,
-        ancienneAssurance: simulatorData.ancienneAssurance,
-        activiteSansEtreAssure: simulatorData.activiteSansEtreAssure,
-        experienceDirigeant: simulatorData.experienceDirigeant,
-        nomDeLAsurreur: simulatorData.nomDeLAsurreur,
-        dateEffet: simulatorData.dateEffet,
-        dateFinCouverturePrecedente: simulatorData.dateFinCouverturePrecedente,
-        sinistresPrecedents: simulatorData.sinistresPrecedents,
-        tauxTI: simulatorData.tauxTI,
-        coefficientAntecedent: simulatorData.coefficientAntecedent,
-      };
+  // // Function to simulate premium calculation
+  // const handleSimulate = () => {
+  //   try {
+  //     // Préparer les paramètres comme dans page.tsx
+  //     const calculParams = {
+  //       caDeclared: simulatorData.caDeclared,
+  //       etp: simulatorData.etp,
+  //       activites: simulatorData.activites,
+  //       dateCreation: simulatorData.dateCreation,
+  //       tempsSansActivite12mois: simulatorData.tempsSansActivite12mois,
+  //       anneeExperience: simulatorData.anneeExperience,
+  //       assureurDefaillant: simulatorData.assureurDefaillant,
+  //       nombreAnneeAssuranceContinue:
+  //         simulatorData.nombreAnneeAssuranceContinue,
+  //       qualif: simulatorData.qualif,
+  //       ancienneAssurance: simulatorData.ancienneAssurance,
+  //       activiteSansEtreAssure: simulatorData.activiteSansEtreAssure,
+  //       experienceDirigeant: simulatorData.experienceDirigeant,
+  //       nomDeLAsurreur: simulatorData.nomDeLAsurreur,
+  //       dateEffet: simulatorData.dateEffet,
+  //       dateFinCouverturePrecedente: simulatorData.dateFinCouverturePrecedente,
+  //       sinistresPrecedents: simulatorData.sinistresPrecedents,
+  //       tauxTI: simulatorData.tauxTI,
+  //       coefficientAntecedent: simulatorData.coefficientAntecedent,
+  //     };
 
-      console.log("Paramètres de simulation:", calculParams);
-      const result = calculPrimeRCD(calculParams);
-      console.log("Résultat simulation:", result);
-      setSimulationResult(result);
-    } catch (error) {
-      console.error("Erreur lors de la simulation:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      alert("Erreur lors de la simulation: " + errorMessage);
-    }
-  };
+  //     console.log("Paramètres de simulation:", calculParams);
+  //     const result = calculPrimeRCD(calculParams);
+  //     console.log("Résultat simulation:", result);
+  //     setSimulationResult(result);
+  //   } catch (error) {
+  //     console.error("Erreur lors de la simulation:", error);
+  //     const errorMessage =
+  //       error instanceof Error ? error.message : String(error);
+  //     alert("Erreur lors de la simulation: " + errorMessage);
+  //   }
+  // };
 
   // Function to update simulator data
   const updateSimulatorData = <K extends keyof SimulatorParams>(
@@ -633,7 +634,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                 </span>
               )}
             </button>
-            <button
+            {/* <button
               onClick={() => setActiveTab("simulator")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === "simulator"
@@ -642,6 +643,16 @@ export default function AdminScreen({ user }: AdminScreenProps) {
               }`}
             >
               Simulateur de tarif
+            </button> */}
+            <button
+              onClick={() => setActiveTab("productConfig")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "productConfig"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Configuration des produits
             </button>
             {/* <button
               onClick={() => setActiveTab("underwriters")}
@@ -1192,7 +1203,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                   >
                     Remplir avec l'exemple & Calculer
                   </button>
-                  <button
+                  {/* <button
                     onClick={handleSimulate}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
                   >
@@ -1210,7 +1221,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                       />
                     </svg>
                     Calculer la prime
-                  </button>
+                  </button> */}
                 </div>
               </div>
 
@@ -1781,6 +1792,17 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === "productConfig" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Configuration des produits
+                </h3>
+              </div>
+              <ProductConfigTab products={products} loading={productsLoading} />
             </div>
           )}
 

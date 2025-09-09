@@ -296,6 +296,7 @@ model InsuranceProduct {
   requiredDocs   Json // Required document types
   workflowConfig Json? // Custom workflow steps
   stepConfig     Json? // Multi-step form configuration
+  mappingFields  Json? // Mapping fields
 
   // Relations
   quotes    Quote[]

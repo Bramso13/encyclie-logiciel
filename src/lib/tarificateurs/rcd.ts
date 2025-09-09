@@ -1,548 +1,1002 @@
-// // ---------- Types
-type Territory =
-  | "REUNION"
-  | "MAYOTTE"
-  | "MARTINIQUE"
-  | "GUADELOUPE"
-  | "GUYANE"
-  | "ST-MARTIN"
-  | "ST-BARTH";
+// // // ---------- Types
+// type Territory =
+//   | "REUNION"
+//   | "MAYOTTE"
+//   | "MARTINIQUE"
+//   | "GUADELOUPE"
+//   | "GUYANE"
+//   | "ST-MARTIN"
+//   | "ST-BARTH";
 
-type PreviousRcdStatus = "EN_COURS" | "RESILIE" | "JAMAIS";
-type Periodicity = "annuel" | "semestriel" | "trimestriel" | "mensuel";
+// type PreviousRcdStatus = "EN_COURS" | "RESILIE" | "JAMAIS";
+// type Periodicity = "annuel" | "semestriel" | "trimestriel" | "mensuel";
 
-type ActivityShare = { code: string; caSharePercent: number };
+// type ActivityShare = { code: string; caSharePercent: number };
 
-type Loss = { year: number; numClaims: number; totalCost: number };
+// type Loss = { year: number; numClaims: number; totalCost: number };
 
-type ActiDegressivity = {
-  baseRate: number; // taux de base (ex: 0.0407)
-  reducAt500k: number; // réduction au 500k (ex: 0.88 => -12%)
-  thresholdStart: number; // seuil de déclenchement de la dégressivité (souvent ~250k)
-  reducAt1M: number; // réduction au 1M (ex: 0.80 => -20%)
-};
+// type ActiDegressivity = {
+//   baseRate: number; // taux de base (ex: 0.0407)
+//   reducAt500k: number; // réduction au 500k (ex: 0.88 => -12%)
+//   thresholdStart: number; // seuil de déclenchement de la dégressivité (souvent ~250k)
+//   reducAt1M: number; // réduction au 1M (ex: 0.80 => -20%)
+// };
 
-type Tables = {
-  actiscorByCode: Record<string, ActiDegressivity>;
-  taxByZone: Record<Territory, number>; // ex { REUNION: 0.09, ... }
-  fraisGestionRate: number; // ex 0.03 (3%) — provient de tab_autrescharges (ligne FG)
-  echeanceUnitCost: number; // "coutecheance" (coût d’1 échéance)
-  periodicitySplits: Record<Periodicity, number>; // { annuel:1, semestriel:2, trimestriel:4, mensuel:12 }
-  pminiPlancher: number; // ex 2000
-  plafondPmini: number; // 70_000 (seuil prime mini)
-  plafondCA: number; // 1_000_000 (max autorisé)
-  pjEnabledByDefault?: boolean; // défaut true si tu veux
-};
+// type Tables = {
+//   actiscorByCode: Record<string, ActiDegressivity>;
+//   taxByZone: Record<Territory, number>; // ex { REUNION: 0.09, ... }
+//   fraisGestionRate: number; // ex 0.03 (3%) — provient de tab_autrescharges (ligne FG)
+//   echeanceUnitCost: number; // "coutecheance" (coût d’1 échéance)
+//   periodicitySplits: Record<Periodicity, number>; // { annuel:1, semestriel:2, trimestriel:4, mensuel:12 }
+//   pminiPlancher: number; // ex 2000
+//   plafondPmini: number; // 70_000 (seuil prime mini)
+//   plafondCA: number; // 1_000_000 (max autorisé)
+//   pjEnabledByDefault?: boolean; // défaut true si tu veux
+// };
 
-type CoeffInput = {
-  hasQualification: boolean; // QUALIBAT/QUALIFELEC
-  creationDateISO: string; // "YYYY-MM-DD"
-  yearsExperience: number; // ex 2.1
-  previousRcdStatus: PreviousRcdStatus;
-  previousResiliationDate?: string | null; // "YYYY-MM-DD"
-  lossHistory: Loss[]; // liste des sinistres
-};
+// type CoeffInput = {
+//   hasQualification: boolean; // QUALIBAT/QUALIFELEC
+//   creationDateISO: string; // "YYYY-MM-DD"
+//   yearsExperience: number; // ex 2.1
+//   previousRcdStatus: PreviousRcdStatus;
+//   previousResiliationDate?: string | null; // "YYYY-MM-DD"
+//   lossHistory: Loss[]; // liste des sinistres
+// };
 
-type ScheduleOptions = {
-  effectiveDateISO: string; // "YYYY-MM-DD" (date d'effet)
-  periodicity: Periodicity; // annuel | semestriel | trimestriel | mensuel
-  includePJ?: boolean; // par défaut: tables.pjEnabledByDefault ?? true
-  repriseDuPasse?: {
-    // si jamais tu l’actives plus tard
-    enabled: boolean;
-    numInstallments?: number; // nb d’échéances pour la reprise
-    ttcAmount?: number; // TTC reprise (si gérée)
-  };
-};
+// type ScheduleOptions = {
+//   effectiveDateISO: string; // "YYYY-MM-DD" (date d'effet)
+//   periodicity: Periodicity; // annuel | semestriel | trimestriel | mensuel
+//   includePJ?: boolean; // par défaut: tables.pjEnabledByDefault ?? true
+//   repriseDuPasse?: {
+//     // si jamais tu l’actives plus tard
+//     enabled: boolean;
+//     numInstallments?: number; // nb d’échéances pour la reprise
+//     ttcAmount?: number; // TTC reprise (si gérée)
+//   };
+// };
 
-type PremiumParams = {
-  caDeclared: number;
-  headcountETP: number;
-  activities: ActivityShare[];
-  territory: Territory;
-  subContractingPercent: number;
-  tradingPercent: number;
-  tables: Tables;
-  coeff: CoeffInput;
-  schedule: ScheduleOptions;
-};
+// type PremiumParams = {
+//   caDeclared: number;
+//   headcountETP: number;
+//   activities: ActivityShare[];
+//   territory: Territory;
+//   subContractingPercent: number;
+//   tradingPercent: number;
+//   tables: Tables;
+//   coeff: CoeffInput;
+//   schedule: ScheduleOptions;
+// };
 
-// ---------- Helpers « Excel-like »
+// // ---------- Helpers « Excel-like »
 
-const DAYS_IN_YEAR = 365; // comme dans le VBA
-const PJ_HT = 106; // valeur utilisée dans ton VBA
+// const DAYS_IN_YEAR = 365; // comme dans le VBA
+// const PJ_HT = 106; // valeur utilisée dans ton VBA
 
-function parseISO(d: string): Date {
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) throw new Error(`Date invalide: ${d}`);
-  return dt;
-}
+// function yearOf(d: Date) {
+//   return d.getFullYear();
+// }
+// function monthOf(d: Date) {
+//   return d.getMonth() + 1;
+// } // 1..12
+// function dayOf(d: Date) {
+//   return d.getDate();
+// }
 
-function yearOf(d: Date) {
-  return d.getFullYear();
-}
-function monthOf(d: Date) {
-  return d.getMonth() + 1;
-} // 1..12
-function dayOf(d: Date) {
-  return d.getDate();
-}
+// function dateSerial(y: number, m: number, d: number): Date {
+//   return new Date(y, m - 1, d);
+// }
 
-function dateSerial(y: number, m: number, d: number): Date {
-  return new Date(y, m - 1, d);
-}
+// function daysDiffInclusive(a: Date, b: Date): number {
+//   // équivalent du DateDiff("d", a, b) + 1
+//   const A = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+//   const B = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+//   return Math.round((B - A) / 86400000) + 1;
+// }
 
-function daysDiffInclusive(a: Date, b: Date): number {
-  // équivalent du DateDiff("d", a, b) + 1
-  const A = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const B = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  return Math.round((B - A) / 86400000) + 1;
-}
+// // ---------- Étapes tarif (modules tarif_mod / outils / coeffmajo_mod)
 
-// ---------- Étapes tarif (modules tarif_mod / outils / coeffmajo_mod)
+// function computeCAcorrected(
+//   caDecl: number,
+//   etp: number,
+//   seuil = 70_000
+// ): number {
+//   if (etp <= 0) return caDecl;
+//   return caDecl / etp > seuil ? caDecl : etp * seuil;
+// }
 
-function computeCAcorrected(
-  caDecl: number,
-  etp: number,
-  seuil = 70_000
-): number {
-  if (etp <= 0) return caDecl;
-  return caDecl / etp > seuil ? caDecl : etp * seuil;
-}
+// function txDeg_2Pentes(
+//   x: number,
+//   tx0: number,
+//   seuil: number,
+//   seuilDeg: number,
+//   caMax: number,
+//   reducAt500k: number,
+//   reducAt1M: number
+// ): number {
+//   // Reprise fidèle de outils.txdeg (>= v7.8) :
+//   // palier 1 jusqu’à 500k puis palier 2 jusqu’à 1M
+//   const CAmaxdeg1 = 500_000;
+//   const CAmaxdeg2 = 1_000_000;
 
-function txDeg_2Pentes(
-  x: number,
-  tx0: number,
-  seuil: number,
-  seuilDeg: number,
-  caMax: number,
-  reducAt500k: number,
-  reducAt1M: number
-): number {
-  // Reprise fidèle de outils.txdeg (>= v7.8) :
-  // palier 1 jusqu’à 500k puis palier 2 jusqu’à 1M
-  const CAmaxdeg1 = 500_000;
-  const CAmaxdeg2 = 1_000_000;
+//   if (x <= seuil) return 0; // en-dessous: prime mini
+//   if (x > seuil && x <= seuilDeg) return tx0;
 
-  if (x <= seuil) return 0; // en-dessous: prime mini
-  if (x > seuil && x <= seuilDeg) return tx0;
+//   if (x > seuilDeg && x <= CAmaxdeg1) {
+//     const frac = (x - seuilDeg) / (CAmaxdeg1 - seuilDeg);
+//     return tx0 * (1 - (1 - reducAt500k) * frac);
+//   }
 
-  if (x > seuilDeg && x <= CAmaxdeg1) {
-    const frac = (x - seuilDeg) / (CAmaxdeg1 - seuilDeg);
-    return tx0 * (1 - (1 - reducAt500k) * frac);
-  }
+//   if (x > CAmaxdeg1 && x <= CAmaxdeg2) {
+//     const reduc =
+//       reducAt500k +
+//       (reducAt1M - reducAt500k) * ((x - CAmaxdeg1) / (CAmaxdeg2 - CAmaxdeg1));
+//     return tx0 * reduc;
+//   }
 
-  if (x > CAmaxdeg1 && x <= CAmaxdeg2) {
-    const reduc =
-      reducAt500k +
-      (reducAt1M - reducAt500k) * ((x - CAmaxdeg1) / (CAmaxdeg2 - CAmaxdeg1));
-    return tx0 * reduc;
-  }
+//   if (x > caMax) {
+//     // Dans le VBA : message + borne
+//     return tx0 * reducAt1M;
+//   }
+//   return tx0; // garde-fou
+// }
 
-  if (x > caMax) {
-    // Dans le VBA : message + borne
-    return tx0 * reducAt1M;
-  }
-  return tx0; // garde-fou
-}
+// function calcPrimeMini(
+//   CA: number,
+//   activities: ActivityShare[],
+//   tables: Tables
+// ): { pmini: number; tauxMoyenBase: number } {
+//   const tauxMoyenBase = activities.reduce((acc, a) => {
+//     const r = tables.actiscorByCode[a.code];
+//     if (!r) throw new Error(`Code activité inconnu: ${a.code}`);
+//     return acc + r.baseRate * (a.caSharePercent / 100);
+//   }, 0);
+//   const pmini = Math.max(
+//     tables.pminiPlancher,
+//     tauxMoyenBase * tables.plafondPmini
+//   );
+//   return { pmini, tauxMoyenBase };
+// }
 
-function calcPrimeMini(
-  CA: number,
-  activities: ActivityShare[],
-  tables: Tables
-): { pmini: number; tauxMoyenBase: number } {
-  const tauxMoyenBase = activities.reduce((acc, a) => {
-    const r = tables.actiscorByCode[a.code];
-    if (!r) throw new Error(`Code activité inconnu: ${a.code}`);
-    return acc + r.baseRate * (a.caSharePercent / 100);
-  }, 0);
-  const pmini = Math.max(
-    tables.pminiPlancher,
-    tauxMoyenBase * tables.plafondPmini
-  );
-  return { pmini, tauxMoyenBase };
-}
+// function calcTxMoyAuDela(
+//   CA: number,
+//   activities: ActivityShare[],
+//   tables: Tables
+// ): number {
+//   if (CA <= tables.plafondPmini) return 0;
+//   return activities.reduce((acc, a) => {
+//     const p = tables.actiscorByCode[a.code];
+//     const tx = txDeg_2Pentes(
+//       CA,
+//       p.baseRate,
+//       tables.plafondPmini,
+//       p.thresholdStart,
+//       tables.plafondCA,
+//       p.reducAt500k,
+//       p.reducAt1M
+//     );
+//     return acc + tx * (a.caSharePercent / 100);
+//   }, 0);
+// }
 
-function calcTxMoyAuDela(
-  CA: number,
-  activities: ActivityShare[],
-  tables: Tables
-): number {
-  if (CA <= tables.plafondPmini) return 0;
-  return activities.reduce((acc, a) => {
-    const p = tables.actiscorByCode[a.code];
-    const tx = txDeg_2Pentes(
-      CA,
-      p.baseRate,
-      tables.plafondPmini,
-      p.thresholdStart,
-      tables.plafondCA,
-      p.reducAt500k,
-      p.reducAt1M
-    );
-    return acc + tx * (a.caSharePercent / 100);
-  }, 0);
-}
+// type CoefficientsBreakdown = {
+//   qualification: { applied: boolean; value: number; description: string };
+//   companyAge: { ageYears: number; value: number; description: string };
+//   managerExperience: { yearsExp: number; value: number; description: string };
+//   previousRcd: {
+//     status: PreviousRcdStatus;
+//     value: number;
+//     description: string;
+//   };
+//   lossHistory: { numLosses: number; value: number; description: string };
+//   total: number;
+// };
 
-type CoefficientsBreakdown = {
-  qualification: { applied: boolean; value: number; description: string };
-  companyAge: { ageYears: number; value: number; description: string };
-  managerExperience: { yearsExp: number; value: number; description: string };
-  previousRcd: {
-    status: PreviousRcdStatus;
-    value: number;
-    description: string;
-  };
-  lossHistory: { numLosses: number; value: number; description: string };
-  total: number;
-};
+// function sumCoefficients(c: CoeffInput): {
+//   total: number;
+//   breakdown: CoefficientsBreakdown;
+// } {
+//   let coeff = 0;
+//   const breakdown: CoefficientsBreakdown = {
+//     qualification: { applied: false, value: 0, description: "" },
+//     companyAge: { ageYears: 0, value: 0, description: "" },
+//     managerExperience: { yearsExp: 0, value: 0, description: "" },
+//     previousRcd: { status: c.previousRcdStatus, value: 0, description: "" },
+//     lossHistory: { numLosses: 0, value: 0, description: "" },
+//     total: 0,
+//   };
 
-function sumCoefficients(c: CoeffInput): {
-  total: number;
-  breakdown: CoefficientsBreakdown;
-} {
-  let coeff = 0;
-  const breakdown: CoefficientsBreakdown = {
-    qualification: { applied: false, value: 0, description: "" },
-    companyAge: { ageYears: 0, value: 0, description: "" },
-    managerExperience: { yearsExp: 0, value: 0, description: "" },
-    previousRcd: { status: c.previousRcdStatus, value: 0, description: "" },
-    lossHistory: { numLosses: 0, value: 0, description: "" },
-    total: 0,
-  };
+//   // a) Qualification
+//   if (c.hasQualification) {
+//     coeff += -0.05;
+//     breakdown.qualification = {
+//       applied: true,
+//       value: -0.05,
+//       description: "Qualification QUALIBAT/QUALIFELEC",
+//     };
+//   } else {
+//     breakdown.qualification = {
+//       applied: false,
+//       value: 0,
+//       description: "Pas de qualification",
+//     };
+//   }
 
-  // a) Qualification
-  if (c.hasQualification) {
-    coeff += -0.05;
-    breakdown.qualification = {
-      applied: true,
-      value: -0.05,
-      description: "Qualification QUALIBAT/QUALIFELEC",
-    };
-  } else {
-    breakdown.qualification = {
-      applied: false,
-      value: 0,
-      description: "Pas de qualification",
-    };
-  }
+//   // b) Ancienneté société
+//   const ageYears =
+//     (Date.now() - parseISO(c.creationDateISO).getTime()) / (365.25 * 86400000);
+//   breakdown.companyAge.ageYears = ageYears;
 
-  // b) Ancienneté société
-  const ageYears =
-    (Date.now() - parseISO(c.creationDateISO).getTime()) / (365.25 * 86400000);
-  breakdown.companyAge.ageYears = ageYears;
+//   if (ageYears < 1) {
+//     coeff += +0.2;
+//     breakdown.companyAge.value = 0.2;
+//     breakdown.companyAge.description = "Société < 1 an";
+//   } else if (ageYears < 3) {
+//     coeff += +0.1;
+//     breakdown.companyAge.value = 0.1;
+//     breakdown.companyAge.description = "Société 1-3 ans";
+//   } else {
+//     breakdown.companyAge.value = 0;
+//     breakdown.companyAge.description = "Société ≥ 3 ans";
+//   }
 
-  if (ageYears < 1) {
-    coeff += +0.2;
-    breakdown.companyAge.value = 0.2;
-    breakdown.companyAge.description = "Société < 1 an";
-  } else if (ageYears < 3) {
-    coeff += +0.1;
-    breakdown.companyAge.value = 0.1;
-    breakdown.companyAge.description = "Société 1-3 ans";
-  } else {
-    breakdown.companyAge.value = 0;
-    breakdown.companyAge.description = "Société ≥ 3 ans";
-  }
+//   // c) Expérience dirigeant
+//   breakdown.managerExperience.yearsExp = c.yearsExperience;
+//   if (c.yearsExperience < 1) {
+//     throw new Error("Refus — expérience dirigeant < 1 an");
+//   } else if (c.yearsExperience < 3) {
+//     coeff += +0.05;
+//     breakdown.managerExperience.value = 0.05;
+//     breakdown.managerExperience.description = "Expérience dirigeant 1-3 ans";
+//   } else if (c.yearsExperience > 5) {
+//     coeff += -0.05;
+//     breakdown.managerExperience.value = -0.05;
+//     breakdown.managerExperience.description = "Expérience dirigeant > 5 ans";
+//   } else {
+//     breakdown.managerExperience.value = 0;
+//     breakdown.managerExperience.description = "Expérience dirigeant 3-5 ans";
+//   }
 
-  // c) Expérience dirigeant
-  breakdown.managerExperience.yearsExp = c.yearsExperience;
-  if (c.yearsExperience < 1) {
-    throw new Error("Refus — expérience dirigeant < 1 an");
-  } else if (c.yearsExperience < 3) {
-    coeff += +0.05;
-    breakdown.managerExperience.value = 0.05;
-    breakdown.managerExperience.description = "Expérience dirigeant 1-3 ans";
-  } else if (c.yearsExperience > 5) {
-    coeff += -0.05;
-    breakdown.managerExperience.value = -0.05;
-    breakdown.managerExperience.description = "Expérience dirigeant > 5 ans";
-  } else {
-    breakdown.managerExperience.value = 0;
-    breakdown.managerExperience.description = "Expérience dirigeant 3-5 ans";
-  }
+//   // d) Antécédents RCD
+//   breakdown.previousRcd.description = `Statut RCD précédent: ${c.previousRcdStatus}`;
 
-  // d) Antécédents RCD
-  breakdown.previousRcd.description = `Statut RCD précédent: ${c.previousRcdStatus}`;
+//   // e) Sinistralité
+//   breakdown.lossHistory.numLosses = c.lossHistory.length;
+//   if (c.lossHistory.length > 0) {
+//     const totalCost = c.lossHistory.reduce(
+//       (sum, loss) => sum + loss.totalCost,
+//       0
+//     );
+//     // Exemple de majoration sinistralité (à adapter selon vos règles)
+//     const sinistraCoeff = Math.min(0.3, c.lossHistory.length * 0.1);
+//     coeff += sinistraCoeff;
+//     breakdown.lossHistory.value = sinistraCoeff;
+//     breakdown.lossHistory.description = `${
+//       c.lossHistory.length
+//     } sinistre(s) - Coût total: ${totalCost.toLocaleString("fr-FR")} €`;
+//   } else {
+//     breakdown.lossHistory.description = "Aucun sinistre déclaré";
+//   }
 
-  // e) Sinistralité
-  breakdown.lossHistory.numLosses = c.lossHistory.length;
-  if (c.lossHistory.length > 0) {
-    const totalCost = c.lossHistory.reduce(
-      (sum, loss) => sum + loss.totalCost,
-      0
-    );
-    // Exemple de majoration sinistralité (à adapter selon vos règles)
-    const sinistraCoeff = Math.min(0.3, c.lossHistory.length * 0.1);
-    coeff += sinistraCoeff;
-    breakdown.lossHistory.value = sinistraCoeff;
-    breakdown.lossHistory.description = `${
-      c.lossHistory.length
-    } sinistre(s) - Coût total: ${totalCost.toLocaleString("fr-FR")} €`;
-  } else {
-    breakdown.lossHistory.description = "Aucun sinistre déclaré";
-  }
+//   breakdown.total = coeff;
+//   return { total: coeff, breakdown };
+// }
 
-  breakdown.total = coeff;
-  return { total: coeff, breakdown };
-}
+// // ---------- Taxes & frais (tarif_mod.calcTarif_options)
 
-// ---------- Taxes & frais (tarif_mod.calcTarif_options)
+// function computeHTBase(
+//   CA_declared: number,
+//   ETP: number,
+//   activities: ActivityShare[],
+//   tables: Tables,
+//   coeffInput: CoeffInput
+// ): {
+//   CA_total: number;
+//   CA_declared: number;
+//   ETP: number;
+//   pmini: number;
+//   tauxMoyenBase: number;
+//   txMoyAuDela: number;
+//   primeBeforeCoeff: number;
+//   primeHT: number; // HT après coefficients
+//   coeffTotal: number;
+//   coeffBreakdown: CoefficientsBreakdown;
+//   isPrimeMinForced: boolean;
+//   primeMiniHT_afterCoeff: number;
+//   primeAuDelaHT_afterCoeff: number;
+//   isAbovePminiThreshold: boolean;
+//   caAbovePmini: number;
+// } {
+//   const CA_total = computeCAcorrected(CA_declared, ETP, 70_000);
+//   const { pmini, tauxMoyenBase } = calcPrimeMini(CA_total, activities, tables);
+//   const txMoyAuDela = calcTxMoyAuDela(CA_total, activities, tables);
 
-function computeHTBase(
-  CA_declared: number,
-  ETP: number,
-  activities: ActivityShare[],
-  tables: Tables,
-  coeffInput: CoeffInput
-): {
-  CA_total: number;
-  CA_declared: number;
-  ETP: number;
-  pmini: number;
-  tauxMoyenBase: number;
-  txMoyAuDela: number;
-  primeBeforeCoeff: number;
-  primeHT: number; // HT après coefficients
-  coeffTotal: number;
-  coeffBreakdown: CoefficientsBreakdown;
-  isPrimeMinForced: boolean;
-  primeMiniHT_afterCoeff: number;
-  primeAuDelaHT_afterCoeff: number;
-  isAbovePminiThreshold: boolean;
-  caAbovePmini: number;
-} {
-  const CA_total = computeCAcorrected(CA_declared, ETP, 70_000);
-  const { pmini, tauxMoyenBase } = calcPrimeMini(CA_total, activities, tables);
-  const txMoyAuDela = calcTxMoyAuDela(CA_total, activities, tables);
+//   const isAbovePminiThreshold = CA_total > tables.plafondPmini;
+//   const caAbovePmini = Math.max(0, CA_total - tables.plafondPmini);
 
-  const isAbovePminiThreshold = CA_total > tables.plafondPmini;
-  const caAbovePmini = Math.max(0, CA_total - tables.plafondPmini);
+//   const primeBeforeCoeff = isAbovePminiThreshold
+//     ? pmini + txMoyAuDela * caAbovePmini
+//     : pmini;
 
-  const primeBeforeCoeff = isAbovePminiThreshold
-    ? pmini + txMoyAuDela * caAbovePmini
-    : pmini;
+//   const coeffResult = sumCoefficients(coeffInput);
+//   let primeHT = primeBeforeCoeff * (1 + coeffResult.total);
+//   let isPrimeMinForced = false;
 
-  const coeffResult = sumCoefficients(coeffInput);
-  let primeHT = primeBeforeCoeff * (1 + coeffResult.total);
-  let isPrimeMinForced = false;
+//   if (primeHT < tables.pminiPlancher) {
+//     primeHT = tables.pminiPlancher;
+//     isPrimeMinForced = true;
+//   }
 
-  if (primeHT < tables.pminiPlancher) {
-    primeHT = tables.pminiPlancher;
-    isPrimeMinForced = true;
-  }
+//   return {
+//     CA_total,
+//     CA_declared,
+//     ETP,
+//     pmini,
+//     tauxMoyenBase,
+//     txMoyAuDela,
+//     primeBeforeCoeff,
+//     primeHT,
+//     coeffTotal: coeffResult.total,
+//     coeffBreakdown: coeffResult.breakdown,
+//     isPrimeMinForced,
+//     primeMiniHT_afterCoeff: pmini * (1 + coeffResult.total),
+//     primeAuDelaHT_afterCoeff:
+//       (primeBeforeCoeff - pmini) * (1 + coeffResult.total),
+//     isAbovePminiThreshold,
+//     caAbovePmini,
+//   };
+// }
 
-  return {
-    CA_total,
-    CA_declared,
-    ETP,
-    pmini,
-    tauxMoyenBase,
-    txMoyAuDela,
-    primeBeforeCoeff,
-    primeHT,
-    coeffTotal: coeffResult.total,
-    coeffBreakdown: coeffResult.breakdown,
-    isPrimeMinForced,
-    primeMiniHT_afterCoeff: pmini * (1 + coeffResult.total),
-    primeAuDelaHT_afterCoeff:
-      (primeBeforeCoeff - pmini) * (1 + coeffResult.total),
-    isAbovePminiThreshold,
-    caAbovePmini,
-  };
-}
+// function buildTTCAndExtras(
+//   primeHT: number,
+//   territory: Territory,
+//   tables: Tables,
+//   periodicity: Periodicity,
+//   includePJ: boolean
+// ) {
+//   const taxRate = tables.taxByZone[territory] ?? 0;
+//   const nEch = tables.periodicitySplits[periodicity];
+//   const fraisFract = nEch > 1 ? nEch * (tables.echeanceUnitCost ?? 0) : 0;
+//   const fraisGestion = primeHT * (tables.fraisGestionRate ?? 0);
 
-function buildTTCAndExtras(
-  primeHT: number,
-  territory: Territory,
-  tables: Tables,
-  periodicity: Periodicity,
-  includePJ: boolean
-) {
-  const taxRate = tables.taxByZone[territory] ?? 0;
-  const nEch = tables.periodicitySplits[periodicity];
-  const fraisFract = nEch > 1 ? nEch * (tables.echeanceUnitCost ?? 0) : 0;
-  const fraisGestion = primeHT * (tables.fraisGestionRate ?? 0);
+//   // PJ : 106 € HT taxés au même taux (cf. tarif_mod)
+//   const pjHT = includePJ ? PJ_HT : 0;
+//   const pjTax = pjHT * taxRate;
+//   const pjTTC = pjHT + pjTax;
 
-  // PJ : 106 € HT taxés au même taux (cf. tarif_mod)
-  const pjHT = includePJ ? PJ_HT : 0;
-  const pjTax = pjHT * taxRate;
-  const pjTTC = pjHT + pjTax;
+//   // taxe territoriale: assiette = HT + frais de fractionnement (comme dans le VBA)
+//   const taxe = (primeHT + fraisFract) * taxRate;
 
-  // taxe territoriale: assiette = HT + frais de fractionnement (comme dans le VBA)
-  const taxe = (primeHT + fraisFract) * taxRate;
+//   const ttc = primeHT + taxe + fraisFract + fraisGestion + pjTTC;
 
-  const ttc = primeHT + taxe + fraisFract + fraisGestion + pjTTC;
+//   return {
+//     taxRate,
+//     taxe,
+//     fraisFract,
+//     fraisGestion,
+//     pjHT,
+//     pjTax,
+//     pjTTC,
+//     ttc,
+//     nEch,
+//   };
+// }
 
-  return {
-    taxRate,
-    taxe,
-    fraisFract,
-    fraisGestion,
-    pjHT,
-    pjTax,
-    pjTTC,
-    ttc,
-    nEch,
-  };
-}
+// // ---------- Échéancier (echeancier_mod) — fidèle mais compact
+// // Règles clés reprises :
+// //  - Année en cours = prorata jours sur la partie RCD TTC (hors FG et PJ).
+// //  - PJ est due à 100% même en année partielle.
+// //  - FG au prorata jours.
+// //  - Pour l’année N+1, on répartit la partie RCD TTC sur la périodicité choisie.
 
-// ---------- Échéancier (echeancier_mod) — fidèle mais compact
-// Règles clés reprises :
-//  - Année en cours = prorata jours sur la partie RCD TTC (hors FG et PJ).
-//  - PJ est due à 100% même en année partielle.
-//  - FG au prorata jours.
-//  - Pour l’année N+1, on répartit la partie RCD TTC sur la périodicité choisie.
+// type ScheduleLine = {
+//   date: string; // ISO
+//   rcdHT: number;
+//   rcdTax: number;
+//   rcdTTC: number;
+//   pjHT: number;
+//   pjTax: number;
+//   pjTTC: number;
+//   fraisGestion: number; // HT (pas de taxe dans le VBA)
+//   totalTTC: number;
+// };
 
-type ScheduleLine = {
-  date: string; // ISO
-  rcdHT: number;
-  rcdTax: number;
-  rcdTTC: number;
-  pjHT: number;
-  pjTax: number;
-  pjTTC: number;
-  fraisGestion: number; // HT (pas de taxe dans le VBA)
-  totalTTC: number;
-};
+// function splitRcdTTCIntoHTTax(ttc: number, taxRate: number) {
+//   const ht = ttc / (1 + taxRate);
+//   const tax = ttc - ht;
+//   return { ht, tax };
+// }
 
-function splitRcdTTCIntoHTTax(ttc: number, taxRate: number) {
-  const ht = ttc / (1 + taxRate);
-  const tax = ttc - ht;
-  return { ht, tax };
-}
+// function buildSchedule(
+//   totals: ReturnType<typeof buildTTCAndExtras>,
+//   schedule: ScheduleOptions
+// ) {
+//   const res: ScheduleLine[] = [];
 
-function buildSchedule(
-  totals: ReturnType<typeof buildTTCAndExtras>,
-  schedule: ScheduleOptions
-) {
-  const res: ScheduleLine[] = [];
+//   const eff = parseISO(schedule.effectiveDateISO);
+//   const yr = yearOf(eff);
+//   const mo = monthOf(eff);
+//   const jr = dayOf(eff);
 
-  const eff = parseISO(schedule.effectiveDateISO);
-  const yr = yearOf(eff);
-  const mo = monthOf(eff);
-  const jr = dayOf(eff);
+//   // Parties TTC à ventiler
+//   // Prcd = RCD TTC (total – FG – PJ)
+//   const Prcd = totals.ttc - totals.fraisGestion - totals.pjTTC;
 
-  // Parties TTC à ventiler
-  // Prcd = RCD TTC (total – FG – PJ)
-  const Prcd = totals.ttc - totals.fraisGestion - totals.pjTTC;
+//   // Année N (partielle) : prorata jours
+//   const endOfYear = dateSerial(yr, 12, 31);
+//   const njrRestant = daysDiffInclusive(eff, endOfYear);
+//   const PRCDpartiel = Prcd * (njrRestant / DAYS_IN_YEAR);
+//   const FGpartiel = totals.fraisGestion * (njrRestant / DAYS_IN_YEAR);
+//   const PJpartiel = totals.pjTTC; // 100%
 
-  // Année N (partielle) : prorata jours
-  const endOfYear = dateSerial(yr, 12, 31);
-  const njrRestant = daysDiffInclusive(eff, endOfYear);
-  const PRCDpartiel = Prcd * (njrRestant / DAYS_IN_YEAR);
-  const FGpartiel = totals.fraisGestion * (njrRestant / DAYS_IN_YEAR);
-  const PJpartiel = totals.pjTTC; // 100%
+//   // 1) Échéancier année N
+//   // Répartition conforme à l’esprit du VBA (simple & fidèle) :
+//   // - on pose une première ligne à la date d’effet avec PRCDpartiel TTC
+//   //   (et on éclate HT/Taxe à partir du taux territorial)
+//   {
+//     const { ht, tax } = splitRcdTTCIntoHTTax(PRCDpartiel, totals.taxRate);
+//     const totalTTC = PRCDpartiel + PJpartiel + FGpartiel;
+//     res.push({
+//       date: schedule.effectiveDateISO,
+//       rcdHT: ht,
+//       rcdTax: tax,
+//       rcdTTC: PRCDpartiel,
+//       pjHT: totals.pjHT,
+//       pjTax: totals.pjTax,
+//       pjTTC: PJpartiel,
+//       fraisGestion: FGpartiel,
+//       totalTTC,
+//     });
+//   }
 
-  // 1) Échéancier année N
-  // Répartition conforme à l’esprit du VBA (simple & fidèle) :
-  // - on pose une première ligne à la date d’effet avec PRCDpartiel TTC
-  //   (et on éclate HT/Taxe à partir du taux territorial)
-  {
-    const { ht, tax } = splitRcdTTCIntoHTTax(PRCDpartiel, totals.taxRate);
-    const totalTTC = PRCDpartiel + PJpartiel + FGpartiel;
-    res.push({
-      date: schedule.effectiveDateISO,
-      rcdHT: ht,
-      rcdTax: tax,
-      rcdTTC: PRCDpartiel,
-      pjHT: totals.pjHT,
-      pjTax: totals.pjTax,
-      pjTTC: PJpartiel,
-      fraisGestion: FGpartiel,
-      totalTTC,
-    });
-  }
+//   // 2) Échéancier année N+1
+//   const yrnext = mo === 1 && jr === 1 ? yr : yr + 1;
+//   const nEch = totals.nEch;
+//   const partRCD = Prcd; // pleine année
+//   const rcdParEch = partRCD / nEch;
+//   const { ht: rcdHTparEch, tax: rcdTaxParEch } = splitRcdTTCIntoHTTax(
+//     rcdParEch,
+//     totals.taxRate
+//   );
+//   const FGparEch = totals.fraisGestion / nEch;
 
-  // 2) Échéancier année N+1
-  const yrnext = mo === 1 && jr === 1 ? yr : yr + 1;
-  const nEch = totals.nEch;
-  const partRCD = Prcd; // pleine année
-  const rcdParEch = partRCD / nEch;
-  const { ht: rcdHTparEch, tax: rcdTaxParEch } = splitRcdTTCIntoHTTax(
-    rcdParEch,
-    totals.taxRate
-  );
-  const FGparEch = totals.fraisGestion / nEch;
+//   if (schedule.periodicity === "annuel") {
+//     const d = dateSerial(yrnext, 1, 1);
+//     res.push({
+//       date: d.toISOString().slice(0, 10),
+//       rcdHT: rcdHTparEch,
+//       rcdTax: rcdTaxParEch,
+//       rcdTTC: rcdParEch,
+//       pjHT: totals.pjHT,
+//       pjTax: totals.pjTax,
+//       pjTTC: totals.pjTTC,
+//       fraisGestion: totals.fraisGestion,
+//       totalTTC: rcdParEch + totals.pjTTC + totals.fraisGestion,
+//     });
+//   } else if (schedule.periodicity === "semestriel") {
+//     const d1 = dateSerial(yrnext, 1, 1);
+//     const d2 = dateSerial(yrnext, 7, 1);
+//     [d1, d2].forEach((d, i) => {
+//       const pj = i === 0 ? totals.pjTTC : 0; // PJ au 1er appel, fidèle au code
+//       const pjHT = i === 0 ? totals.pjHT : 0;
+//       const pjTax = i === 0 ? totals.pjTax : 0;
+//       res.push({
+//         date: d.toISOString().slice(0, 10),
+//         rcdHT: rcdHTparEch,
+//         rcdTax: rcdTaxParEch,
+//         rcdTTC: rcdParEch,
+//         pjHT,
+//         pjTax,
+//         pjTTC: pj,
+//         fraisGestion: FGparEch,
+//         totalTTC: rcdParEch + pj + FGparEch,
+//       });
+//     });
+//   } else if (schedule.periodicity === "trimestriel") {
+//     for (let k = 0; k < 4; k++) {
+//       const d = dateSerial(yrnext, 3 * k + 1, 1);
+//       const pj = k === 0 ? totals.pjTTC : 0;
+//       const pjHT = k === 0 ? totals.pjHT : 0;
+//       const pjTax = k === 0 ? totals.pjTax : 0;
+//       res.push({
+//         date: d.toISOString().slice(0, 10),
+//         rcdHT: rcdHTparEch,
+//         rcdTax: rcdTaxParEch,
+//         rcdTTC: rcdParEch,
+//         pjHT,
+//         pjTax,
+//         pjTTC: pj,
+//         fraisGestion: FGparEch,
+//         totalTTC: rcdParEch + pj + FGparEch,
+//       });
+//     }
+//   } else {
+//     // mensuel
+//     for (let m = 1; m <= 12; m++) {
+//       const d = dateSerial(yrnext, m, 1);
+//       const pj = m === 1 ? totals.pjTTC : 0;
+//       const pjHT = m === 1 ? totals.pjHT : 0;
+//       const pjTax = m === 1 ? totals.pjTax : 0;
+//       res.push({
+//         date: d.toISOString().slice(0, 10),
+//         rcdHT: rcdHTparEch,
+//         rcdTax: rcdTaxParEch,
+//         rcdTTC: rcdParEch,
+//         pjHT,
+//         pjTax,
+//         pjTTC: pj,
+//         fraisGestion: FGparEch,
+//         totalTTC: rcdParEch + pj + FGparEch,
+//       });
+//     }
+//   }
 
-  if (schedule.periodicity === "annuel") {
-    const d = dateSerial(yrnext, 1, 1);
-    res.push({
-      date: d.toISOString().slice(0, 10),
-      rcdHT: rcdHTparEch,
-      rcdTax: rcdTaxParEch,
-      rcdTTC: rcdParEch,
-      pjHT: totals.pjHT,
-      pjTax: totals.pjTax,
-      pjTTC: totals.pjTTC,
-      fraisGestion: totals.fraisGestion,
-      totalTTC: rcdParEch + totals.pjTTC + totals.fraisGestion,
-    });
-  } else if (schedule.periodicity === "semestriel") {
-    const d1 = dateSerial(yrnext, 1, 1);
-    const d2 = dateSerial(yrnext, 7, 1);
-    [d1, d2].forEach((d, i) => {
-      const pj = i === 0 ? totals.pjTTC : 0; // PJ au 1er appel, fidèle au code
-      const pjHT = i === 0 ? totals.pjHT : 0;
-      const pjTax = i === 0 ? totals.pjTax : 0;
-      res.push({
-        date: d.toISOString().slice(0, 10),
-        rcdHT: rcdHTparEch,
-        rcdTax: rcdTaxParEch,
-        rcdTTC: rcdParEch,
-        pjHT,
-        pjTax,
-        pjTTC: pj,
-        fraisGestion: FGparEch,
-        totalTTC: rcdParEch + pj + FGparEch,
-      });
-    });
-  } else if (schedule.periodicity === "trimestriel") {
-    for (let k = 0; k < 4; k++) {
-      const d = dateSerial(yrnext, 3 * k + 1, 1);
-      const pj = k === 0 ? totals.pjTTC : 0;
-      const pjHT = k === 0 ? totals.pjHT : 0;
-      const pjTax = k === 0 ? totals.pjTax : 0;
-      res.push({
-        date: d.toISOString().slice(0, 10),
-        rcdHT: rcdHTparEch,
-        rcdTax: rcdTaxParEch,
-        rcdTTC: rcdParEch,
-        pjHT,
-        pjTax,
-        pjTTC: pj,
-        fraisGestion: FGparEch,
-        totalTTC: rcdParEch + pj + FGparEch,
-      });
-    }
-  } else {
-    // mensuel
-    for (let m = 1; m <= 12; m++) {
-      const d = dateSerial(yrnext, m, 1);
-      const pj = m === 1 ? totals.pjTTC : 0;
-      const pjHT = m === 1 ? totals.pjHT : 0;
-      const pjTax = m === 1 ? totals.pjTax : 0;
-      res.push({
-        date: d.toISOString().slice(0, 10),
-        rcdHT: rcdHTparEch,
-        rcdTax: rcdTaxParEch,
-        rcdTTC: rcdParEch,
-        pjHT,
-        pjTax,
-        pjTTC: pj,
-        fraisGestion: FGparEch,
-        totalTTC: rcdParEch + pj + FGparEch,
-      });
-    }
-  }
+//   return res;
+// }
 
-  return res;
-}
+// // // ---------- API principale
 
-// // ---------- API principale
+// // export function calculateRcdPremium(params: PremiumParams) {
+// //   // 0) Refus « métier »
+// //   if (params.subContractingPercent > 15 || params.tradingPercent > 15)
+// //     throw new Error("Refus: sous-traitance/négoce > 15%");
+// //   if (params.headcountETP > 8) throw new Error("Refus: effectif > 8 ETP");
+// //   if (params.caDeclared > params.tables.plafondCA)
+// //     throw new Error("Refus: CA > plafond CA");
 
+// //   // 1) Prime HT (base + coeffs)
+// //   const base = computeHTBase(
+// //     params.caDeclared,
+// //     params.headcountETP,
+// //     params.activities,
+// //     params.tables,
+// //     {
+// //       hasQualification: params.coeff.hasQualification,
+// //       creationDateISO: params.coeff.creationDateISO,
+// //       yearsExperience: params.coeff.yearsExperience,
+// //       previousRcdStatus: params.coeff.previousRcdStatus,
+// //       previousResiliationDate: params.coeff.previousResiliationDate ?? null,
+// //       lossHistory: params.coeff.lossHistory,
+// //     }
+// //   );
+
+// //   // 2) Taxes / Frais / PJ / TTC
+// //   const includePJ =
+// //     params.schedule.includePJ ?? params.tables.pjEnabledByDefault ?? true;
+
+// //   const totals = buildTTCAndExtras(
+// //     base.primeHT,
+// //     params.territory,
+// //     params.tables,
+// //     params.schedule.periodicity,
+// //     includePJ
+// //   );
+
+// //   // 3) Échéancier (année N partielle + année N+1)
+// //   const schedule = buildSchedule(totals, params.schedule);
+
+// //   return {
+// //     inputsEcho: params,
+// //     baseBreakdown: base,
+// //     totals, // taxe, FG, PJ, TTC
+// //     schedule, // lignes datées (RCD HT/Tax/TTC, PJ, FG, total TTC)
+// //   };
+// // }
+// // --- util arrondi à l’euro (comme l’Excel affiché)
+// const eur = (n: number) => Math.round(n);
+
+// type ActivityRow = {
+//   code: string;
+//   baseRate: number; // ex 0.0407
+//   appliedRate: number; // taux dégressif appliqué à l'activité (au-delà)
+//   caSharePercent: number; // part CA de cette activité
+//   caShare: number; // montant CA de cette activité
+//   reducAt500k: number; // facteur réduction à 500k
+//   reducAt1M: number; // facteur réduction à 1M
+//   thresholdStart: number; // seuil déclenchement dégressivité
+//   weightInTotalBeyondPct: number; // poids % dans le "TOTAL au-delà de Pmini" (avant coeff)
+//   primeBeyondHT: number; // prime au-delà HT (avant coeff), par activité
+//   degressivityApplied: boolean; // true si dégressivité appliquée
+// };
+
+// type ActivityBreakdown = {
+//   rows: ActivityRow[];
+//   totalBeyondHT_noCoeff: number; // "TOTAL au-delà de Pmini" avant coeff
+//   primeMiniAddedHT_noCoeff: number; // "Prime mini ajoutée" (pmini) avant coeff
+//   totalWithoutCoeffsHT: number; // total sans majorations/minorations (l. "TOTAL sans majorations/min")
+//   withCoeffs: {
+//     coeffTotalPct: number; // ex 20 (%)
+//     primeMiniHT: number; // pmini * (1 + coeff)
+//     primeBeyondHT: number; // totalBeyond * (1 + coeff)
+//     totalRcdHT: number; // somme = base RCD HT
+//   };
+// };
+
+// type RecapLikeExcel = {
+//   ttcAnnuelAvecPJ: number; // "TARIF TOTAL TTC € ANNUEL (avec PJ)"
+//   baseRcdHT: number; // "dont TARIF de BASE RCD (HT)"
+//   coeffTotalPct: number; // "dont majorations"
+//   fraisGestionPct: number; // "% sur RCD HT"
+//   fraisGestionMontant: number; // "montant €"
+//   taxeAssuranceMontant: number;
+//   taxeAssuranceTaux: number; // ex 4.5%
+//   fraisFractionnementHT: number;
+//   nbEcheances: number;
+//   protectionJuridiqueTTC: number;
+//   totalAutres: number; // taxe + frais fract + PJ
+// };
+
+// // === NOUVEAU : détail par activité (comme le tableau)
+// function buildActivityBreakdown(
+//   CA_total: number,
+//   activities: ActivityShare[],
+//   tables: Tables,
+//   coeffTotal: number,
+//   pmini: number
+// ): ActivityBreakdown {
+//   const beyondBase = Math.max(0, CA_total - tables.plafondPmini);
+
+//   // lignes par activité (avant coeff)
+//   const rowsRaw: ActivityRow[] = activities.map((a) => {
+//     const p = tables.actiscorByCode[a.code];
+//     if (!p) throw new Error(`Code activité inconnu: ${a.code}`);
+//     const rateApplied = txDeg_2Pentes(
+//       CA_total,
+//       p.baseRate,
+//       tables.plafondPmini,
+//       p.thresholdStart,
+//       tables.plafondCA,
+//       p.reducAt500k,
+//       p.reducAt1M
+//     );
+//     const primeBeyondHT = beyondBase * rateApplied * (a.caSharePercent / 100);
+//     const caShare = CA_total * (a.caSharePercent / 100);
+//     const degressivityApplied = CA_total > p.thresholdStart;
+
+//     return {
+//       code: a.code,
+//       baseRate: p.baseRate,
+//       appliedRate: rateApplied,
+//       caSharePercent: a.caSharePercent,
+//       caShare,
+//       reducAt500k: p.reducAt500k,
+//       reducAt1M: p.reducAt1M,
+//       thresholdStart: p.thresholdStart,
+//       weightInTotalBeyondPct: 0, // rempli après
+//       primeBeyondHT,
+//       degressivityApplied,
+//     };
+//   });
+
+//   // totaux et poids
+//   const totalBeyondHT_noCoeff = rowsRaw.reduce(
+//     (s, r) => s + r.primeBeyondHT,
+//     0
+//   );
+//   const rows = rowsRaw.map((r) => ({
+//     ...r,
+//     weightInTotalBeyondPct:
+//       totalBeyondHT_noCoeff > 0
+//         ? Math.round((r.primeBeyondHT / totalBeyondHT_noCoeff) * 100)
+//         : 0,
+//   }));
+
+//   const primeMiniAddedHT_noCoeff = pmini;
+//   const totalWithoutCoeffsHT = pmini + totalBeyondHT_noCoeff;
+
+//   // avec coeffs
+//   const primeMiniHT = pmini * (1 + coeffTotal);
+//   const primeBeyondHT = totalBeyondHT_noCoeff * (1 + coeffTotal);
+//   const totalRcdHT = primeMiniHT + primeBeyondHT;
+
+//   return {
+//     rows,
+//     totalBeyondHT_noCoeff: eur(totalBeyondHT_noCoeff),
+//     primeMiniAddedHT_noCoeff: eur(primeMiniAddedHT_noCoeff),
+//     totalWithoutCoeffsHT: eur(totalWithoutCoeffsHT),
+//     withCoeffs: {
+//       coeffTotalPct: Math.round(100 * coeffTotal),
+//       primeMiniHT: eur(primeMiniHT),
+//       primeBeyondHT: eur(primeBeyondHT),
+//       totalRcdHT: eur(totalRcdHT),
+//     },
+//   };
+// }
+
+// // === Tableau détaillé par année (comme Excel)
+// type YearlyDetailRow = {
+//   annee: number;
+//   htRcd: number;
+//   taxeRcd: number;
+//   ttcRcd: number;
+//   htReprise: number;
+//   taxeReprise: number;
+//   totalReprise: number;
+//   htPj: number;
+//   taxePj: number;
+//   ttcPj: number;
+//   htFraisG: number;
+//   taxeFraisG: number;
+//   ttcFraisG: number;
+//   htTotal: number;
+//   taxeTotal: number;
+//   ttcTotal: number;
+// };
+
+// function buildYearlyDetail(
+//   schedule: ScheduleLine[],
+//   effectiveDateISO: string
+// ): YearlyDetailRow[] {
+//   const effectiveDate = parseISO(effectiveDateISO);
+//   const yearEffective = yearOf(effectiveDate);
+
+//   // Grouper les échéances par année
+//   const yearlyTotals: Map<
+//     number,
+//     {
+//       htRcd: number;
+//       taxeRcd: number;
+//       ttcRcd: number;
+//       htPj: number;
+//       taxePj: number;
+//       ttcPj: number;
+//       htFraisG: number;
+//       ttcFraisG: number;
+//     }
+//   > = new Map();
+
+//   schedule.forEach((line) => {
+//     const lineDate = parseISO(line.date);
+//     const year = yearOf(lineDate);
+
+//     if (!yearlyTotals.has(year)) {
+//       yearlyTotals.set(year, {
+//         htRcd: 0,
+//         taxeRcd: 0,
+//         ttcRcd: 0,
+//         htPj: 0,
+//         taxePj: 0,
+//         ttcPj: 0,
+//         htFraisG: 0,
+//         ttcFraisG: 0,
+//       });
+//     }
+
+//     const yearData = yearlyTotals.get(year)!;
+//     yearData.htRcd += line.rcdHT;
+//     yearData.taxeRcd += line.rcdTax;
+//     yearData.ttcRcd += line.rcdTTC;
+//     yearData.htPj += line.pjHT;
+//     yearData.taxePj += line.pjTax;
+//     yearData.ttcPj += line.pjTTC;
+//     yearData.htFraisG += line.fraisGestion;
+//     yearData.ttcFraisG += line.fraisGestion; // Frais gestion pas de taxe dans le VBA
+//   });
+
+//   // Convertir en tableau de lignes
+//   const result: YearlyDetailRow[] = [];
+//   for (const [year, data] of yearlyTotals.entries()) {
+//     const htTotal = data.htRcd + data.htPj + data.htFraisG;
+//     const taxeTotal = data.taxeRcd + data.taxePj; // pas de taxe sur frais gestion
+//     const ttcTotal = data.ttcRcd + data.ttcPj + data.ttcFraisG;
+
+//     result.push({
+//       annee: year,
+//       htRcd: eur(data.htRcd),
+//       taxeRcd: eur(data.taxeRcd),
+//       ttcRcd: eur(data.ttcRcd),
+//       htReprise: 0, // Pas de reprise du passé dans notre exemple
+//       taxeReprise: 0,
+//       totalReprise: 0,
+//       htPj: eur(data.htPj),
+//       taxePj: eur(data.taxePj),
+//       ttcPj: eur(data.ttcPj),
+//       htFraisG: eur(data.htFraisG),
+//       taxeFraisG: 0, // Frais gestion HT (pas de taxe)
+//       ttcFraisG: eur(data.ttcFraisG),
+//       htTotal: eur(htTotal),
+//       taxeTotal: eur(taxeTotal),
+//       ttcTotal: eur(ttcTotal),
+//     });
+//   }
+
+//   // Trier par année
+//   result.sort((a, b) => a.annee - b.annee);
+//   return result;
+// }
+
+// // === Tableau détail par poste (année en cours vs annuel)
+// type PrimeDetailRow = {
+//   type: "HT" | "taxe" | "TTC";
+//   anneeEnCours: {
+//     rcd: number;
+//     pj: number;
+//     totalHorsFG: number;
+//     fraisG: number;
+//     totalYcFG: number;
+//     reprise: number;
+//     totalRcdPjFraisReprise: number;
+//   };
+//   annuel: {
+//     rcd: number;
+//     pj: number;
+//     totalHorsFG: number;
+//     fraisG: number;
+//     totalYcFG: number;
+//     reprise: number;
+//     totalRcdPjFraisReprise: number;
+//   };
+// };
+
+// function buildPrimeDetailByPoste(
+//   schedule: ScheduleLine[],
+//   totals: ReturnType<typeof buildTTCAndExtras>,
+//   effectiveDateISO: string
+// ): PrimeDetailRow[] {
+//   const effectiveDate = parseISO(effectiveDateISO);
+//   const currentYear = yearOf(effectiveDate);
+
+//   // Séparer les échéances par année
+//   const currentYearLines = schedule.filter(
+//     (line) => yearOf(parseISO(line.date)) === currentYear
+//   );
+//   const nextYearLines = schedule.filter(
+//     (line) => yearOf(parseISO(line.date)) > currentYear
+//   );
+
+//   // Calculer les totaux pour l'année en cours
+//   const currentYearTotals = currentYearLines.reduce(
+//     (acc, line) => ({
+//       rcdHT: acc.rcdHT + line.rcdHT,
+//       rcdTax: acc.rcdTax + line.rcdTax,
+//       rcdTTC: acc.rcdTTC + line.rcdTTC,
+//       pjHT: acc.pjHT + line.pjHT,
+//       pjTax: acc.pjTax + line.pjTax,
+//       pjTTC: acc.pjTTC + line.pjTTC,
+//       fraisGestion: acc.fraisGestion + line.fraisGestion,
+//     }),
+//     {
+//       rcdHT: 0,
+//       rcdTax: 0,
+//       rcdTTC: 0,
+//       pjHT: 0,
+//       pjTax: 0,
+//       pjTTC: 0,
+//       fraisGestion: 0,
+//     }
+//   );
+
+//   // Calculer les totaux pour l'année suivante (annuel)
+//   const nextYearTotals = nextYearLines.reduce(
+//     (acc, line) => ({
+//       rcdHT: acc.rcdHT + line.rcdHT,
+//       rcdTax: acc.rcdTax + line.rcdTax,
+//       rcdTTC: acc.rcdTTC + line.rcdTTC,
+//       pjHT: acc.pjHT + line.pjHT,
+//       pjTax: acc.pjTax + line.pjTax,
+//       pjTTC: acc.pjTTC + line.pjTTC,
+//       fraisGestion: acc.fraisGestion + line.fraisGestion,
+//     }),
+//     {
+//       rcdHT: 0,
+//       rcdTax: 0,
+//       rcdTTC: 0,
+//       pjHT: 0,
+//       pjTax: 0,
+//       pjTTC: 0,
+//       fraisGestion: 0,
+//     }
+//   );
+
+//   const result: PrimeDetailRow[] = [
+//     // Ligne HT
+//     {
+//       type: "HT",
+//       anneeEnCours: {
+//         rcd: eur(currentYearTotals.rcdHT),
+//         pj: eur(currentYearTotals.pjHT),
+//         totalHorsFG: eur(currentYearTotals.rcdHT + currentYearTotals.pjHT),
+//         fraisG: eur(currentYearTotals.fraisGestion),
+//         totalYcFG: eur(
+//           currentYearTotals.rcdHT +
+//             currentYearTotals.pjHT +
+//             currentYearTotals.fraisGestion
+//         ),
+//         reprise: 0, // pas de reprise dans notre exemple
+//         totalRcdPjFraisReprise: eur(
+//           currentYearTotals.rcdHT +
+//             currentYearTotals.pjHT +
+//             currentYearTotals.fraisGestion
+//         ),
+//       },
+//       annuel: {
+//         rcd: eur(nextYearTotals.rcdHT),
+//         pj: eur(nextYearTotals.pjHT),
+//         totalHorsFG: eur(nextYearTotals.rcdHT + nextYearTotals.pjHT),
+//         fraisG: eur(nextYearTotals.fraisGestion),
+//         totalYcFG: eur(
+//           nextYearTotals.rcdHT +
+//             nextYearTotals.pjHT +
+//             nextYearTotals.fraisGestion
+//         ),
+//         reprise: 0,
+//         totalRcdPjFraisReprise: eur(
+//           nextYearTotals.rcdHT +
+//             nextYearTotals.pjHT +
+//             nextYearTotals.fraisGestion
+//         ),
+//       },
+//     },
+//     // Ligne taxe
+//     {
+//       type: "taxe",
+//       anneeEnCours: {
+//         rcd: eur(currentYearTotals.rcdTax),
+//         pj: eur(currentYearTotals.pjTax),
+//         totalHorsFG: eur(currentYearTotals.rcdTax + currentYearTotals.pjTax),
+//         fraisG: 0, // pas de taxe sur frais gestion
+//         totalYcFG: eur(currentYearTotals.rcdTax + currentYearTotals.pjTax),
+//         reprise: 0,
+//         totalRcdPjFraisReprise: eur(
+//           currentYearTotals.rcdTax + currentYearTotals.pjTax
+//         ),
+//       },
+//       annuel: {
+//         rcd: eur(nextYearTotals.rcdTax),
+//         pj: eur(nextYearTotals.pjTax),
+//         totalHorsFG: eur(nextYearTotals.rcdTax + nextYearTotals.pjTax),
+//         fraisG: 0,
+//         totalYcFG: eur(nextYearTotals.rcdTax + nextYearTotals.pjTax),
+//         reprise: 0,
+//         totalRcdPjFraisReprise: eur(
+//           nextYearTotals.rcdTax + nextYearTotals.pjTax
+//         ),
+//       },
+//     },
+//     // Ligne TTC
+//     {
+//       type: "TTC",
+//       anneeEnCours: {
+//         rcd: eur(currentYearTotals.rcdTTC),
+//         pj: eur(currentYearTotals.pjTTC),
+//         totalHorsFG: eur(currentYearTotals.rcdTTC + currentYearTotals.pjTTC),
+//         fraisG: eur(currentYearTotals.fraisGestion),
+//         totalYcFG: eur(
+//           currentYearTotals.rcdTTC +
+//             currentYearTotals.pjTTC +
+//             currentYearTotals.fraisGestion
+//         ),
+//         reprise: 0,
+//         totalRcdPjFraisReprise: eur(
+//           currentYearTotals.rcdTTC +
+//             currentYearTotals.pjTTC +
+//             currentYearTotals.fraisGestion
+//         ),
+//       },
+//       annuel: {
+//         rcd: eur(nextYearTotals.rcdTTC),
+//         pj: eur(nextYearTotals.pjTTC),
+//         totalHorsFG: eur(nextYearTotals.rcdTTC + nextYearTotals.pjTTC),
+//         fraisG: eur(nextYearTotals.fraisGestion),
+//         totalYcFG: eur(
+//           nextYearTotals.rcdTTC +
+//             nextYearTotals.pjTTC +
+//             nextYearTotals.fraisGestion
+//         ),
+//         reprise: 0,
+//         totalRcdPjFraisReprise: eur(
+//           nextYearTotals.rcdTTC +
+//             nextYearTotals.pjTTC +
+//             nextYearTotals.fraisGestion
+//         ),
+//       },
+//     },
+//   ];
+
+//   return result;
+// }
+
+// // === on enrichit la fonction principale avec ces sorties
 // export function calculateRcdPremium(params: PremiumParams) {
-//   // 0) Refus « métier »
 //   if (params.subContractingPercent > 15 || params.tradingPercent > 15)
 //     throw new Error("Refus: sous-traitance/négoce > 15%");
 //   if (params.headcountETP > 8) throw new Error("Refus: effectif > 8 ETP");
@@ -565,10 +1019,18 @@ function buildSchedule(
 //     }
 //   );
 
+//   // 1bis) Détail par activité (tableaux)
+//   const activityBreakdown = buildActivityBreakdown(
+//     base.CA_total,
+//     params.activities,
+//     params.tables,
+//     base.coeffTotal,
+//     base.pmini
+//   );
+
 //   // 2) Taxes / Frais / PJ / TTC
 //   const includePJ =
 //     params.schedule.includePJ ?? params.tables.pjEnabledByDefault ?? true;
-
 //   const totals = buildTTCAndExtras(
 //     base.primeHT,
 //     params.territory,
@@ -577,670 +1039,257 @@ function buildSchedule(
 //     includePJ
 //   );
 
-//   // 3) Échéancier (année N partielle + année N+1)
+//   // 3) Échéancier
 //   const schedule = buildSchedule(totals, params.schedule);
 
+//   // 3bis) Tableau détaillé par année
+//   const yearlyDetail = buildYearlyDetail(
+//     schedule,
+//     params.schedule.effectiveDateISO
+//   );
+
+//   // 3ter) Tableau prime détail par poste
+//   const primeDetailByPoste = buildPrimeDetailByPoste(
+//     schedule,
+//     totals,
+//     params.schedule.effectiveDateISO
+//   );
+
+//   // 4) Récap “façon Excel”
+//   const recap: RecapLikeExcel = {
+//     ttcAnnuelAvecPJ: eur(totals.ttc),
+//     baseRcdHT: eur(base.primeHT),
+//     coeffTotalPct: Math.round(100 * base.coeffTotal),
+//     fraisGestionPct: Math.round(100 * (params.tables.fraisGestionRate ?? 0)),
+//     fraisGestionMontant: eur(totals.fraisGestion),
+//     taxeAssuranceMontant: eur(totals.taxe),
+//     taxeAssuranceTaux: Math.round(1000 * (totals.taxRate ?? 0)) / 10, // ex 0.045 -> 4.5
+//     fraisFractionnementHT: eur(totals.fraisFract),
+//     nbEcheances: totals.nEch,
+//     protectionJuridiqueTTC: eur(totals.pjTTC),
+//     totalAutres: eur(totals.taxe + totals.fraisFract + totals.pjTTC),
+//   };
+
+//   // Calculs additionnels pour l'affichage
+//   const effectiveDate = parseISO(params.schedule.effectiveDateISO);
+//   const daysRemainingInYear = daysDiffInclusive(
+//     effectiveDate,
+//     dateSerial(yearOf(effectiveDate), 12, 31)
+//   );
+//   const daysInYear = DAYS_IN_YEAR;
+
 //   return {
+//     // Données d'entrée
 //     inputsEcho: params,
-//     baseBreakdown: base,
-//     totals, // taxe, FG, PJ, TTC
-//     schedule, // lignes datées (RCD HT/Tax/TTC, PJ, FG, total TTC)
+
+//     // Analyse du CA
+//     caAnalysis: {
+//       caDeclared: base.CA_declared,
+//       caPerETP: base.ETP > 0 ? base.CA_declared / base.ETP : 0,
+//       caCorrected: base.CA_total,
+//       correctionApplied: base.CA_total !== base.CA_declared,
+//       etpCount: base.ETP,
+//       isAbovePminiThreshold: base.isAbovePminiThreshold,
+//       caAbovePmini: base.caAbovePmini,
+//       pminiThreshold: params.tables.plafondPmini,
+//     },
+
+//     // Détail complet du calcul de base
+//     baseBreakdown: {
+//       ...base,
+//       // versions arrondies utiles pour affichage
+//       primeHT_rounded: eur(base.primeHT),
+//       primeMini_afterCoeff_rounded: eur(base.primeMiniHT_afterCoeff),
+//       primeBeyond_afterCoeff_rounded: eur(base.primeAuDelaHT_afterCoeff),
+//       primeBeforeCoeff_rounded: eur(base.primeBeforeCoeff),
+//       tauxMoyenBase_percent: Math.round(base.tauxMoyenBase * 10000) / 100, // en %
+//       txMoyAuDela_percent: Math.round(base.txMoyAuDela * 10000) / 100, // en %
+//     },
+
+//     // Détail par activité enrichi
+//     activityBreakdown,
+
+//     // Détail des coefficients
+//     coefficientsDetail: base.coeffBreakdown,
+
+//     // Récapitulatif façon Excel
+//     recapLikeExcel: recap,
+
+//     // Détail taxes et frais
+//     taxesAndFees: {
+//       taxes: {
+//         rate: totals.taxRate,
+//         amount: totals.taxe,
+//         territory: params.territory,
+//       },
+//       fees: {
+//         managementFeeRate: params.tables.fraisGestionRate ?? 0,
+//         managementFeeAmount: totals.fraisGestion,
+//         installmentCount: totals.nEch,
+//         installmentFeesHT: totals.fraisFract,
+//         unitCostPerInstallment: params.tables.echeanceUnitCost,
+//       },
+//       ...totals,
+//       taxRate_percent: Math.round(totals.taxRate * 1000) / 10, // ex: 4.5%
+//       fraisGestionRate_percent:
+//         Math.round((params.tables.fraisGestionRate ?? 0) * 1000) / 10,
+//       pjIncluded: includePJ,
+//       pjRate_percent: includePJ
+//         ? Math.round((PJ_HT / base.primeHT) * 1000) / 10
+//         : 0,
+//     },
+
+//     // Analyse temporelle
+//     scheduleAnalysis: {
+//       effectiveDate: params.schedule.effectiveDateISO,
+//       periodicity: params.schedule.periodicity,
+//       nbEcheances: totals.nEch,
+//       daysRemainingInYear,
+//       daysInYear,
+//       prorataFirstYear:
+//         Math.round((daysRemainingInYear / daysInYear) * 1000) / 10, // en %
+//       pjIncluded: includePJ,
+//       pjAnnualPremiumTTC: totals.pjTTC,
+//       totalAnnualHT: base.primeHT + totals.fraisFract,
+//       totalAnnualTTC: totals.ttc,
+//       averageInstallmentTTC: totals.ttc / totals.nEch,
+//       schedule, // échéancier complet
+//     },
+
+//     // Méta-informations
+//     calculationMeta: {
+//       timestamp: new Date().toISOString(),
+//       activitiesCount: params.activities.length,
+//       activityCodes: params.activities.map((a) => a.code),
+//       hasSubcontracting: params.subContractingPercent > 0,
+//       hasTrading: params.tradingPercent > 0,
+//       caCorrectionApplied: base.CA_total !== base.CA_declared,
+//       isAbovePminiThreshold: base.isAbovePminiThreshold,
+//       rulesApplied: {
+//         caCorrection: base.CA_total !== base.CA_declared,
+//         primeMinForced: base.isPrimeMinForced,
+//         degressivityApplied: activityBreakdown.rows.some(
+//           (r) => r.degressivityApplied
+//         ),
+//         coefficientsApplied: Math.abs(base.coeffTotal) > 0.001,
+//         pjIncluded: includePJ,
+//       },
+//       limits: {
+//         pminiPlancher: params.tables.pminiPlancher,
+//         plafondPmini: params.tables.plafondPmini,
+//         plafondCA: params.tables.plafondCA,
+//         maxETP: 8,
+//         maxSubcontracting: 15,
+//         maxTrading: 15,
+//       },
+//       territory: params.territory,
+//     },
+
+//     // Tableau détaillé par année
+//     yearlyDetail,
+
+//     // Tableau prime détail par poste
+//     primeDetailByPoste,
+
+//     // Totaux et échéancier pour compatibilité
+//     totals,
+//     schedule,
 //   };
 // }
-// --- util arrondi à l’euro (comme l’Excel affiché)
-const eur = (n: number) => Math.round(n);
 
-type ActivityRow = {
-  code: string;
-  baseRate: number; // ex 0.0407
-  appliedRate: number; // taux dégressif appliqué à l'activité (au-delà)
-  caSharePercent: number; // part CA de cette activité
-  caShare: number; // montant CA de cette activité
-  reducAt500k: number; // facteur réduction à 500k
-  reducAt1M: number; // facteur réduction à 1M
-  thresholdStart: number; // seuil déclenchement dégressivité
-  weightInTotalBeyondPct: number; // poids % dans le "TOTAL au-delà de Pmini" (avant coeff)
-  primeBeyondHT: number; // prime au-delà HT (avant coeff), par activité
-  degressivityApplied: boolean; // true si dégressivité appliquée
-};
-
-type ActivityBreakdown = {
-  rows: ActivityRow[];
-  totalBeyondHT_noCoeff: number; // "TOTAL au-delà de Pmini" avant coeff
-  primeMiniAddedHT_noCoeff: number; // "Prime mini ajoutée" (pmini) avant coeff
-  totalWithoutCoeffsHT: number; // total sans majorations/minorations (l. "TOTAL sans majorations/min")
-  withCoeffs: {
-    coeffTotalPct: number; // ex 20 (%)
-    primeMiniHT: number; // pmini * (1 + coeff)
-    primeBeyondHT: number; // totalBeyond * (1 + coeff)
-    totalRcdHT: number; // somme = base RCD HT
-  };
-};
-
-type RecapLikeExcel = {
-  ttcAnnuelAvecPJ: number; // "TARIF TOTAL TTC € ANNUEL (avec PJ)"
-  baseRcdHT: number; // "dont TARIF de BASE RCD (HT)"
-  coeffTotalPct: number; // "dont majorations"
-  fraisGestionPct: number; // "% sur RCD HT"
-  fraisGestionMontant: number; // "montant €"
-  taxeAssuranceMontant: number;
-  taxeAssuranceTaux: number; // ex 4.5%
-  fraisFractionnementHT: number;
-  nbEcheances: number;
-  protectionJuridiqueTTC: number;
-  totalAutres: number; // taxe + frais fract + PJ
-};
-
-// === NOUVEAU : détail par activité (comme le tableau)
-function buildActivityBreakdown(
-  CA_total: number,
-  activities: ActivityShare[],
-  tables: Tables,
-  coeffTotal: number,
-  pmini: number
-): ActivityBreakdown {
-  const beyondBase = Math.max(0, CA_total - tables.plafondPmini);
-
-  // lignes par activité (avant coeff)
-  const rowsRaw: ActivityRow[] = activities.map((a) => {
-    const p = tables.actiscorByCode[a.code];
-    if (!p) throw new Error(`Code activité inconnu: ${a.code}`);
-    const rateApplied = txDeg_2Pentes(
-      CA_total,
-      p.baseRate,
-      tables.plafondPmini,
-      p.thresholdStart,
-      tables.plafondCA,
-      p.reducAt500k,
-      p.reducAt1M
-    );
-    const primeBeyondHT = beyondBase * rateApplied * (a.caSharePercent / 100);
-    const caShare = CA_total * (a.caSharePercent / 100);
-    const degressivityApplied = CA_total > p.thresholdStart;
-
-    return {
-      code: a.code,
-      baseRate: p.baseRate,
-      appliedRate: rateApplied,
-      caSharePercent: a.caSharePercent,
-      caShare,
-      reducAt500k: p.reducAt500k,
-      reducAt1M: p.reducAt1M,
-      thresholdStart: p.thresholdStart,
-      weightInTotalBeyondPct: 0, // rempli après
-      primeBeyondHT,
-      degressivityApplied,
-    };
-  });
-
-  // totaux et poids
-  const totalBeyondHT_noCoeff = rowsRaw.reduce(
-    (s, r) => s + r.primeBeyondHT,
-    0
-  );
-  const rows = rowsRaw.map((r) => ({
-    ...r,
-    weightInTotalBeyondPct:
-      totalBeyondHT_noCoeff > 0
-        ? Math.round((r.primeBeyondHT / totalBeyondHT_noCoeff) * 100)
-        : 0,
-  }));
-
-  const primeMiniAddedHT_noCoeff = pmini;
-  const totalWithoutCoeffsHT = pmini + totalBeyondHT_noCoeff;
-
-  // avec coeffs
-  const primeMiniHT = pmini * (1 + coeffTotal);
-  const primeBeyondHT = totalBeyondHT_noCoeff * (1 + coeffTotal);
-  const totalRcdHT = primeMiniHT + primeBeyondHT;
-
-  return {
-    rows,
-    totalBeyondHT_noCoeff: eur(totalBeyondHT_noCoeff),
-    primeMiniAddedHT_noCoeff: eur(primeMiniAddedHT_noCoeff),
-    totalWithoutCoeffsHT: eur(totalWithoutCoeffsHT),
-    withCoeffs: {
-      coeffTotalPct: Math.round(100 * coeffTotal),
-      primeMiniHT: eur(primeMiniHT),
-      primeBeyondHT: eur(primeBeyondHT),
-      totalRcdHT: eur(totalRcdHT),
-    },
-  };
+function parseISO(d: string): Date {
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) throw new Error(`Date invalide: ${d}`);
+  return dt;
 }
 
-// === Tableau détaillé par année (comme Excel)
-type YearlyDetailRow = {
-  annee: number;
-  htRcd: number;
-  taxeRcd: number;
-  ttcRcd: number;
-  htReprise: number;
-  taxeReprise: number;
-  totalReprise: number;
-  htPj: number;
-  taxePj: number;
-  ttcPj: number;
-  htFraisG: number;
-  taxeFraisG: number;
-  ttcFraisG: number;
-  htTotal: number;
-  taxeTotal: number;
-  ttcTotal: number;
+type ReturnValueRefus = {
+  experienceDirigeant: boolean;
+  sansAssuranceDepuisPlusDe12Mois: boolean;
+  partSoutraitance: boolean;
+  partNegoce: boolean;
 };
 
-function buildYearlyDetail(
-  schedule: ScheduleLine[],
-  effectiveDateISO: string
-): YearlyDetailRow[] {
-  const effectiveDate = parseISO(effectiveDateISO);
-  const yearEffective = yearOf(effectiveDate);
+function verifRefus(
+  params: {
+    experienceDirigeant: number;
 
-  // Grouper les échéances par année
-  const yearlyTotals: Map<
-    number,
-    {
-      htRcd: number;
-      taxeRcd: number;
-      ttcRcd: number;
-      htPj: number;
-      taxePj: number;
-      ttcPj: number;
-      htFraisG: number;
-      ttcFraisG: number;
-    }
-  > = new Map();
+    tempsSansActivite: Enum_Temps_sans_activite;
+    partSoutraitance: number;
+    partNegoce: number;
+  },
 
-  schedule.forEach((line) => {
-    const lineDate = parseISO(line.date);
-    const year = yearOf(lineDate);
+) {
+  const {
+    experienceDirigeant,
+    tempsSansActivite,
+    partSoutraitance,
+    partNegoce,
+  } = params;
+  const returnValue: ReturnValueRefus = {
+    experienceDirigeant: false,
+    sansAssuranceDepuisPlusDe12Mois: false,
+    partSoutraitance: false,
+    partNegoce: false,
+  };
 
-    if (!yearlyTotals.has(year)) {
-      yearlyTotals.set(year, {
-        htRcd: 0,
-        taxeRcd: 0,
-        ttcRcd: 0,
-        htPj: 0,
-        taxePj: 0,
-        ttcPj: 0,
-        htFraisG: 0,
-        ttcFraisG: 0,
-      });
-    }
-
-    const yearData = yearlyTotals.get(year)!;
-    yearData.htRcd += line.rcdHT;
-    yearData.taxeRcd += line.rcdTax;
-    yearData.ttcRcd += line.rcdTTC;
-    yearData.htPj += line.pjHT;
-    yearData.taxePj += line.pjTax;
-    yearData.ttcPj += line.pjTTC;
-    yearData.htFraisG += line.fraisGestion;
-    yearData.ttcFraisG += line.fraisGestion; // Frais gestion pas de taxe dans le VBA
-  });
-
-  // Convertir en tableau de lignes
-  const result: YearlyDetailRow[] = [];
-  for (const [year, data] of yearlyTotals.entries()) {
-    const htTotal = data.htRcd + data.htPj + data.htFraisG;
-    const taxeTotal = data.taxeRcd + data.taxePj; // pas de taxe sur frais gestion
-    const ttcTotal = data.ttcRcd + data.ttcPj + data.ttcFraisG;
-
-    result.push({
-      annee: year,
-      htRcd: eur(data.htRcd),
-      taxeRcd: eur(data.taxeRcd),
-      ttcRcd: eur(data.ttcRcd),
-      htReprise: 0, // Pas de reprise du passé dans notre exemple
-      taxeReprise: 0,
-      totalReprise: 0,
-      htPj: eur(data.htPj),
-      taxePj: eur(data.taxePj),
-      ttcPj: eur(data.ttcPj),
-      htFraisG: eur(data.htFraisG),
-      taxeFraisG: 0, // Frais gestion HT (pas de taxe)
-      ttcFraisG: eur(data.ttcFraisG),
-      htTotal: eur(htTotal),
-      taxeTotal: eur(taxeTotal),
-      ttcTotal: eur(ttcTotal),
-    });
-  }
-
-  // Trier par année
-  result.sort((a, b) => a.annee - b.annee);
-  return result;
+  returnValue.experienceDirigeant = experienceDirigeant < 1;
+  returnValue.sansAssuranceDepuisPlusDe12Mois =
+    tempsSansActivite === "PLUS_DE_12_MOIS";
+  returnValue.partSoutraitance =
+    partSoutraitance > 1
+      ? partSoutraitance / 100 > 0.15
+      : partSoutraitance > 0.15;
+  returnValue.partNegoce =
+    partNegoce > 1 ? partNegoce / 100 > 0.15 : partNegoce > 0.15;
+  return returnValue;
 }
 
-// === Tableau détail par poste (année en cours vs annuel)
-type PrimeDetailRow = {
-  type: "HT" | "taxe" | "TTC";
-  anneeEnCours: {
-    rcd: number;
-    pj: number;
-    totalHorsFG: number;
-    fraisG: number;
-    totalYcFG: number;
-    reprise: number;
-    totalRcdPjFraisReprise: number;
-  };
-  annuel: {
-    rcd: number;
-    pj: number;
-    totalHorsFG: number;
-    fraisG: number;
-    totalYcFG: number;
-    reprise: number;
-    totalRcdPjFraisReprise: number;
-  };
-};
-
-function buildPrimeDetailByPoste(
-  schedule: ScheduleLine[],
-  totals: ReturnType<typeof buildTTCAndExtras>,
-  effectiveDateISO: string
-): PrimeDetailRow[] {
-  const effectiveDate = parseISO(effectiveDateISO);
-  const currentYear = yearOf(effectiveDate);
-
-  // Séparer les échéances par année
-  const currentYearLines = schedule.filter(
-    (line) => yearOf(parseISO(line.date)) === currentYear
-  );
-  const nextYearLines = schedule.filter(
-    (line) => yearOf(parseISO(line.date)) > currentYear
-  );
-
-  // Calculer les totaux pour l'année en cours
-  const currentYearTotals = currentYearLines.reduce(
-    (acc, line) => ({
-      rcdHT: acc.rcdHT + line.rcdHT,
-      rcdTax: acc.rcdTax + line.rcdTax,
-      rcdTTC: acc.rcdTTC + line.rcdTTC,
-      pjHT: acc.pjHT + line.pjHT,
-      pjTax: acc.pjTax + line.pjTax,
-      pjTTC: acc.pjTTC + line.pjTTC,
-      fraisGestion: acc.fraisGestion + line.fraisGestion,
-    }),
-    {
-      rcdHT: 0,
-      rcdTax: 0,
-      rcdTTC: 0,
-      pjHT: 0,
-      pjTax: 0,
-      pjTTC: 0,
-      fraisGestion: 0,
-    }
-  );
-
-  // Calculer les totaux pour l'année suivante (annuel)
-  const nextYearTotals = nextYearLines.reduce(
-    (acc, line) => ({
-      rcdHT: acc.rcdHT + line.rcdHT,
-      rcdTax: acc.rcdTax + line.rcdTax,
-      rcdTTC: acc.rcdTTC + line.rcdTTC,
-      pjHT: acc.pjHT + line.pjHT,
-      pjTax: acc.pjTax + line.pjTax,
-      pjTTC: acc.pjTTC + line.pjTTC,
-      fraisGestion: acc.fraisGestion + line.fraisGestion,
-    }),
-    {
-      rcdHT: 0,
-      rcdTax: 0,
-      rcdTTC: 0,
-      pjHT: 0,
-      pjTax: 0,
-      pjTTC: 0,
-      fraisGestion: 0,
-    }
-  );
-
-  const result: PrimeDetailRow[] = [
-    // Ligne HT
-    {
-      type: "HT",
-      anneeEnCours: {
-        rcd: eur(currentYearTotals.rcdHT),
-        pj: eur(currentYearTotals.pjHT),
-        totalHorsFG: eur(currentYearTotals.rcdHT + currentYearTotals.pjHT),
-        fraisG: eur(currentYearTotals.fraisGestion),
-        totalYcFG: eur(
-          currentYearTotals.rcdHT +
-            currentYearTotals.pjHT +
-            currentYearTotals.fraisGestion
-        ),
-        reprise: 0, // pas de reprise dans notre exemple
-        totalRcdPjFraisReprise: eur(
-          currentYearTotals.rcdHT +
-            currentYearTotals.pjHT +
-            currentYearTotals.fraisGestion
-        ),
-      },
-      annuel: {
-        rcd: eur(nextYearTotals.rcdHT),
-        pj: eur(nextYearTotals.pjHT),
-        totalHorsFG: eur(nextYearTotals.rcdHT + nextYearTotals.pjHT),
-        fraisG: eur(nextYearTotals.fraisGestion),
-        totalYcFG: eur(
-          nextYearTotals.rcdHT +
-            nextYearTotals.pjHT +
-            nextYearTotals.fraisGestion
-        ),
-        reprise: 0,
-        totalRcdPjFraisReprise: eur(
-          nextYearTotals.rcdHT +
-            nextYearTotals.pjHT +
-            nextYearTotals.fraisGestion
-        ),
-      },
-    },
-    // Ligne taxe
-    {
-      type: "taxe",
-      anneeEnCours: {
-        rcd: eur(currentYearTotals.rcdTax),
-        pj: eur(currentYearTotals.pjTax),
-        totalHorsFG: eur(currentYearTotals.rcdTax + currentYearTotals.pjTax),
-        fraisG: 0, // pas de taxe sur frais gestion
-        totalYcFG: eur(currentYearTotals.rcdTax + currentYearTotals.pjTax),
-        reprise: 0,
-        totalRcdPjFraisReprise: eur(
-          currentYearTotals.rcdTax + currentYearTotals.pjTax
-        ),
-      },
-      annuel: {
-        rcd: eur(nextYearTotals.rcdTax),
-        pj: eur(nextYearTotals.pjTax),
-        totalHorsFG: eur(nextYearTotals.rcdTax + nextYearTotals.pjTax),
-        fraisG: 0,
-        totalYcFG: eur(nextYearTotals.rcdTax + nextYearTotals.pjTax),
-        reprise: 0,
-        totalRcdPjFraisReprise: eur(
-          nextYearTotals.rcdTax + nextYearTotals.pjTax
-        ),
-      },
-    },
-    // Ligne TTC
-    {
-      type: "TTC",
-      anneeEnCours: {
-        rcd: eur(currentYearTotals.rcdTTC),
-        pj: eur(currentYearTotals.pjTTC),
-        totalHorsFG: eur(currentYearTotals.rcdTTC + currentYearTotals.pjTTC),
-        fraisG: eur(currentYearTotals.fraisGestion),
-        totalYcFG: eur(
-          currentYearTotals.rcdTTC +
-            currentYearTotals.pjTTC +
-            currentYearTotals.fraisGestion
-        ),
-        reprise: 0,
-        totalRcdPjFraisReprise: eur(
-          currentYearTotals.rcdTTC +
-            currentYearTotals.pjTTC +
-            currentYearTotals.fraisGestion
-        ),
-      },
-      annuel: {
-        rcd: eur(nextYearTotals.rcdTTC),
-        pj: eur(nextYearTotals.pjTTC),
-        totalHorsFG: eur(nextYearTotals.rcdTTC + nextYearTotals.pjTTC),
-        fraisG: eur(nextYearTotals.fraisGestion),
-        totalYcFG: eur(
-          nextYearTotals.rcdTTC +
-            nextYearTotals.pjTTC +
-            nextYearTotals.fraisGestion
-        ),
-        reprise: 0,
-        totalRcdPjFraisReprise: eur(
-          nextYearTotals.rcdTTC +
-            nextYearTotals.pjTTC +
-            nextYearTotals.fraisGestion
-        ),
-      },
-    },
-  ];
-
-  return result;
-}
-
-// === on enrichit la fonction principale avec ces sorties
-export function calculateRcdPremium(params: PremiumParams) {
-  if (params.subContractingPercent > 15 || params.tradingPercent > 15)
-    throw new Error("Refus: sous-traitance/négoce > 15%");
-  if (params.headcountETP > 8) throw new Error("Refus: effectif > 8 ETP");
-  if (params.caDeclared > params.tables.plafondCA)
-    throw new Error("Refus: CA > plafond CA");
-
-  // 1) Prime HT (base + coeffs)
-  const base = computeHTBase(
-    params.caDeclared,
-    params.headcountETP,
-    params.activities,
-    params.tables,
-    {
-      hasQualification: params.coeff.hasQualification,
-      creationDateISO: params.coeff.creationDateISO,
-      yearsExperience: params.coeff.yearsExperience,
-      previousRcdStatus: params.coeff.previousRcdStatus,
-      previousResiliationDate: params.coeff.previousResiliationDate ?? null,
-      lossHistory: params.coeff.lossHistory,
-    }
-  );
-
-  // 1bis) Détail par activité (tableaux)
-  const activityBreakdown = buildActivityBreakdown(
-    base.CA_total,
-    params.activities,
-    params.tables,
-    base.coeffTotal,
-    base.pmini
-  );
-
-  // 2) Taxes / Frais / PJ / TTC
-  const includePJ =
-    params.schedule.includePJ ?? params.tables.pjEnabledByDefault ?? true;
-  const totals = buildTTCAndExtras(
-    base.primeHT,
-    params.territory,
-    params.tables,
-    params.schedule.periodicity,
-    includePJ
-  );
-
-  // 3) Échéancier
-  const schedule = buildSchedule(totals, params.schedule);
-
-  // 3bis) Tableau détaillé par année
-  const yearlyDetail = buildYearlyDetail(
-    schedule,
-    params.schedule.effectiveDateISO
-  );
-
-  // 3ter) Tableau prime détail par poste
-  const primeDetailByPoste = buildPrimeDetailByPoste(
-    schedule,
-    totals,
-    params.schedule.effectiveDateISO
-  );
-
-  // 4) Récap “façon Excel”
-  const recap: RecapLikeExcel = {
-    ttcAnnuelAvecPJ: eur(totals.ttc),
-    baseRcdHT: eur(base.primeHT),
-    coeffTotalPct: Math.round(100 * base.coeffTotal),
-    fraisGestionPct: Math.round(100 * (params.tables.fraisGestionRate ?? 0)),
-    fraisGestionMontant: eur(totals.fraisGestion),
-    taxeAssuranceMontant: eur(totals.taxe),
-    taxeAssuranceTaux: Math.round(1000 * (totals.taxRate ?? 0)) / 10, // ex 0.045 -> 4.5
-    fraisFractionnementHT: eur(totals.fraisFract),
-    nbEcheances: totals.nEch,
-    protectionJuridiqueTTC: eur(totals.pjTTC),
-    totalAutres: eur(totals.taxe + totals.fraisFract + totals.pjTTC),
-  };
-
-  // Calculs additionnels pour l'affichage
-  const effectiveDate = parseISO(params.schedule.effectiveDateISO);
-  const daysRemainingInYear = daysDiffInclusive(
-    effectiveDate,
-    dateSerial(yearOf(effectiveDate), 12, 31)
-  );
-  const daysInYear = DAYS_IN_YEAR;
-
-  return {
-    // Données d'entrée
-    inputsEcho: params,
-
-    // Analyse du CA
-    caAnalysis: {
-      caDeclared: base.CA_declared,
-      caPerETP: base.ETP > 0 ? base.CA_declared / base.ETP : 0,
-      caCorrected: base.CA_total,
-      correctionApplied: base.CA_total !== base.CA_declared,
-      etpCount: base.ETP,
-      isAbovePminiThreshold: base.isAbovePminiThreshold,
-      caAbovePmini: base.caAbovePmini,
-      pminiThreshold: params.tables.plafondPmini,
-    },
-
-    // Détail complet du calcul de base
-    baseBreakdown: {
-      ...base,
-      // versions arrondies utiles pour affichage
-      primeHT_rounded: eur(base.primeHT),
-      primeMini_afterCoeff_rounded: eur(base.primeMiniHT_afterCoeff),
-      primeBeyond_afterCoeff_rounded: eur(base.primeAuDelaHT_afterCoeff),
-      primeBeforeCoeff_rounded: eur(base.primeBeforeCoeff),
-      tauxMoyenBase_percent: Math.round(base.tauxMoyenBase * 10000) / 100, // en %
-      txMoyAuDela_percent: Math.round(base.txMoyAuDela * 10000) / 100, // en %
-    },
-
-    // Détail par activité enrichi
-    activityBreakdown,
-
-    // Détail des coefficients
-    coefficientsDetail: base.coeffBreakdown,
-
-    // Récapitulatif façon Excel
-    recapLikeExcel: recap,
-
-    // Détail taxes et frais
-    taxesAndFees: {
-      taxes: {
-        rate: totals.taxRate,
-        amount: totals.taxe,
-        territory: params.territory,
-      },
-      fees: {
-        managementFeeRate: params.tables.fraisGestionRate ?? 0,
-        managementFeeAmount: totals.fraisGestion,
-        installmentCount: totals.nEch,
-        installmentFeesHT: totals.fraisFract,
-        unitCostPerInstallment: params.tables.echeanceUnitCost,
-      },
-      ...totals,
-      taxRate_percent: Math.round(totals.taxRate * 1000) / 10, // ex: 4.5%
-      fraisGestionRate_percent:
-        Math.round((params.tables.fraisGestionRate ?? 0) * 1000) / 10,
-      pjIncluded: includePJ,
-      pjRate_percent: includePJ
-        ? Math.round((PJ_HT / base.primeHT) * 1000) / 10
-        : 0,
-    },
-
-    // Analyse temporelle
-    scheduleAnalysis: {
-      effectiveDate: params.schedule.effectiveDateISO,
-      periodicity: params.schedule.periodicity,
-      nbEcheances: totals.nEch,
-      daysRemainingInYear,
-      daysInYear,
-      prorataFirstYear:
-        Math.round((daysRemainingInYear / daysInYear) * 1000) / 10, // en %
-      pjIncluded: includePJ,
-      pjAnnualPremiumTTC: totals.pjTTC,
-      totalAnnualHT: base.primeHT + totals.fraisFract,
-      totalAnnualTTC: totals.ttc,
-      averageInstallmentTTC: totals.ttc / totals.nEch,
-      schedule, // échéancier complet
-    },
-
-    // Méta-informations
-    calculationMeta: {
-      timestamp: new Date().toISOString(),
-      activitiesCount: params.activities.length,
-      activityCodes: params.activities.map((a) => a.code),
-      hasSubcontracting: params.subContractingPercent > 0,
-      hasTrading: params.tradingPercent > 0,
-      caCorrectionApplied: base.CA_total !== base.CA_declared,
-      isAbovePminiThreshold: base.isAbovePminiThreshold,
-      rulesApplied: {
-        caCorrection: base.CA_total !== base.CA_declared,
-        primeMinForced: base.isPrimeMinForced,
-        degressivityApplied: activityBreakdown.rows.some(
-          (r) => r.degressivityApplied
-        ),
-        coefficientsApplied: Math.abs(base.coeffTotal) > 0.001,
-        pjIncluded: includePJ,
-      },
-      limits: {
-        pminiPlancher: params.tables.pminiPlancher,
-        plafondPmini: params.tables.plafondPmini,
-        plafondCA: params.tables.plafondCA,
-        maxETP: 8,
-        maxSubcontracting: 15,
-        maxTrading: 15,
-      },
-      territory: params.territory,
-    },
-
-    // Tableau détaillé par année
-    yearlyDetail,
-
-    // Tableau prime détail par poste
-    primeDetailByPoste,
-
-    // Totaux et échéancier pour compatibilité
-    totals,
-    schedule,
-  };
-}
-
-function verifRefus(params: {
-  activiteSansEtreAssure: boolean;
-  experienceDirigeant: number;
-  ancienneAssurance: string;
-}) {
-  const { activiteSansEtreAssure, experienceDirigeant, ancienneAssurance } =
-    params;
-
-  const refus = {
-    activiteSansEtreAssure: activiteSansEtreAssure,
-    experienceDirigeant: experienceDirigeant < 1,
-    // ancienneAssurance: ancienneAssurance === "RESILIE",
-    ancienneAssurance: false,
-  };
-
-  return refus;
-}
-
+type Enum_Temps_sans_activite =
+  | "PLUS_DE_12_MOIS"
+  | "DE 6_A 12_MOIS"
+  | "NON"
+  | "CREATION";
 function calculateMajorations(params: {
   etp: number;
   nbActivites: number;
   qualif: boolean;
   dateCreation: Date;
-  tempsSansActivite12mois: boolean;
+  nonFournitureBilanN_1: boolean;
   anneeExperience: number;
   assureurDefaillant: boolean;
   nombreAnneeAssuranceContinue: number;
+  tempsSansActivite: Enum_Temps_sans_activite;
+
+  sansActiviteDepuisPlusDe12MoisSansFermeture: "OUI" | "NON" | "CREATION";
+  absenceDeSinistreSurLes5DernieresAnnees:
+    | "OUI"
+    | "NON"
+    | "CREATION"
+    | "ASSUREUR_DEFAILLANT"
+    | "A_DEFINIR";
 }) {
   const {
     etp,
     nbActivites,
     qualif,
     dateCreation,
-    tempsSansActivite12mois,
+    tempsSansActivite,
     anneeExperience,
     assureurDefaillant,
     nombreAnneeAssuranceContinue,
+    nonFournitureBilanN_1,
+    sansActiviteDepuisPlusDe12MoisSansFermeture,
+    absenceDeSinistreSurLes5DernieresAnnees,
   } = params;
+  const calculMajTempsSansActivite = (
+    tempsSansActivite: Enum_Temps_sans_activite
+  ) => {
+    console.log("tempsSansActivite", tempsSansActivite);
+    if (tempsSansActivite === "DE 6_A 12_MOIS") return 0.3;
+    if (tempsSansActivite === "NON") return 0;
+    if (tempsSansActivite === "CREATION") return 0;
+  };
 
   const calculMajETP = (etp: number, nbActivites: number) => {
     if (etp === 1) {
@@ -1264,7 +1313,7 @@ function calculateMajorations(params: {
   const calculMajExp = (anneeExperience: number) => {
     if (anneeExperience > 1 && anneeExperience < 3) return 0.05;
     if (anneeExperience > 3 && anneeExperience < 5) return 0;
-    if (anneeExperience > 5) return -0.05;
+    if (anneeExperience >= 5) return -0.05;
   };
   const calculMajNAAC = (NAAC: number) => {
     if (NAAC <= 1) return 0.1;
@@ -1275,10 +1324,21 @@ function calculateMajorations(params: {
     etp: calculMajETP(etp, nbActivites),
     qualif: qualif ? -0.05 : 0,
     dateCreation: calculMajAnciennete(dateCreation),
-    tempsSansActivite12mois: tempsSansActivite12mois ? 0.2 : 0,
+    tempsSansActivite: calculMajTempsSansActivite(tempsSansActivite),
     anneeExperience: calculMajExp(anneeExperience),
-    assureurDefaillant: assureurDefaillant ? 0.2 : 0,
+    assureurDefaillant:
+      assureurDefaillant &&
+      !(absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT")
+        ? 0.2
+        : 0,
     nombreAnneeAssuranceContinue: calculMajNAAC(nombreAnneeAssuranceContinue),
+    nonFournitureBilanN_1: nonFournitureBilanN_1 ? 0.5 : 0,
+    sansActiviteDepuisPlusDe12MoisSansFermeture:
+      sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" ? 0.2 : 0,
+    absenceDeSinistreSurLes5DernieresAnnees:
+      absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT"
+        ? 0.2
+        : 0,
   };
 
   return majorations;
@@ -1484,7 +1544,10 @@ const calculDeg = (params: {
     degressivity2: number;
   }[];
 }) => {
+  // 0.982
   const { caDeclared, tableauDeg } = params;
+
+  console.log("caCalculee", caDeclared);
 
   const resultValue: {
     code: number;
@@ -1516,7 +1579,7 @@ const calculDeg = (params: {
         degressivity: degMax,
       });
     }
-    if (caDeclared < 250_000) {
+    if (caDeclared > 70_000 && caDeclared <= 250_000) {
       resultValue.push({
         code: deg.code,
         title: deg.title,
@@ -1532,44 +1595,75 @@ export function calculPrimeRCD(params: {
   etp: number;
   activites: { code: number; caSharePercent: number }[];
   dateCreation: Date;
-  tempsSansActivite12mois: boolean;
+  tempsSansActivite: Enum_Temps_sans_activite;
   anneeExperience: number;
   assureurDefaillant: boolean;
   nombreAnneeAssuranceContinue: number;
   qualif: boolean;
-  ancienneAssurance: string;
-  activiteSansEtreAssure: boolean;
-  experienceDirigeant: number;
+  sansActiviteDepuisPlusDe12MoisSansFermeture: "OUI" | "NON" | "CREATION";
+  absenceDeSinistreSurLes5DernieresAnnees:
+    | "OUI"
+    | "NON"
+    | "CREATION"
+    | "ASSUREUR_DEFAILLANT"
+    | "A_DEFINIR";
+  protectionJuridique: boolean;
+
+  fractionnementPrime: "annuel" | "mensuel" | "trimestriel" | "semestriel";
+  fraisFractionnementPrime: number;
+  protectionJuridique1an: number;
+  taxeAssurance: number;
+  partSoutraitance: number;
+  partNegoce: number;
+  nonFournitureBilanN_1: boolean;
+  reprisePasse: boolean;
+  txFraisGestion: number;
+  dateFinCouverturePrecedente: Date;
+
   // Nouveaux paramètres pour la reprise du passé
   nomDeLAsurreur: string;
-  dateEffet?: string; // Date d'effet du contrat (ISO)
-  dateFinCouverturePrecedente?: string; // Date de fin de couverture précédente (ISO)
+  dateEffet?: Date; // Date d'effet du contrat (ISO)
+
   sinistresPrecedents?: SinistrePasse[]; // Sinistres des 5 dernières années
-  tauxTI?: number; // Taux TI par année (ex: 0.700 pour N)
-  coefficientAntecedent?: number; // Coefficient selon ancienneté
 }) {
   const {
     caDeclared,
     etp,
     activites: activitesRaw,
     dateCreation,
-    tempsSansActivite12mois,
+
     anneeExperience,
     assureurDefaillant,
     nombreAnneeAssuranceContinue,
     qualif,
-    ancienneAssurance,
-    activiteSansEtreAssure,
-    experienceDirigeant,
+    tempsSansActivite,
+
     // Paramètres reprise du passé
     nomDeLAsurreur,
     dateEffet,
-    dateFinCouverturePrecedente,
+    sansActiviteDepuisPlusDe12MoisSansFermeture,
+    absenceDeSinistreSurLes5DernieresAnnees,
+    protectionJuridique,
+    fractionnementPrime,
+    protectionJuridique1an = 113,
+    txFraisGestion = 0.1,
+    taxeAssurance = 0.045,
+    fraisFractionnementPrime = 40,
+    partSoutraitance,
+    partNegoce,
+    nonFournitureBilanN_1,
+    reprisePasse,
     sinistresPrecedents = [],
-    tauxTI = 0.7, // Valeur par défaut pour l'année N
-    coefficientAntecedent = 1.0,
+    dateFinCouverturePrecedente,
   } = params;
+  console.log("params", params);
+  console.log("protectionJuridique1an", protectionJuridique1an);
 
+  const calculCA = (params: { caDeclared: number; etp: number }) => {
+    const { caDeclared, etp } = params;
+    if (etp * 70_000 > caDeclared) return etp * 70_000;
+    return caDeclared;
+  };
   const reformatedActivites = (
     activites: { code: number; caSharePercent: number }[]
   ) =>
@@ -1583,13 +1677,19 @@ export function calculPrimeRCD(params: {
 
   const activites = reformatedActivites(activitesRaw);
 
-  const caCalculee = caDeclared;
+  const caCalculee = calculCA({ caDeclared, etp });
 
-  const refus = verifRefus({
-    activiteSansEtreAssure,
-    experienceDirigeant,
-    ancienneAssurance,
-  });
+  const refus: ReturnValueRefus = verifRefus(
+    {
+      experienceDirigeant: anneeExperience,
+      tempsSansActivite,
+      partSoutraitance,
+      partNegoce,
+    },
+
+  );
+
+  
 
   const isAssureurDefaillant = assureursDefaillants.includes(nomDeLAsurreur);
 
@@ -1598,10 +1698,13 @@ export function calculPrimeRCD(params: {
     nbActivites: activites.length,
     qualif,
     dateCreation,
-    tempsSansActivite12mois,
+    tempsSansActivite,
     anneeExperience,
     assureurDefaillant,
     nombreAnneeAssuranceContinue,
+    nonFournitureBilanN_1,
+    sansActiviteDepuisPlusDe12MoisSansFermeture,
+    absenceDeSinistreSurLes5DernieresAnnees,
   });
 
   type returnTab = {
@@ -1617,13 +1720,30 @@ export function calculPrimeRCD(params: {
   };
 
   type returnValue = {
+    caCalculee: number;
     refus: boolean;
     refusReason: string;
     returnTab: returnTab[];
     PminiHT: number;
-    PrimeHT: number;
+    PrimeHTSansMajorations: number;
+    totalMajorations: number;
+    primeMini: number;
+    primeAuDela: number;
+    primeTotal: number;
     majorations: typeof majorations;
     reprisePasseResult?: ReprisePasseResult; // Résultat du calcul de reprise du passé
+    protectionJuridique: number;
+    fraisGestion: number;
+    totalTTC: number;
+    echeancier?: EcheancierResult;
+    nbEcheances: number;
+    autres: {
+      taxeAssurance: number;
+      protectionJuridiqueTTC: number;
+      fraisFractionnementPrimeHT: number;
+      total: number;
+    };
+    primeAggravationBilanN_1NonFourni: number;
   };
 
   const plafond = 70_000;
@@ -1631,22 +1751,47 @@ export function calculPrimeRCD(params: {
   const returnTab: returnTab[] = [];
 
   const returnValue: returnValue = {
+    caCalculee: caCalculee,
     refus:
-      refus.activiteSansEtreAssure ||
       refus.experienceDirigeant ||
-      refus.ancienneAssurance,
-    refusReason: refus.activiteSansEtreAssure
-      ? "Activité sans être assurée"
-      : refus.experienceDirigeant
+      refus.sansAssuranceDepuisPlusDe12Mois ||
+      refus.partSoutraitance ||
+      refus.partNegoce,
+    refusReason: refus.experienceDirigeant
       ? "Expérience du dirigeant"
-      : refus.ancienneAssurance
-      ? "Ancienne assurance"
+      : refus.sansAssuranceDepuisPlusDe12Mois
+      ? "Sans assurance depuis plus de 12 mois"
+      : refus.partSoutraitance
+      ? "Part de soutraitance"
+      : refus.partNegoce
+      ? "Part de négociation"
       : "",
     returnTab: [],
     PminiHT: 0,
-    PrimeHT: 0,
+    primeMini: 0,
+    PrimeHTSansMajorations: 0,
+    totalMajorations: 0,
+    primeAuDela: 0,
+    primeTotal: 0,
     majorations: majorations,
     reprisePasseResult: undefined,
+    protectionJuridique: protectionJuridique1an,
+    fraisGestion: 0,
+    totalTTC: 0,
+    nbEcheances: {
+      annuel: 1,
+      mensuel: 12,
+      trimestriel: 4,
+      semestriel: 2,
+    }[fractionnementPrime],
+    echeancier: undefined,
+    autres: {
+      taxeAssurance: 0,
+      protectionJuridiqueTTC: 0,
+      fraisFractionnementPrimeHT: 0,
+      total: 0,
+    },
+    primeAggravationBilanN_1NonFourni: 0,
   };
 
   const calculSommeTauxActPartCa = (
@@ -1660,14 +1805,14 @@ export function calculPrimeRCD(params: {
   };
 
   const tableauDeg = calculDeg({
-    caDeclared,
+    caDeclared: caCalculee,
     tableauDeg: tableauDegAvant,
   });
   console.log("tableauDeg", tableauDeg);
 
   activites.forEach((activite) => {
     const rate = tableauTax.find((tax) => tax.code === activite.code)?.rate;
-    const tauxBase = rate ? rate * (1 + majorations.dateCreation) : 0;
+    const tauxBase = rate ? rate : 0;
     const primeMiniAct = tauxBase * plafond;
     const degMax = tableauDeg.find(
       (deg) => deg.code === activite.code
@@ -1695,25 +1840,83 @@ export function calculPrimeRCD(params: {
     });
   });
 
+  const totalMajorations = Object.entries(returnValue.majorations)
+    .filter(([key]) => key !== "nonFournitureBilanN_1")
+    .reduce(
+      (acc: number, [, val]: [string, number | undefined]) => acc + (val ?? 0),
+      1
+    );
+
   returnValue.PminiHT =
-    plafond *
-    calculSommeTauxActPartCa(activites, tableauTax) *
-    (1 + majorations.dateCreation);
-  returnValue.PrimeHT =
+    plafond * calculSommeTauxActPartCa(activites, tableauTax);
+  returnValue.PrimeHTSansMajorations =
     returnValue.PminiHT +
     returnTab.reduce((acc, activite) => acc + activite.Prime100Min, 0);
+  returnValue.totalMajorations = totalMajorations;
+  returnValue.primeMini = returnValue.PminiHT * totalMajorations;
+  returnValue.primeTotal =
+    returnValue.PrimeHTSansMajorations * totalMajorations;
+  returnValue.fraisGestion = returnValue.primeTotal * txFraisGestion;
+  returnValue.autres.fraisFractionnementPrimeHT =
+    returnValue.nbEcheances * fraisFractionnementPrime;
+  returnValue.autres.taxeAssurance =
+    returnValue.primeTotal * taxeAssurance +
+    returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance;
+  returnValue.autres.protectionJuridiqueTTC = protectionJuridique1an;
+  returnValue.autres.total =
+    returnValue.autres.taxeAssurance +
+    returnValue.autres.protectionJuridiqueTTC +
+    returnValue.autres.fraisFractionnementPrimeHT;
+  returnValue.primeAuDela = returnValue.primeTotal - returnValue.primeMini;
+  returnValue.totalTTC =
+    returnValue.primeTotal +
+    returnValue.autres.total +
+    returnValue.fraisGestion;
   returnValue.returnTab = returnTab;
+  returnValue.echeancier = genererEcheancier({
+    dateDebut: dateEffet ?? new Date(),
+    totalHT: returnValue.primeTotal,
+    taxe: returnValue.autres.taxeAssurance,
+    totalTTC: returnValue.totalTTC,
+    rcd: returnValue.primeTotal,
+    pj: returnValue.autres.protectionJuridiqueTTC,
+    frais: returnValue.autres.fraisFractionnementPrimeHT,
+    reprise: 0, // Pas de reprise dans cet exemple
+    fraisGestion: returnValue.fraisGestion,
+    periodicite: fractionnementPrime,
+    // caCalculee: returnValue.caCalculee,
+    // primeHTSansMajorations: returnValue.PrimeHTSansMajorations,
+    // totalMajorations: returnValue.totalMajorations,
+    // primeMini: returnValue.primeMini,
+    // primeAuDela: returnValue.primeAuDela,
+    // primeTotal: returnValue.primeTotal,
+    // majorations: returnValue.majorations,
+    // protectionJuridique: returnValue.protectionJuridique,
+    // autres: returnValue.autres,
+    // primeAggravationBilanN_1NonFourni: returnValue.primeAggravationBilanN_1NonFourni,
+  });
 
+  returnValue.primeAggravationBilanN_1NonFourni = returnValue.majorations
+    .nonFournitureBilanN_1
+    ? returnValue.primeTotal *
+      returnValue.majorations.nonFournitureBilanN_1 *
+      (1 + txFraisGestion + taxeAssurance)
+    : 0;
+  console.log("returnValue", returnValue);
   // Calcul de la reprise du passé si activée
-  if (isAssureurDefaillant && dateEffet && dateFinCouverturePrecedente) {
+  if (
+    (isAssureurDefaillant || assureurDefaillant) &&
+    dateEffet &&
+    reprisePasse
+  ) {
     try {
       const reprisePasseResult = calculReprisePasseRCD({
-        tauxTI,
-        primeAnnuelleHT: returnValue.PrimeHT,
+        tauxTI: 0.6,
+        primeAnnuelleHT: returnValue.PrimeHTSansMajorations,
         dateEffet,
         dateFinCouverturePrecedente,
         sinistresPrecedents,
-        coefficientAntecedent,
+        coefficientAntecedent: 1,
       });
       returnValue.reprisePasseResult = reprisePasseResult;
     } catch (error) {
@@ -1724,6 +1927,242 @@ export function calculPrimeRCD(params: {
   }
 
   return returnValue;
+}
+
+// ========== FONCTION ÉCHÉANCIER SIMPLE ==========
+
+type EcheancierParams = {
+  dateDebut: Date; // Date de début du contrat
+  totalHT: number; // Total HT
+  taxe: number; // Taxe €
+  totalTTC: number; // Total TTC
+  rcd: number; // RCD
+  pj: number; // PJ
+  frais: number; // Frais
+  reprise: number; // Reprise
+  fraisGestion: number; // Frais de gestion
+  periodicite: "annuel" | "semestriel" | "trimestriel" | "mensuel";
+  // Informations complètes du calcul
+  // caCalculee: number;
+  // primeHTSansMajorations: number;
+  // totalMajorations: number;
+  // primeMini: number;
+  // primeAuDela: number;
+  // primeTotal: number;
+  // majorations: any;
+  // protectionJuridique: number;
+  // autres: {
+  //   taxeAssurance: number;
+  //   protectionJuridiqueTTC: number;
+  //   fraisFractionnementPrimeHT: number;
+  //   total: number;
+  // };
+  // primeAggravationBilanN_1NonFourni: number;
+};
+
+type Echeance = {
+  date: string; // Format "DD/MM/YYYY"
+  totalHT: number;
+  taxe: number;
+  totalTTC: number;
+  rcd: number;
+  pj: number;
+  frais: number;
+  reprise: number;
+  fraisGestion: number;
+  debutPeriode: string; // Format "DD/MM/YYYY"
+  finPeriode: string; // Format "DD/MM/YYYY"
+};
+
+type EcheancierResult = {
+  echeances: Echeance[];
+  nbEcheances: number;
+  // Informations complètes du calcul
+  // caCalculee: number;
+  // primeHTSansMajorations: number;
+  // totalMajorations: number;
+  // primeMini: number;
+  // primeAuDela: number;
+  // primeTotal: number;
+  // majorations: any;
+  // protectionJuridique: number;
+  // fraisGestion: number;
+  // autres: {
+  //   taxeAssurance: number;
+  //   protectionJuridiqueTTC: number;
+  //   fraisFractionnementPrimeHT: number;
+  //   total: number;
+  // };
+  // primeAggravationBilanN_1NonFourni: number;
+};
+
+export function genererEcheancier(params: EcheancierParams): EcheancierResult {
+  const {
+    dateDebut,
+    totalHT,
+    taxe,
+    totalTTC,
+    rcd,
+    pj,
+    frais,
+    reprise,
+    fraisGestion,
+    periodicite,
+    // caCalculee,
+    // primeHTSansMajorations,
+    // totalMajorations,
+    // primeMini,
+    // primeAuDela,
+    // primeTotal,
+    // majorations,
+    // protectionJuridique,
+    // autres,
+    // primeAggravationBilanN_1NonFourni
+  } = params;
+
+  const echeances: Echeance[] = [];
+
+  // Calculer le nombre d'échéances selon la périodicité
+  const nbEcheancesParAn = {
+    annuel: 1,
+    semestriel: 2,
+    trimestriel: 4,
+    mensuel: 12,
+  }[periodicite];
+  const nbEcheances = nbEcheancesParAn;
+  console.log("nbEcheancesParAn :", nbEcheancesParAn);
+  console.log("nbEcheances :", nbEcheances);
+
+  // On génère un tableau de dates (type Date uniquement) qui coupe l'année en nbEcheances parts égales
+  // On part du 1er janvier de l'année courante
+  const year = dateDebut.getFullYear();
+  console.log("Année de début :", year);
+
+  // On calcule le nombre de jours entre le 1er janvier de l'année courante et la date de début
+  const nbJoursDepuisDateDebut = Math.floor(
+    (dateDebut.getTime() - new Date(year, 0, 1).getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
+  console.log("Nombre de jours depuis le 1er janvier :", nbJoursDepuisDateDebut);
+
+  const nbEcheancesNbJours = 365.25 / nbEcheances;
+  console.log("Nombre de jours par échéance :", nbEcheancesNbJours);
+
+  let premierPaiementDeLAnnee = true;
+  let totalPaiement = 0;
+
+  let nbJoursPaye = nbJoursDepuisDateDebut;
+  console.log("nbJoursPaye initial :", nbJoursPaye);
+
+  if (nbJoursDepuisDateDebut > 1) {
+    const nbAnneeAEcheance = 2;
+    console.log("nbAnneeAEcheance :", nbAnneeAEcheance);
+
+    const iFn = () => {
+      for (let k = 0; k < nbEcheances; k++) {
+        if (k * nbEcheancesNbJours > nbJoursDepuisDateDebut) {
+          console.log("iFn retourne :", k);
+          return k;
+        }
+      }
+      console.log("iFn retourne 0");
+      return 0;
+    };
+    const i = iFn();
+    console.log("Valeur de i :", i);
+
+    for (let j = i - 1; j < nbAnneeAEcheance * nbEcheances; j++) {
+      const formatDate = (date: Date) => {
+        const d = date.getDate().toString().padStart(2, "0");
+        const m = (date.getMonth() + 1).toString().padStart(2, "0");
+        const y = date.getFullYear();
+        return `${d}/${m}/${y}`;
+      };
+      const dateEcheanceIPLus1D=new Date(
+        new Date(year, 0, 1).getTime() +
+          nbEcheancesNbJours * (j+1) * 24 * 60 * 60 * 1000
+      );
+      const dateEcheanceIPLus1 = formatDate(dateEcheanceIPLus1D);
+
+      const dateEcheance = formatDate(
+        j === i-1 ? dateDebut : new Date(
+          new Date(year, 0, 1).getTime() +
+            nbEcheancesNbJours * j * 24 * 60 * 60 * 1000
+        )
+      );
+      console.log(`Échéance ${j}: dateEcheanceI_1 = ${dateEcheanceIPLus1}, dateEcheance = ${dateEcheance}`);
+
+      if (
+        dateEcheanceIPLus1D.getFullYear() === year + 1 &&
+        j % nbEcheances === 0
+      ) {
+        premierPaiementDeLAnnee = true;
+        console.log("Premier paiement de l'année détecté pour j =", j);
+      }
+      const ratio = nbJoursPaye%nbEcheancesNbJours === 0 ? 1 :( (nbEcheancesNbJours*(j+1))-nbJoursPaye)/nbEcheancesNbJours;
+      console.log(`ratio pour j=${j} :`, ratio);
+
+      const taxeEcheance = ((taxe / nbEcheances) * ratio) + (premierPaiementDeLAnnee ? frais*(0.045) : 0);
+      
+      const rcdEcheance = ((rcd  +taxe+ (frais)) / nbEcheances) * ratio;
+      console.log(rcd, taxe, frais, "rcdEcheance", rcdEcheance, ratio)
+      const pjEcheance = premierPaiementDeLAnnee ? pj : 0;
+      const fraisEcheance = premierPaiementDeLAnnee ? frais : 0;
+      const repriseEcheance = premierPaiementDeLAnnee ? reprise : 0;
+      const fraisGestionEcheance = premierPaiementDeLAnnee ? fraisGestion : 0;
+      const totalHTEcheance = rcdEcheance+fraisGestionEcheance+pjEcheance+repriseEcheance-taxeEcheance;
+
+      const totalTCHEcheance = ((totalHTEcheance+taxeEcheance)) ;
+
+      console.log(`totalHTEcheance : ${totalHTEcheance}, taxeEcheance : ${taxeEcheance}, totalTCHEcheance : ${totalTCHEcheance}, rcdEcheance : ${rcdEcheance}, pjEcheance : ${pjEcheance}, fraisEcheance : ${fraisEcheance}, repriseEcheance : ${repriseEcheance}, fraisGestionEcheance : ${fraisGestionEcheance}`);
+
+      totalPaiement +=
+        totalHTEcheance +
+        taxeEcheance +
+        rcdEcheance +
+        pjEcheance +
+        fraisEcheance +
+        repriseEcheance +
+        fraisGestionEcheance;
+
+      console.log("totalPaiement cumulé :", totalPaiement);
+
+      echeances.push({
+        date: dateEcheance,
+        totalHT: totalHTEcheance,
+        taxe: taxeEcheance,
+        totalTTC: totalTCHEcheance,
+        rcd: rcdEcheance,
+        pj: pjEcheance,
+        frais: fraisEcheance,
+        reprise: repriseEcheance,
+        fraisGestion: fraisGestionEcheance,
+        debutPeriode: dateEcheance,
+        finPeriode: dateEcheanceIPLus1,
+      });
+
+      nbJoursPaye = nbEcheancesNbJours;
+      console.log("nbJoursPaye après incrément :", nbJoursPaye);
+
+      premierPaiementDeLAnnee = false;
+    }
+  }
+
+  return {
+    echeances,
+    nbEcheances,
+    // caCalculee,
+    // primeHTSansMajorations,
+    // totalMajorations,
+    // primeMini,
+    // primeAuDela,
+    // primeTotal,
+    // majorations,
+    // protectionJuridique,
+    // fraisGestion,
+    // autres,
+    // primeAggravationBilanN_1NonFourni
+  };
 }
 
 // ========== CALCUL REPRISE DU PASSÉ ==========
@@ -1737,8 +2176,8 @@ type SinistrePasse = {
 type ReprisePasseParams = {
   tauxTI: number; // Taux TI par année (ex: 0.700 pour N, 0.686 pour N-1, etc.)
   primeAnnuelleHT: number; // Prime annuelle calculée avec tous les coefficients
-  dateEffet: string; // Date d'effet du contrat (ISO)
-  dateFinCouverturePrecedente: string; // Date de fin de couverture précédente (ISO)
+  dateEffet: Date; // Date d'effet du contrat (ISO)
+  dateFinCouverturePrecedente: Date; // Date de fin de couverture précédente (ISO)
   sinistresPrecedents: SinistrePasse[]; // Sinistres des 5 dernières années
   coefficientAntecedent: number; // Coefficient selon ancienneté (0.3, 0.6, 1, 1.4, 1.7, etc.)
 };
@@ -1790,8 +2229,8 @@ export function calculReprisePasseRCD(
   } = params;
 
   // 1. Calcul du pourcentage de l'année de reprise
-  const dateEffetObj = parseISO(dateEffet);
-  const dateFinObj = parseISO(dateFinCouverturePrecedente);
+  const dateEffetObj = dateEffet;
+  const dateFinObj = dateFinCouverturePrecedente;
 
   // Calculer la différence en mois (exemple du document: 10/12 de N-9)
   const diffMs = dateEffetObj.getTime() - dateFinObj.getTime();
