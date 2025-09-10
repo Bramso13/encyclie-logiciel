@@ -58,9 +58,11 @@ export const UpdateQuoteSchema = z.object({
       "ACCEPTED",
       "REJECTED",
       "EXPIRED",
+      "INCOMPLETE",
     ])
     .optional(),
   formData: z.record(z.string(), z.any()).optional(),
+  companyData: z.record(z.string(), z.any()).optional(),
   calculatedPremium: z.number().positive().optional(),
   validUntil: z.string().optional(),
 });

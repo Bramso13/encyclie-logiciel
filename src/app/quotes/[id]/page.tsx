@@ -8,6 +8,9 @@ import useQuotesStore, { QuoteDocument } from "@/lib/stores/quotes-store";
 import useProductsStore, {
   InsuranceProduct,
 } from "@/lib/stores/products-store";
+import MultiSelect from "@/components/quotes/MultiSelect";
+import ActivityBreakdownField from "@/components/quotes/ActivityBreakdown";
+import LossHistoryField from "@/components/quotes/LossHistoryField";
 
 interface CompanyData {
   siret: string;
@@ -15,6 +18,7 @@ interface CompanyData {
   legalForm: string;
   companyName: string;
   creationDate: string;
+  directorName: string;
 }
 
 interface ActivityShare {
@@ -82,6 +86,7 @@ export default function QuoteDetailPage() {
     address: "",
     legalForm: "",
     creationDate: "",
+    directorName: "",
   });
   const [selectedProduct, setSelectedProduct] =
     useState<InsuranceProduct | null>(null);
@@ -276,6 +281,12 @@ export default function QuoteDetailPage() {
               }
               break;
               
+            case 'dateFinCouverturePrecedente':
+              if (field.type === 'date') {
+                mappedParams[paramKey] = value ? new Date(value) : new Date();
+              }
+              break;
+              
             case 'activites':
               // Pour les activités, utiliser les données du formulaire
               if (quoteData.formData.activities && Array.isArray(quoteData.formData.activities)) {
@@ -362,6 +373,7 @@ export default function QuoteDetailPage() {
             address: "",
             legalForm: "",
             creationDate: "",
+            directorName: "",
           };
           setCompanyData({ ...defaultCompanyData, ...data.companyData });
           setDocuments(data.documents || []);
@@ -446,6 +458,7 @@ export default function QuoteDetailPage() {
 
   // Fonctions d'édition
   const handleFormDataChange = (fieldName: string, value: any) => {
+    console.log("handleFormDataChange", fieldName, value);
     setFormData((prev) => ({ ...prev, [fieldName]: value }));
     if (errors[fieldName]) {
       setErrors((prev) => ({ ...prev, [fieldName]: "" }));
@@ -563,14 +576,15 @@ export default function QuoteDetailPage() {
     }
 
     setErrors(newErrors);
+    console.log("errors", errors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (status: "DRAFT" | "INCOMPLETE") => {
-    if (status !== "DRAFT" && !validateForm()) {
+    if (!validateForm()) {
       return;
     }
-
+    console.log("formData", formData);
     try {
       const updateData = {
         companyData,
@@ -578,15 +592,25 @@ export default function QuoteDetailPage() {
         status,
       };
 
-      await updateQuote(params.id as string, updateData);
+      // Mettre à jour via l'API
+      const response = await fetch(`/api/quotes/${params.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      });
 
-      // Recharger les données après la mise à jour
-      const response = await fetch(`/api/quotes/${params.id}`);
-      if (response.ok) {
-        const dataA = await response.json();
-        const data = dataA.data;
-        setQuote(data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la mise à jour");
       }
+
+      const result = await response.json();
+      
+      // Mettre à jour l'état local
+      updateQuote(params.id as string, result.data);
+      setQuote(result.data);
     } catch (error) {
       console.error("Update error:", error);
       setErrors((prev) => ({
@@ -737,6 +761,8 @@ export default function QuoteDetailPage() {
             {...commonProps}
             rows={fieldConfig.rows || 3}
             placeholder={fieldConfig.placeholder}
+            value={formData[fieldName] || ""}
+            onChange={(e) => handleFormDataChange(fieldName, e.target.value)}
           />
         );
 
@@ -749,6 +775,8 @@ export default function QuoteDetailPage() {
             max={fieldConfig.max}
             step={fieldConfig.step}
             placeholder={fieldConfig.placeholder}
+            value={formData[fieldName] || ""}
+            onChange={(e) => handleFormDataChange(fieldName, e.target.value)}
           />
         );
 
@@ -759,6 +787,8 @@ export default function QuoteDetailPage() {
             type="date"
             min={fieldConfig.min}
             max={fieldConfig.max}
+            value={formData[fieldName] || ""}
+            onChange={(e) => handleFormDataChange(fieldName, e.target.value)}
           />
         );
 
@@ -770,6 +800,35 @@ export default function QuoteDetailPage() {
             checked={formData[fieldName] || false}
             onChange={(e) => handleFormDataChange(fieldName, e.target.checked)}
             className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+          />
+        );
+
+      case "multiselect":
+        return (
+          <MultiSelect
+            options={fieldConfig.options}
+            value={formData[fieldName] || []}
+            onChange={(newValues) => handleFormDataChange(fieldName, newValues)}
+          />
+        );
+
+      case "activity_breakdown":
+        return (
+          <ActivityBreakdownField
+            options={fieldConfig.options}
+            value={formData[fieldName] || []}
+            onChange={(newValues) => handleFormDataChange(fieldName, newValues)}
+            error={errors[fieldName]}
+          />
+        );
+
+      case "loss_history":
+        return (
+          <LossHistoryField
+            fields={fieldConfig.fields}
+            maxEntries={fieldConfig.maxEntries}
+            value={formData[fieldName] || []}
+            onChange={(newValues) => handleFormDataChange(fieldName, newValues)}
           />
         );
 
@@ -1348,10 +1407,6 @@ export default function QuoteDetailPage() {
                                   <span className="text-gray-600">Fréquence sinistres</span>
                                   <span className="font-medium">{calculationResult.reprisePasseResult.frequenceSinistres?.toFixed(2) || "0"}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">% année reprise</span>
-                                  <span className="font-medium">{(calculationResult.reprisePasseResult.pourcentageAnneeReprise * 100)?.toFixed(1) || "0"}%</span>
-                                </div>
                               </div>
                             </div>
                             <div className="space-y-4">
@@ -1372,22 +1427,82 @@ export default function QuoteDetailPage() {
                               </div>
                             </div>
                           </div>
+
+                          {/* Résumé des calculs */}
+                          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-blue-50 rounded-lg p-4">
+                              <h4 className="font-semibold text-blue-900 mb-2">Taux de majoration</h4>
+                              <div className="text-2xl font-bold text-blue-800">
+                                {(calculationResult.reprisePasseResult.tauxMajoration * 100)?.toFixed(1) || "0"}%
+                              </div>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Coefficient appliqué selon l'analyse sinistralité
+                              </p>
+                            </div>
+                            <div className="bg-green-50 rounded-lg p-4">
+                              <h4 className="font-semibold text-green-900 mb-2">Prime après sinistralité</h4>
+                              <div className="text-2xl font-bold text-green-800">
+                                {calculationResult.reprisePasseResult.primeApresSinistralite?.toLocaleString("fr-FR") || "0"} €
+                              </div>
+                              <p className="text-sm text-green-700 mt-1">
+                                Prime HT × Taux de majoration
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Tableau des années */}
+                          {calculationResult.reprisePasseResult.tableauAnnees && calculationResult.reprisePasseResult.tableauAnnees.length > 0 && (
+                            <div className="mt-6">
+                              <h4 className="font-semibold text-gray-900 mb-4">Détail par année</h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full border-collapse border border-gray-300">
+                                  <thead>
+                                    <tr className="bg-amber-100">
+                                      <th className="border border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700">Année</th>
+                                      <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Taux TI</th>
+                                      <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">% Année</th>
+                                      <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Prime Reprise</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {calculationResult.reprisePasseResult.tableauAnnees.map((annee: any, index: number) => (
+                                      <tr key={index} className="hover:bg-gray-50">
+                                        <td className="border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900">{annee.annee}</td>
+                                        <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-right">
+                                          {(annee.tauxTI * 100)?.toFixed(2) || "0"}%
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600 text-right">
+                                          {annee.pourcentageAnnee?.toFixed(1) || "0"}%
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                                          {annee.primeRepriseAnnee?.toLocaleString("fr-FR") || "0"} €
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
                           <div className="mt-6 p-4 bg-amber-50 rounded-lg">
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-semibold text-amber-900">Prime reprise du passé TTC</p>
                                 <p className="text-sm text-amber-700">
-                                  Coefficient: {calculationResult.reprisePasseResult.coefficientMajoration || "0"}
-                                  {calculationResult.reprisePasseResult.analyseCompagnieRequise && " (Analyse Cie requise)"}
+                                  Taux de majoration: {(calculationResult.reprisePasseResult.tauxMajoration * 100)?.toFixed(1) || "0"}%
+                                </p>
+                                <p className="text-sm text-amber-700">
+                                  Calculée sur {calculationResult.reprisePasseResult.tableauAnnees?.length || 0} année(s)
                                 </p>
                               </div>
                               <span className="text-2xl font-bold text-amber-900">
                                 {calculationResult.reprisePasseResult.primeReprisePasseTTC?.toLocaleString("fr-FR") || "0"} €
-                                </span>
-                              </div>
+                              </span>
                             </div>
                           </div>
                         </div>
+                      </div>
                     )}
 
                     {/* Échéancier */}
@@ -2239,11 +2354,8 @@ export default function QuoteDetailPage() {
               )}
 
               <div className="space-y-8">
-                {/* Company Information */}
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Informations de l'entreprise
-                  </h2>
+                {/* Company Information - Identique à QuoteForm.tsx */}
+                <div className="border-t pt-6">
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
                       <label
@@ -2256,19 +2368,40 @@ export default function QuoteDetailPage() {
                         type="text"
                         id="companyName"
                         value={companyData.companyName}
-                        onChange={(e) =>
-                          handleCompanyDataChange("companyName", e.target.value)
-                        }
+                        onChange={(e) => {
+                          handleCompanyDataChange("companyName", e.target.value);
+                          handleFormDataChange("companyName", e.target.value);
+                        }}
                         className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-                          errors.companyName
-                            ? "border-red-300"
-                            : "border-gray-300"
+                          errors.companyName ? "border-red-300" : "border-gray-300"
                         }`}
                       />
                       {errors.companyName && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.companyName}
-                        </p>
+                        <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="directorName"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Nom du dirigeant *
+                      </label>
+                      <input
+                        type="text"
+                        id="directorName"
+                        value={companyData.directorName}
+                        onChange={(e) => {
+                          handleCompanyDataChange("directorName", e.target.value);
+                          handleFormDataChange("directorName", e.target.value);
+                        }}
+                        className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                          errors.directorName ? "border-red-300" : "border-gray-300"
+                        }`}
+                      />
+                      {errors.directorName && (
+                        <p className="mt-1 text-sm text-red-600">{errors.directorName}</p>
                       )}
                     </div>
 
@@ -2283,21 +2416,20 @@ export default function QuoteDetailPage() {
                         type="text"
                         id="siret"
                         value={companyData.siret}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           handleCompanyDataChange(
                             "siret",
                             e.target.value.replace(/\D/g, "")
-                          )
-                        }
+                          );
+                          handleFormDataChange("siret", e.target.value.replace(/\D/g, ""));
+                        }}
                         maxLength={14}
                         className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
                           errors.siret ? "border-red-300" : "border-gray-300"
                         }`}
                       />
                       {errors.siret && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.siret}
-                        </p>
+                        <p className="mt-1 text-sm text-red-600">{errors.siret}</p>
                       )}
                     </div>
 
@@ -2312,17 +2444,16 @@ export default function QuoteDetailPage() {
                         type="text"
                         id="address"
                         value={companyData.address}
-                        onChange={(e) =>
-                          handleCompanyDataChange("address", e.target.value)
-                        }
+                        onChange={(e) => {
+                          handleCompanyDataChange("address", e.target.value);
+                          handleFormDataChange("address", e.target.value);
+                        }}
                         className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
                           errors.address ? "border-red-300" : "border-gray-300"
                         }`}
                       />
                       {errors.address && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.address}
-                        </p>
+                        <p className="mt-1 text-sm text-red-600">{errors.address}</p>
                       )}
                     </div>
 
@@ -2336,9 +2467,10 @@ export default function QuoteDetailPage() {
                       <select
                         id="legalForm"
                         value={companyData.legalForm}
-                        onChange={(e) =>
-                          handleCompanyDataChange("legalForm", e.target.value)
-                        }
+                        onChange={(e) => {
+                          handleCompanyDataChange("legalForm", e.target.value);
+                          handleFormDataChange("legalForm", e.target.value);
+                        }}
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       >
                         <option value="">Sélectionnez...</option>
@@ -2347,9 +2479,8 @@ export default function QuoteDetailPage() {
                         <option value="SA">SA</option>
                         <option value="EURL">EURL</option>
                         <option value="SNC">SNC</option>
-                        <option value="AUTO_ENTREPRENEUR">
-                          Auto-entrepreneur
-                        </option>
+                        <option value="AUTO_ENTREPRENEUR">Auto-entrepreneur</option>
+                        <option value="EXPL_INDIVIDUELLE">Exploitation individuelle</option>
                       </select>
                     </div>
 
@@ -2364,33 +2495,29 @@ export default function QuoteDetailPage() {
                         type="date"
                         id="creationDate"
                         value={companyData.creationDate}
-                        onChange={(e) =>
-                          handleCompanyDataChange(
-                            "creationDate",
-                            e.target.value
-                          )
-                        }
+                        onChange={(e) => {
+                          handleCompanyDataChange("creationDate", e.target.value);
+                          handleFormDataChange("creationDate", e.target.value);
+                        }}
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Product Specific Fields */}
+                {/* Dynamic Product Fields - Identique à QuoteForm.tsx */}
                 {selectedProduct?.formFields && (
-                  <div>
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
                       Informations spécifiques - {selectedProduct.name}
-                    </h2>
+                    </h3>
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       {Object.entries(selectedProduct.formFields).map(
                         ([fieldName, fieldConfig]: [string, any]) => (
                           <div
                             key={fieldName}
                             className={
-                              fieldConfig.type === "textarea"
-                                ? "sm:col-span-2"
-                                : ""
+                              fieldConfig.type === "textarea" ? "sm:col-span-2" : ""
                             }
                           >
                             <label

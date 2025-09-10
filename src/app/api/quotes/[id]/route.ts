@@ -101,19 +101,19 @@ export async function PUT(
         throw new ApiError(403, "Accès refusé à ce devis");
       }
 
-      // Status change validation
-      if (validatedData.status) {
-        const allowedTransitions = getStatusTransitions(
-          existingQuote.status,
-          userRole
-        );
-        if (!allowedTransitions.includes(validatedData.status)) {
-          throw new ApiError(
-            400,
-            `Transition de statut non autorisée: ${existingQuote.status} -> ${validatedData.status}`
-          );
-        }
-      }
+      // // Status change validation
+      // if (validatedData.status) {
+      //   const allowedTransitions = getStatusTransitions(
+      //     existingQuote.status,
+      //     userRole
+      //   );
+      //   if (!allowedTransitions.includes(validatedData.status)) {
+      //     throw new ApiError(
+      //       400,
+      //       `Transition de statut non autorisée: ${existingQuote.status} -> ${validatedData.status}`
+      //     );
+      //   }
+      // }
 
       // Prepare update data
       const updateData: any = {
@@ -217,6 +217,7 @@ export async function DELETE(
     return handleApiError(error);
   }
 }
+// PATCH /api/quotes/[id] - Update quote
 
 // Helper function to determine allowed status transitions based on role
 function getStatusTransitions(
