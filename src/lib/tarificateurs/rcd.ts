@@ -1251,6 +1251,7 @@ type Enum_Temps_sans_activite =
   | "NON"
   | "CREATION";
 function calculateMajorations(params: {
+  enCreation: boolean;
   etp: number;
   nbActivites: number;
   qualif: boolean;
@@ -1270,6 +1271,7 @@ function calculateMajorations(params: {
     | "A_DEFINIR";
 }) {
   const {
+    enCreation,
     etp,
     nbActivites,
     qualif,
@@ -1327,12 +1329,12 @@ function calculateMajorations(params: {
     tempsSansActivite: calculMajTempsSansActivite(tempsSansActivite),
     anneeExperience: calculMajExp(anneeExperience),
     assureurDefaillant:
-      assureurDefaillant &&
+      !enCreation && assureurDefaillant &&
       !(absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT")
         ? 0.2
         : 0,
-    nombreAnneeAssuranceContinue: calculMajNAAC(nombreAnneeAssuranceContinue),
-    nonFournitureBilanN_1: nonFournitureBilanN_1 ? 0.5 : 0,
+    nombreAnneeAssuranceContinue: enCreation ? 0 : calculMajNAAC(nombreAnneeAssuranceContinue),
+    nonFournitureBilanN_1: enCreation ? 0 : nonFournitureBilanN_1 ? 0.5 : 0,
     sansActiviteDepuisPlusDe12MoisSansFermeture:
       sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" ? 0.2 : 0,
     absenceDeSinistreSurLes5DernieresAnnees:
@@ -1591,6 +1593,7 @@ const calculDeg = (params: {
   return resultValue;
 };
 export function calculPrimeRCD(params: {
+  enCreation: boolean;
   caDeclared: number;
   etp: number;
   activites: { code: number; caSharePercent: number }[];
@@ -1627,6 +1630,7 @@ export function calculPrimeRCD(params: {
   sinistresPrecedents?: SinistrePasse[]; // Sinistres des 5 dernières années
 }) {
   const {
+    enCreation,
     caDeclared,
     etp,
     activites: activitesRaw,
@@ -1694,6 +1698,7 @@ export function calculPrimeRCD(params: {
   const isAssureurDefaillant = assureursDefaillants.includes(nomDeLAsurreur);
 
   const majorations = calculateMajorations({
+    enCreation,
     etp,
     nbActivites: activites.length,
     qualif,
@@ -1820,10 +1825,10 @@ export function calculPrimeRCD(params: {
     const deg400k = tableauDeg.find(
       (deg) => deg.code === activite.code && deg.type === "CA"
     )?.degressivity;
-    const primeRefAct = deg400k ? primeMiniAct * deg400k : primeMiniAct;
-    const prime100Ref = deg400k
+    const primeRefAct = (deg400k && caCalculee > 250000) ? primeMiniAct * deg400k : primeMiniAct;
+    const prime100Ref = (deg400k && caCalculee > 250000)
       ? tauxBase * deg400k * caCalculee - primeRefAct
-      : 0;
+      : tauxBase * caCalculee - primeRefAct;
     const prime100Min = prime100Ref * activite.caSharePercent;
 
     returnTab.push({
@@ -2111,7 +2116,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       const fraisEcheance = premierPaiementDeLAnnee ? frais : 0;
       const repriseEcheance = premierPaiementDeLAnnee ? reprise : 0;
       const fraisGestionEcheance = premierPaiementDeLAnnee ? fraisGestion : 0;
-      const totalHTEcheance = rcdEcheance+fraisGestionEcheance+pjEcheance+repriseEcheance-taxeEcheance;
+      const totalHTEcheance = rcdEcheance+fraisGestionEcheance+pjEcheance+(repriseEcheance === undefined ? 0 : repriseEcheance)-taxeEcheance;
 
       const totalTCHEcheance = ((totalHTEcheance+taxeEcheance)) ;
 

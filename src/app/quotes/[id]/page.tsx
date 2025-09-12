@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
+import { calculPrimeRCD, genererEcheancier } from "@/lib/tarificateurs/rcd";
 import { authClient } from "@/lib/auth-client";
 import useQuotesStore, { QuoteDocument } from "@/lib/stores/quotes-store";
 import useProductsStore, {
@@ -11,6 +11,8 @@ import useProductsStore, {
 import MultiSelect from "@/components/quotes/MultiSelect";
 import ActivityBreakdownField from "@/components/quotes/ActivityBreakdown";
 import LossHistoryField from "@/components/quotes/LossHistoryField";
+import AdminWorkflowManager from "@/components/workflow/AdminWorkflowManager";
+import BrokerWorkflowExecutor from "@/components/workflow/BrokerWorkflowExecutor";
 
 interface CompanyData {
   siret: string;
@@ -41,7 +43,7 @@ interface FormData {
   experienceMetier: string;
   hasQualification: boolean;
   previousRcdStatus: string;
-  dateEffetSouhaitee: string;
+  dateDeffet: string;
   companyCreationDate: string;
   subContractingPercent: string;
   previousResiliationDate?: string;
@@ -65,16 +67,239 @@ interface Quote {
 // Interface simplifiée pour éviter les conflits de types
 type CalculationResult = any;
 
+// Fonction pour obtenir des labels lisibles pour les champs
+const getFieldLabel = (path: string): string => {
+  const labels: Record<string, string> = {
+    'primeTotal': 'Prime HT Total',
+    'totalTTC': 'Total TTC',
+    'caCalculee': 'CA Calculé',
+    'PminiHT': 'Prime Minimum HT',
+    'primeAuDela': 'Prime Au-delà',
+    'PrimeHTSansMajorations': 'Prime HT Sans Majorations',
+    'totalMajorations': 'Total Majorations',
+    'protectionJuridique': 'Protection Juridique',
+    'fraisGestion': 'Frais de Gestion',
+    'autres.taxeAssurance': 'Taxe Assurance',
+    'autres.fraisFractionnementPrimeHT': 'Frais Fractionnement',
+    'primeAggravationBilanN_1NonFourni': 'Prime Aggravation Bilan N-1',
+    'reprisePasseResult.ratioSP': 'Ratio S/P',
+    'reprisePasseResult.frequenceSinistres': 'Fréquence Sinistres',
+    'reprisePasseResult.categorieAnciennete': 'Catégorie Ancienneté',
+    'reprisePasseResult.categorieSinistralite': 'Catégorie Sinistralité',
+    'reprisePasseResult.majoration': 'Majoration Reprise du Passé'
+  };
+
+  // Gestion des majorations dynamiques
+  if (path.startsWith('majorations.')) {
+    const majKey = path.replace('majorations.', '');
+    return `Majoration ${majKey.charAt(0).toUpperCase() + majKey.slice(1)}`;
+  }
+
+  return labels[path] || path;
+};
+
+// Composant pour le formulaire de modification (déplacé à l'extérieur)
+const ModificationForm = React.memo(({ 
+  quote,
+  calculationResult, 
+  onUpdate,
+  originalCalculationResult,
+  section 
+}: {
+  quote: Quote;
+  calculationResult: CalculationResult;
+  onUpdate: (newResult: CalculationResult) => void;
+  originalCalculationResult: CalculationResult | null;
+  section: 'majorations' | 'fraisEtTaxes' | null;
+}) => {
+  // État local pour les modifications temporaires
+  const [localValues, setLocalValues] = useState<Record<string, any>>({});
+
+  // Fonction pour obtenir une valeur dans un objet imbriqué
+  const getNestedValue = useCallback((obj: any, path: string) => {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+  }, []);
+
+  // Fonction pour définir une valeur dans un objet imbriqué via un chemin
+  const setNestedValue = useCallback((obj: any, path: string, value: any) => {
+    const keys = path.split('.');
+    let current = obj;
+    
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) current[keys[i]] = {};
+      current = current[keys[i]];
+    }
+    
+    const finalKey = keys[keys.length - 1];
+    current[finalKey] = value;
+  }, []);
+
+  // Filtrer les champs selon la section
+  const getFieldsForSection = useCallback(() => {
+    if (section === 'majorations') {
+      return [
+        'majorations.absenceDeSinistreSurLes5DernieresAnnees',
+        'majorations.anneeExperience',
+        'majorations.assureurDefaillant',
+        'majorations.dateCreation',
+        'majorations.etp',
+        'majorations.nombreAnneeAssuranceContinue',
+        'majorations.nonFournitureBilanN_1',
+        'majorations.qualif',
+        'majorations.sansActiviteDepuisPlusDe12MoisSansFermeture',
+        'majorations.tempsSansActivite',
+
+      ];
+    } else if (section === 'fraisEtTaxes') {
+      return [
+        'protectionJuridique',
+        'fraisGestion',
+        'autres.taxeAssurance',
+        'autres.fraisFractionnementPrimeHT'
+      ];
+    }
+    return Object.keys(calculationResult);
+  }, [section, calculationResult]);
+
+  const fieldsToShow = getFieldsForSection();
+
+  const reDoEcheancier = () => {
+    console.log("quote///", quote.formData.dateDeffet);
+    setNestedValue(calculationResult, "echeancier", genererEcheancier({
+      dateDebut: new Date(quote.formData.dateDeffet),
+      totalHT: calculationResult.primeTotal,
+      taxe: calculationResult.autres.taxeAssurance,
+      totalTTC: calculationResult.totalTTC,
+      rcd: calculationResult.primeTotal,
+      pj: calculationResult.autres.protectionJuridiqueTTC,
+      frais: calculationResult.autres.fraisFractionnementPrimeHT,
+      reprise: calculationResult.reprisePasseResult?.reprise,
+      fraisGestion: calculationResult.fraisGestion,
+      periodicite: quote.formData.periodicity as "annuel" | "semestriel" | "trimestriel" | "mensuel",
+    }));
+  };
+
+  // Fonction pour gérer les changements d'input
+  const handleInputChange = useCallback((path: string, value: string) => {
+    console.log("path///", path);
+    console.log("value///", value);
+    
+    const numValue = parseFloat(value) || 0;
+    setLocalValues(prev => ({ ...prev, [path]: numValue }));
+
+    
+    if(path==="autres.fraisFractionnementPrimeHT" || path==="autres.taxeAssurance" || path==="protectionJuridique"){
+      setNestedValue(calculationResult, "autres.total", calculationResult.autres.taxeAssurance + calculationResult.autres.fraisFractionnementPrimeHT + calculationResult.protectionJuridique);
+      if(path==="protectionJuridique") setNestedValue(calculationResult, "autres.protectionJuridiqueTTC", calculationResult.autres.protectionJuridique);
+
+    }
+    if(path.startsWith("majorations.")){
+      console.log("pathMajorations///", path, numValue, getNestedValue(calculationResult, path));
+      setNestedValue(calculationResult, "totalMajorations", calculationResult.totalMajorations + numValue - getNestedValue(calculationResult, path));
+      setNestedValue(calculationResult, "primeTotal", calculationResult.PrimeHTSansMajorations * getNestedValue(calculationResult, "totalMajorations"));
+
+    }
+
+    if(path==="fraisGestion") setNestedValue(calculationResult, "fraisGestion", numValue);
+
+    console.log(getNestedValue(calculationResult, "primeTotal"),"primeTotal///" ,getNestedValue(calculationResult, "autres.total"), getNestedValue(calculationResult, "fraisGestion"), "calculationResult///", getNestedValue(calculationResult, "primeTotal") + getNestedValue(calculationResult, "autres.total") + getNestedValue(calculationResult, "fraisGestion"));
+
+    setNestedValue(calculationResult, "totalTTC", getNestedValue(calculationResult, "primeTotal") + getNestedValue(calculationResult, "autres.total") + getNestedValue(calculationResult, "fraisGestion"));
+
+    reDoEcheancier();
+
+
+    // Mettre à jour le calculationResult immédiatement
+    const newResult = { ...calculationResult };
+    setNestedValue(newResult, path, numValue);
+
+    
+    onUpdate(newResult);
+  }, [calculationResult, onUpdate, setNestedValue]);
+
+  return (
+    <div className="space-y-6">
+      {/* Formulaire de modification */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {fieldsToShow.map(path => {
+          const currentValue = localValues[path] !== undefined ? localValues[path] : getNestedValue(calculationResult, path);
+          const originalValue = getNestedValue(originalCalculationResult, path);
+          const label = getFieldLabel(path);
+          const isModified = currentValue !== originalValue;
+          
+          return (
+            <div key={path} className={`p-4 border rounded-lg ${isModified ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {label}
+                {isModified && <span className="text-blue-600 ml-1">●</span>}
+              </label>
+              
+              <input
+                type="number"
+                step="0.01"
+                value={currentValue || ''}
+                onChange={(e) => handleInputChange(path, e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md text-sm ${
+                  isModified 
+                    ? 'border-blue-300 bg-blue-50 text-blue-900 font-medium' 
+                    : 'border-gray-300'
+                }`}
+              />
+              
+              {originalValue !== undefined && originalValue !== currentValue && (
+                <div className="mt-1 text-xs text-gray-500">
+                  Original: {typeof originalValue === 'number' 
+                    ? originalValue.toLocaleString('fr-FR') 
+                    : originalValue}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Message d'aide */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div className="flex items-start">
+          <svg className="w-5 h-5 text-gray-400 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <div>
+            <h4 className="font-medium text-gray-900">Instructions</h4>
+            <p className="text-sm text-gray-600 mt-1">
+              Modifiez les valeurs ci-dessus. Les champs modifiés sont surlignés en bleu.
+              Les modifications sont appliquées en temps réel et visibles dans l'interface.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ModificationForm.displayName = "ModificationForm";
+
 export default function QuoteDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [activeTab, setActiveTab] = useState("form-data");
+  const [activeTab, setActiveTab] = useState("resume");
   const [calculationResult, setCalculationResult] =
     useState<CalculationResult | null>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recalculating, setRecalculating] = useState(false);
+
+  // États pour la modification des calculs
+  const [isEditingCalculation, setIsEditingCalculation] = useState(false);
+  const [originalCalculationResult, setOriginalCalculationResult] = useState<CalculationResult | null>(null);
+  const [editingSections, setEditingSections] = useState<{majorations: boolean, fraisEtTaxes: boolean}>({
+    majorations: false,
+    fraisEtTaxes: false
+  });
+  const [showModificationPopup, setShowModificationPopup] = useState(false);
+  const [currentEditingSection, setCurrentEditingSection] = useState<'majorations' | 'fraisEtTaxes' | null>(null);
 
   // États pour l'édition
   const { updateQuote } = useQuotesStore();
@@ -102,7 +327,40 @@ export default function QuoteDetailPage() {
   const [generatingLetterPDF, setGeneratingLetterPDF] = useState(false);
   const [generatingPremiumCallPDF, setGeneratingPremiumCallPDF] = useState(false);
 
+  // Détection des rôles utilisateur
+  const userRole = session?.user?.role;
+  const isAdmin = userRole === 'ADMIN';
+  const isBroker = userRole === 'BROKER';
+
+  // Types de tâches pour l'assignation
+  const TASK_TYPES = {
+    COMPLETE_FORM: 'Compléter le formulaire',
+    UPLOAD_DOCS: 'Télécharger les documents',
+    VERIFY_INFO: 'Vérifier les informations',
+    CONTACT_CLIENT: 'Contacter le client',
+    SCHEDULE_MEETING: 'Planifier un rendez-vous'
+  } as const;
+
   const tabs = [
+    {
+      id: "resume",
+      label: "Résumé",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          />
+        </svg>
+      ),
+    },
     {
       id: "form-data",
       label: "Donnees du formulaire",
@@ -200,9 +458,119 @@ export default function QuoteDetailPage() {
     },
   ];
 
+  // Fonctions utilitaires pour l'onglet Résumé
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { color: string; text: string }> = {
+      DRAFT: { color: "bg-gray-100 text-gray-800", text: "Brouillon" },
+      INCOMPLETE: {
+        color: "bg-yellow-100 text-yellow-800",
+        text: "A compléter",
+      },
+      SUBMITTED: { color: "bg-blue-100 text-blue-800", text: "Soumis" },
+      IN_PROGRESS: { color: "bg-yellow-100 text-yellow-800", text: "En cours" },
+      COMPLEMENT_REQUIRED: {
+        color: "bg-orange-100 text-orange-800",
+        text: "Complément demandé",
+      },
+      OFFER_READY: { color: "bg-green-100 text-green-800", text: "Offre prête" },
+      OFFER_SENT: { color: "bg-blue-100 text-blue-800", text: "Offre envoyée" },
+      ACCEPTED: { color: "bg-green-100 text-green-800", text: "Acceptée" },
+      REJECTED: { color: "bg-red-100 text-red-800", text: "Refusée" },
+      EXPIRED: { color: "bg-gray-100 text-gray-800", text: "Expirée" },
+    };
+
+    const config = statusConfig[status] || statusConfig.DRAFT;
+    return (
+      <span
+        className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${config.color}`}
+      >
+        {config.text}
+      </span>
+    );
+  };
+
+  const getStatusDotColor = (status: string) => {
+    const colorMap: Record<string, string> = {
+      DRAFT: "bg-gray-500",
+      INCOMPLETE: "bg-yellow-500",
+      SUBMITTED: "bg-blue-500",
+      IN_PROGRESS: "bg-yellow-500",
+      COMPLEMENT_REQUIRED: "bg-orange-500",
+      OFFER_READY: "bg-green-500",
+      OFFER_SENT: "bg-blue-500",
+      ACCEPTED: "bg-green-500",
+      REJECTED: "bg-red-500",
+      EXPIRED: "bg-gray-500",
+    };
+    return colorMap[status] || "bg-gray-500";
+  };
+
+  const getRequiredAction = (status: string) => {
+    const actions: Record<string, { text: string; priority: string; time: string }> = {
+      DRAFT: { text: "Terminer la saisie des données", priority: "High", time: "15 min" },
+      INCOMPLETE: { text: "Compléter les informations manquantes", priority: "High", time: "20 min" },
+      SUBMITTED: { text: "Vérifier et valider le devis", priority: "Medium", time: "10 min" },
+      IN_PROGRESS: { text: "Traiter la demande", priority: "Medium", time: "30 min" },
+      COMPLEMENT_REQUIRED: { text: "Demander les compléments manquants", priority: "High", time: "5 min" },
+      OFFER_READY: { text: "Envoyer l'offre au client", priority: "High", time: "5 min" },
+      OFFER_SENT: { text: "Suivre la réponse client", priority: "Low", time: "2 min" },
+      ACCEPTED: { text: "Finaliser le contrat", priority: "Medium", time: "15 min" },
+      REJECTED: { text: "Analyser les raisons du refus", priority: "Low", time: "10 min" },
+      EXPIRED: { text: "Relancer le client", priority: "Medium", time: "5 min" },
+    };
+    return actions[status] || actions.DRAFT;
+  };
+
+  const getProgressSteps = () => {
+    const steps = [
+      { id: "draft", label: "Brouillon", status: "DRAFT" },
+      { id: "incomplete", label: "Incomplet", status: "INCOMPLETE" },
+      { id: "submitted", label: "Soumis", status: "SUBMITTED" },
+      { id: "in_progress", label: "En cours", status: "IN_PROGRESS" },
+      { id: "offer_ready", label: "Offre prête", status: "OFFER_READY" },
+      { id: "offer_sent", label: "Offre envoyée", status: "OFFER_SENT" },
+      { id: "accepted", label: "Acceptée", status: "ACCEPTED" },
+    ];
+    return steps;
+  };
+
+  const getTimeSinceUpdate = (updatedAt: string) => {
+    const now = new Date();
+    const updateDate = new Date(updatedAt);
+    const diffInMinutes = Math.floor((now.getTime() - updateDate.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `Il y a ${diffInMinutes} min`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `Il y a ${hours}h`;
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return `Il y a ${days} jour${days > 1 ? 's' : ''}`;
+    }
+  };
+
+  // Fonctions placeholder pour la future intégration backend
+  const assignTaskToBroker = async (quoteId: string, taskType: string, brokerId: string) => {
+    // TODO: Implement API call to assign task
+    console.log('TODO: Implement task assignment', { quoteId, taskType, brokerId });
+  };
+
+  const completeAssignedTask = async (quoteId: string, taskId: string) => {
+    // TODO: Implement API call to mark task complete
+    console.log('TODO: Implement task completion', { quoteId, taskId });
+  };
+
+  const updateQuoteStatusAdmin = async (quoteId: string, newStatus: string, reason: string) => {
+    // TODO: Implement admin status change with audit log
+    console.log('TODO: Implement admin status update', { quoteId, newStatus, reason });
+  };
+
   useEffect(() => {
     fetchActiveProducts();
   }, [fetchActiveProducts]);
+
+  
 
   // Fonction pour charger le mapping et les formFields du produit
   const loadProductMapping = async (productId: string) => {
@@ -240,6 +608,11 @@ export default function QuoteDetailPage() {
           
           // Conversion selon le type de champ et le paramètre
           switch (paramKey) {
+            case 'enCreation':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
             case 'caDeclared':
             case 'etp':
             case 'anneeExperience':
@@ -441,20 +814,195 @@ export default function QuoteDetailPage() {
     }
   }, [params.id, activeProducts]);
 
-  // Recalculer quand le mapping est chargé
+  // Charger ou calculer la prime
   useEffect(() => {
-    if (quote && Object.keys(parameterMapping).length > 0 && quote.formData) {
+    const loadOrCalculatePremium = async () => {
+      if (!quote || !Object.keys(parameterMapping).length || !quote.formData) {
+        return;
+      }
+
       try {
-        console.log("Recalcul avec mapping chargé");
+        // D'abord essayer de récupérer calculatedPremium de la DB
+        const response = await fetch(`/api/quotes/${params.id}/calculated-premium`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("data///", data);
+          if (data.data.calculatedPremium) {
+            console.log("Utilisation calculatedPremium depuis DB");
+            setCalculationResult(data.data.calculatedPremium);
+            setCalculationError(null);
+            return;
+          }
+        }
+
+        // Si pas de calculatedPremium en DB, faire le calcul
+        console.log("Calcul");
         const result = calculateWithMapping(quote);
         setCalculationResult(result);
         setCalculationError(null);
+
+        
+
       } catch (error) {
-        console.error("Erreur recalcul:", error);
+        console.error("Erreur chargement/calcul:", error);
         setCalculationError(error instanceof Error ? error.message : "Erreur de calcul");
       }
+    };
+
+    loadOrCalculatePremium();
+  }, [parameterMapping, quote, params.id]);
+
+  // Fonction pour recalculer côté client (sans sauvegarder)
+  const handleRecalculate = () => {
+    if (!quote) return;
+
+    setRecalculating(true);
+    setCalculationError(null);
+
+    try {
+      console.log("Recalcul côté client");
+      const result = calculateWithMapping(quote);
+      setCalculationResult(result);
+    } catch (error) {
+      console.error("Erreur recalcul:", error);
+      setCalculationError(error instanceof Error ? error.message : "Erreur de recalcul");
+    } finally {
+      setRecalculating(false);
     }
-  }, [parameterMapping, quote]);
+  };
+
+  // Fonction pour sauvegarder le calcul actuel en DB
+  const saveCalculationToDatabase = async () => {
+    if (!calculationResult) {
+      alert("Aucun calcul à sauvegarder");
+      return;
+    }
+
+    setRecalculating(true);
+    try {
+      await fetch(`/api/quotes/${params.id}/calculated-premium`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ calculatedPremium: calculationResult }),
+      });
+      alert("Calcul sauvegardé en base de données");
+    } catch (error) {
+      console.error("Erreur sauvegarde:", error);
+      alert("Erreur lors de la sauvegarde");
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
+  // Fonctions pour la gestion de la modification des calculs
+  const resetCalculationEditing = () => {
+    setEditingSections({ majorations: false, fraisEtTaxes: false });
+    if (originalCalculationResult) {
+      setCalculationResult(originalCalculationResult);
+      setOriginalCalculationResult(null);
+    }
+  };
+
+  const isValueModified = (originalValue: any, currentValue: any) => {
+    return JSON.stringify(originalValue) !== JSON.stringify(currentValue);
+  };
+
+  // Fonction pour détecter toutes les différences dans calculationResult
+  const getAllDifferences = (original: CalculationResult | null, current: CalculationResult | null) => {
+    if (!original || !current) return [];
+    
+    const differences: Array<{
+      path: string;
+      label: string;
+      originalValue: any;
+      currentValue: any;
+      isModified: boolean;
+    }> = [];
+
+    const compareValues = (origObj: any, currObj: any, path: string = '', parentLabel: string = '') => {
+      if (origObj === null || origObj === undefined || currObj === null || currObj === undefined) {
+        if (origObj !== currObj) {
+          differences.push({
+            path,
+            label: parentLabel,
+            originalValue: origObj,
+            currentValue: currObj,
+            isModified: true
+          });
+        }
+        return;
+      }
+
+      if (typeof origObj === 'object' && typeof currObj === 'object') {
+        const allKeys = new Set([...Object.keys(origObj), ...Object.keys(currObj)]);
+        allKeys.forEach(key => {
+          const newPath = path ? `${path}.${key}` : key;
+          const label = getFieldLabel(newPath);
+          compareValues(origObj[key], currObj[key], newPath, label);
+        });
+      } else {
+        const isModified = origObj !== currObj;
+        differences.push({
+          path,
+          label: parentLabel,
+          originalValue: origObj,
+          currentValue: currObj,
+          isModified
+        });
+      }
+    };
+
+    compareValues(original, current);
+    return differences.filter(diff => diff.isModified);
+  };
+
+  const getValueWithModificationIndicator = (originalValue: any, currentValue: any, formatFn?: (val: any) => string) => {
+    const isModified = originalCalculationResult && isValueModified(originalValue, currentValue);
+    const displayValue = formatFn ? formatFn(currentValue) : currentValue;
+    
+    return {
+      value: displayValue,
+      isModified,
+      originalValue: formatFn ? formatFn(originalValue) : originalValue
+    };
+  };
+
+  // Composant pour afficher une valeur modifiable avec indicateur
+  const ModifiableValue = ({ 
+    originalValue, 
+    currentValue, 
+    formatFn = (val) => val?.toLocaleString?.("fr-FR") || "0", 
+    suffix = " €",
+    className = "" 
+  }: {
+    originalValue: any,
+    currentValue: any,
+    formatFn?: (val: any) => string,
+    suffix?: string,
+    className?: string
+  }) => {
+    const { value, isModified, originalValue: formattedOriginal } = getValueWithModificationIndicator(originalValue, currentValue, formatFn);
+    
+    if (!isModified) {
+      return <span className={className}>{value}{suffix}</span>;
+    }
+    
+    return (
+      <div className="relative">
+        <span className={`${className} ${isModified ? 'text-blue-600 font-bold' : ''}`}>
+          {value}{suffix}
+        </span>
+        {isModified && (
+          <div className="flex items-center mt-1 text-xs text-gray-500">
+            <svg className="w-3 h-3 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="line-through">Original: {formattedOriginal}{suffix}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Fonctions d'édition
   const handleFormDataChange = (fieldName: string, value: any) => {
@@ -901,6 +1449,7 @@ export default function QuoteDetailPage() {
     return labels[status as keyof typeof labels] || status;
   };
 
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1023,6 +1572,258 @@ export default function QuoteDetailPage() {
 
       {/* Tab Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === "resume" && quote && (
+          <div className="space-y-6">
+            {isAdmin ? (
+              // DASHBOARD ADMIN - Nouveau système de workflow
+              <>
+                {/* Status Control Card */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">Contrôle du statut</h2>
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full ${getStatusDotColor(quote.status)}`}></div>
+                      {getStatusBadge(quote.status)}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Référence</p>
+                      <p className="text-lg font-medium text-gray-900">{quote.reference}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Produit</p>
+                      <p className="text-lg font-medium text-gray-900">{quote.product.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Créé le</p>
+                      <p className="text-lg font-medium text-gray-900">
+                        {new Date(quote.createdAt).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Dernière mise à jour</p>
+                      <p className="text-lg font-medium text-gray-900">
+                        {getTimeSinceUpdate(quote.updatedAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm font-medium text-gray-700">Changer le statut :</span>
+                    <select 
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e) => updateQuoteStatusAdmin(quote.id, e.target.value, 'Admin status change')}
+                    >
+                      <option value="">Sélectionner un statut</option>
+                      <option value="DRAFT">Brouillon</option>
+                      <option value="INCOMPLETE">A compléter</option>
+                      <option value="SUBMITTED">Soumis</option>
+                      <option value="IN_PROGRESS">En cours</option>
+                      <option value="COMPLEMENT_REQUIRED">Complément demandé</option>
+                      <option value="OFFER_READY">Offre prête</option>
+                      <option value="OFFER_SENT">Offre envoyée</option>
+                      <option value="ACCEPTED">Acceptée</option>
+                      <option value="REJECTED">Refusée</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Gestionnaire de workflow */}
+                <AdminWorkflowManager quoteId={quote.id} />
+
+                
+
+                
+
+                {/* Administrative Actions Panel */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions administratives</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button
+                      onClick={() => updateQuoteStatusAdmin(quote.id, 'ACCEPTED', 'Admin approved quote')}
+                      className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Valider le devis
+                    </button>
+                    
+                    <button
+                      onClick={() => updateQuoteStatusAdmin(quote.id, 'COMPLEMENT_REQUIRED', 'Admin requested additional info')}
+                      className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Demander compléments
+                    </button>
+                    
+                    <button
+                      onClick={() => updateQuoteStatusAdmin(quote.id, 'OFFER_READY', 'Admin approved offer')}
+                      className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Approuver l'offre
+                    </button>
+                    
+                    <button
+                      onClick={() => updateQuoteStatusAdmin(quote.id, 'REJECTED', 'Admin rejected quote')}
+                      className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Rejeter le devis
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // DASHBOARD BROKER
+              <>
+                {/* Status Display Card (Read-only) */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">Statut du devis</h2>
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full ${getStatusDotColor(quote.status)}`}></div>
+                      {getStatusBadge(quote.status)}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Référence</p>
+                      <p className="text-lg font-medium text-gray-900">{quote.reference}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Produit</p>
+                      <p className="text-lg font-medium text-gray-900">{quote.product.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Créé le</p>
+                      <p className="text-lg font-medium text-gray-900">
+                        {new Date(quote.createdAt).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Dernière mise à jour</p>
+                      <p className="text-lg font-medium text-gray-900">
+                        {getTimeSinceUpdate(quote.updatedAt)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gestionnaire de workflow pour les brokers */}
+                <BrokerWorkflowExecutor quoteId={quote.id} />
+
+                {/* My Assigned Tasks Card */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Mes tâches assignées</h2>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        <span className="text-gray-900 font-medium">Compléter le formulaire</span>
+                      </div>
+                      <button 
+                        onClick={() => completeAssignedTask(quote.id, 'task1')}
+                        className="px-3 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-full hover:bg-yellow-200"
+                      >
+                        Marquer comme terminé
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-gray-900 font-medium">Vérifier les informations</span>
+                      </div>
+                      <span className="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 border border-green-300 rounded-full">
+                        Terminé
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-gray-900 font-medium">Contacter le client</span>
+                      </div>
+                      <button 
+                        onClick={() => completeAssignedTask(quote.id, 'task3')}
+                        className="px-3 py-1 text-xs font-medium text-blue-800 bg-blue-100 border border-blue-300 rounded-full hover:bg-blue-200"
+                      >
+                        Marquer comme terminé
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Timeline (Read-only) */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Progression du devis</h2>
+                  <div className="relative">
+                    <div className="flex items-center justify-between">
+                      {getProgressSteps().map((step, index) => {
+                        const currentStepIndex = getProgressSteps().findIndex(s => s.status === quote.status);
+                        const isCompleted = currentStepIndex > index;
+                        const isCurrent = step.status === quote.status;
+                        const isLast = index === getProgressSteps().length - 1;
+                        
+                        return (
+                          <div key={step.id} className="flex flex-col items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              isCompleted 
+                                ? 'bg-green-500 text-white' 
+                                : isCurrent 
+                                ? `${getStatusDotColor(quote.status)} text-white` 
+                                : 'bg-gray-200 text-gray-500'
+                            }`}>
+                              {isCompleted ? (
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              ) : (
+                                <span className="text-xs font-semibold">{index + 1}</span>
+                              )}
+                            </div>
+                            <span className={`text-xs mt-2 text-center ${
+                              isCurrent ? 'font-semibold text-gray-900' : 'text-gray-500'
+                            }`}>
+                              {step.label}
+                            </span>
+                            {!isLast && (
+                              <div className={`absolute top-4 left-1/2 h-0.5 w-full ${
+                                isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                              }`} style={{ transform: 'translateX(50%)', width: 'calc(100% - 2rem)' }}></div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes Section */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes pour l'administrateur</h2>
+                  <div className="space-y-3">
+                    <textarea
+                      placeholder="Ajouter une note pour l'administrateur..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      rows={3}
+                    />
+                    <button className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                      Envoyer la note
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {activeTab === "form-data" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
@@ -1106,6 +1907,26 @@ export default function QuoteDetailPage() {
 
             {calculationResult && (
               <div className="space-y-8">
+                {/* Notification de modification */}
+                {originalCalculationResult && (
+                  <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg">
+                    <div className="flex">
+                      <svg className="w-5 h-5 text-amber-400 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <div>
+                        <h3 className="text-sm font-medium text-amber-800">
+                          Mode modification activé
+                        </h3>
+                        <p className="text-sm text-amber-700 mt-1">
+                          Vous visualisez une version modifiée des calculs. Les valeurs changées sont indiquées visuellement.
+                          Utilisez "Version originale" pour revenir aux calculs d'origine.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Header principal avec statut */}
                 <div
                   className={`rounded-2xl p-8 text-white shadow-xl ${
@@ -1163,6 +1984,67 @@ export default function QuoteDetailPage() {
 
                 {!calculationResult.refus && session?.user?.role === "ADMIN" && (
                   <>
+                    {/* Boutons pour admin */}
+                    <div className="flex justify-end space-x-3 mb-6">
+                      <button
+                        onClick={handleRecalculate}
+                        disabled={recalculating}
+                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      >
+                        {recalculating ? (
+                          <>
+                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Recalcul...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Recalculer</span>
+                          </>
+                        )}
+                      </button>
+
+                      {originalCalculationResult && (
+                        <button
+                          onClick={resetCalculationEditing}
+                          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                          <span>Version originale</span>
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={saveCalculationToDatabase}
+                        disabled={recalculating}
+                        className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      >
+                        {recalculating ? (
+                          <>
+                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Sauvegarde...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <span>Sauvegarder le calcul</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
                     {/* Résumé financier */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {/* CA Calculé */}
@@ -1170,9 +2052,13 @@ export default function QuoteDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-gray-600">CA Calculé</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                              {calculationResult.caCalculee?.toLocaleString("fr-FR") || "0"} €
-                            </p>
+                            <div className="text-2xl font-bold text-gray-900">
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.caCalculee}
+                                currentValue={calculationResult.caCalculee}
+                                className="text-2xl font-bold text-gray-900"
+                              />
+                            </div>
                           </div>
                           <div className="p-3 bg-blue-100 rounded-full">
                             <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1187,9 +2073,13 @@ export default function QuoteDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-gray-600">Prime HT</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                              {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
-                            </p>
+                            <div className="text-2xl font-bold text-gray-900">
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.primeTotal}
+                                currentValue={calculationResult.primeTotal}
+                                className="text-2xl font-bold text-gray-900"
+                              />
+                            </div>
                           </div>
                           <div className="p-3 bg-green-100 rounded-full">
                             <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1204,9 +2094,13 @@ export default function QuoteDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-gray-600">Total TTC</p>
-                            <p className="text-2xl font-bold text-indigo-600">
-                              {calculationResult.totalTTC?.toLocaleString("fr-FR") || "0"} €
-                            </p>
+                            <div className="text-2xl font-bold text-indigo-600">
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.totalTTC}
+                                currentValue={calculationResult.totalTTC}
+                                className="text-2xl font-bold text-indigo-600"
+                              />
+                            </div>
                           </div>
                           <div className="p-3 bg-indigo-100 rounded-full">
                             <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1233,19 +2127,28 @@ export default function QuoteDetailPage() {
                           <div className="flex justify-between items-center py-2 border-b border-gray-100">
                             <span className="text-gray-600">Prime minimum HT</span>
                             <span className="font-semibold text-gray-900">
-                              {calculationResult.PminiHT?.toLocaleString("fr-FR") || "0"} €
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.PminiHT}
+                                currentValue={calculationResult.PminiHT}
+                              />
                               </span>
                           </div>
                           <div className="flex justify-between items-center py-2 border-b border-gray-100">
                             <span className="text-gray-600">Prime au-delà</span>
                             <span className="font-semibold text-gray-900">
-                              {calculationResult.primeAuDela?.toLocaleString("fr-FR") || "0"} €
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.primeAuDela}
+                                currentValue={calculationResult.primeAuDela}
+                              />
                               </span>
                             </div>
                           <div className="flex justify-between items-center py-2 border-b border-gray-100">
                             <span className="text-gray-600">Prime HT sans majorations</span>
                             <span className="font-semibold text-gray-900">
-                              {calculationResult.PrimeHTSansMajorations?.toLocaleString("fr-FR") || "0"} €
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.PrimeHTSansMajorations}
+                                currentValue={calculationResult.PrimeHTSansMajorations}
+                              />
                               </span>
                             </div>
                           <div className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -1258,7 +2161,10 @@ export default function QuoteDetailPage() {
                           <div className="flex justify-between items-center py-3 bg-gray-50 rounded-lg px-4">
                             <span className="text-gray-900 font-medium">Prime HT finale</span>
                             <span className="font-bold text-lg text-indigo-600">
-                              {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.primeTotal}
+                                currentValue={calculationResult.primeTotal}
+                              />
                               </span>
                             </div>
                           </div>
@@ -1267,13 +2173,32 @@ export default function QuoteDetailPage() {
                         {/* Majorations appliquées */}
                       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                            <svg className="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                              <svg className="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                              </svg>
                               Majorations appliquées
                             </h3>
+                            {session?.user?.role === "ADMIN" && (
+                              <button
+                                onClick={() => {
+                                  if (!originalCalculationResult) {
+                                    setOriginalCalculationResult(calculationResult);
+                                  }
+                                  setCurrentEditingSection('majorations');
+                                  setShowModificationPopup(true);
+                                }}
+                                className="flex items-center px-3 py-1.5 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md transition-colors"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Modifier
+                              </button>
+                            )}
                           </div>
+                        </div>
                         <div className="p-6 space-y-3">
                           {calculationResult.majorations && Object.entries(calculationResult.majorations).map(
                               ([key, value]: [string, any]) => (
@@ -1309,38 +2234,73 @@ export default function QuoteDetailPage() {
                     {/* Frais et taxes */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                          <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          </svg>
-                          Frais et taxes
-                        </h3>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            Frais et taxes
+                          </h3>
+                          {session?.user?.role === "ADMIN" && (
+                            <button
+                              onClick={() => {
+                                if (!originalCalculationResult) {
+                                  setOriginalCalculationResult(calculationResult);
+                                }
+                                setCurrentEditingSection('fraisEtTaxes');
+                                setShowModificationPopup(true);
+                              }}
+                              className="flex items-center px-3 py-1.5 text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-md transition-colors"
+                            >
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Modifier
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                           <div className="text-center p-4 bg-blue-50 rounded-lg">
                             <p className="text-sm text-blue-600 font-medium">Protection Juridique</p>
-                            <p className="text-xl font-bold text-blue-900">
-                              {calculationResult.protectionJuridique?.toLocaleString("fr-FR") || "0"} €
-                            </p>
+                            <div className="text-xl font-bold text-blue-900">
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.protectionJuridique}
+                                currentValue={calculationResult.protectionJuridique}
+                                className="text-xl font-bold text-blue-900"
+                              />
+                            </div>
                           </div>
                           <div className="text-center p-4 bg-green-50 rounded-lg">
                             <p className="text-sm text-green-600 font-medium">Frais de gestion</p>
-                            <p className="text-xl font-bold text-green-900">
-                              {calculationResult.fraisGestion?.toLocaleString("fr-FR") || "0"} €
-                            </p>
+                            <div className="text-xl font-bold text-green-900">
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.fraisGestion}
+                                currentValue={calculationResult.fraisGestion}
+                                className="text-xl font-bold text-green-900"
+                              />
+                            </div>
                           </div>
                           <div className="text-center p-4 bg-orange-50 rounded-lg">
                             <p className="text-sm text-orange-600 font-medium">Taxe assurance</p>
-                            <p className="text-xl font-bold text-orange-900">
-                              {calculationResult.autres?.taxeAssurance?.toLocaleString("fr-FR") || "0"} €
-                            </p>
+                            <div className="text-xl font-bold text-orange-900">
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.autres?.taxeAssurance}
+                                currentValue={calculationResult.autres?.taxeAssurance}
+                                className="text-xl font-bold text-orange-900"
+                              />
+                            </div>
                           </div>
                           <div className="text-center p-4 bg-purple-50 rounded-lg">
                             <p className="text-sm text-purple-600 font-medium">Frais fractionnement</p>
-                            <p className="text-xl font-bold text-purple-900">
-                              {calculationResult.autres?.fraisFractionnementPrimeHT?.toLocaleString("fr-FR") || "0"} €
-                            </p>
+                            <div className="text-xl font-bold text-purple-900">
+                              <ModifiableValue
+                                originalValue={originalCalculationResult?.autres?.fraisFractionnementPrimeHT}
+                                currentValue={calculationResult.autres?.fraisFractionnementPrimeHT}
+                                className="text-xl font-bold text-purple-900"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2712,6 +3672,86 @@ export default function QuoteDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Popup de modification des calculs */}
+      {showModificationPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Modifier les calculs - {currentEditingSection === 'majorations' ? 'Majorations' : 'Frais et taxes'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowModificationPopup(false);
+                    setCurrentEditingSection(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {calculationResult && (
+                <ModificationForm
+                  quote={quote}
+                  calculationResult={calculationResult}
+                  onUpdate={setCalculationResult}
+                  originalCalculationResult={originalCalculationResult}
+                  section={currentEditingSection}
+                />
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    if (originalCalculationResult) {
+                      setCalculationResult(originalCalculationResult);
+                      setOriginalCalculationResult(null);
+                    }
+                    setShowModificationPopup(false);
+                    setCurrentEditingSection(null);
+                    setEditingSections({ majorations: false, fraisEtTaxes: false });
+                  }}
+                  className="px-4 py-2 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-md transition-colors"
+                >
+                  Restaurer l'original
+                </button>
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowModificationPopup(false);
+                    setCurrentEditingSection(null);
+                  }}
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Fermer
+                </button>
+                <button
+                  onClick={() => {
+                    // Ici vous pourrez ajouter la logique de sauvegarde
+                    alert('Modifications appliquées!');
+                    setShowModificationPopup(false);
+                    setCurrentEditingSection(null);
+                  }}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+                >
+                  Appliquer les modifications
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

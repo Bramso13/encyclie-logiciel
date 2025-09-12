@@ -50,6 +50,11 @@ model User {
   validatedDocuments QuoteDocument[]     @relation("DocumentValidator")
   passwordResets     PasswordReset[]
 
+  // Workflow relations
+  assignedSteps WorkflowStep[] @relation("AssignedSteps")
+  stepMessages  StepMessage[]
+  stepTemplates StepTemplate[]
+
   @@map("users")
 }
 
@@ -326,7 +331,7 @@ model Quote {
 
   // Quote specifics
   formData          Json // All form data specific to the product
-  calculatedPremium Float?
+  calculatedPremium Json?
   validUntil        DateTime?
 
   // Workflow
@@ -341,6 +346,7 @@ model Quote {
 
   documents QuoteDocument[]
   contract  InsuranceContract?
+  workflowSteps WorkflowStep[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -523,4 +529,162 @@ model BrokerInvitation {
   updatedAt DateTime @updatedAt
 
   @@map("broker_invitations")
+}
+
+// Workflow System Models
+
+enum StepStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  SKIPPED
+}
+
+enum MessageType {
+  ADMIN_INSTRUCTION
+  BROKER_QUESTION
+  BROKER_RESPONSE
+  SYSTEM_NOTIFICATION
+}
+
+enum InputType {
+  TEXT
+  TEXTAREA
+  SELECT
+  DATE
+  FILE
+  CHECKBOX
+}
+
+// Modèle principal pour les étapes de workflow
+model WorkflowStep {
+  id        String     @id @default(cuid())
+  quoteId   String     @map("quote_id")
+  quote     Quote      @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  
+  // Configuration de l'étape
+  title       String
+  description String?
+  order       Int       // Ordre d'exécution
+  status      StepStatus @default(PENDING)
+  
+  // Assignation et échéance
+  assignedToBrokerId String? @map("assigned_to_broker_id")
+  assignedToBroker   User?   @relation("AssignedSteps", fields: [assignedToBrokerId], references: [id])
+  dueDate           DateTime?
+  
+  // Template
+  isTemplate Boolean @default(false)
+  templateId String? @map("template_id")
+  template   StepTemplate? @relation(fields: [templateId], references: [id])
+  
+  // Relations
+  inputs   StepInput[]
+  messages StepMessage[]
+  
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("workflow_steps")
+}
+
+// Modèle pour les inputs dynamiques des étapes
+model StepInput {
+  id        String    @id @default(cuid())
+  stepId    String    @map("step_id")
+  step      WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  
+  // Configuration de l'input
+  type        InputType
+  label       String
+  placeholder String?
+  required    Boolean  @default(false)
+  options     Json?    // Pour les inputs de type SELECT
+  validationRules Json? // Règles de validation personnalisées
+  
+  // Valeur saisie par le broker
+  value       Json?    // Valeur stockée
+  submittedAt DateTime?
+  
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("step_inputs")
+}
+
+// Modèle pour les messages dans les étapes
+model StepMessage {
+  id        String      @id @default(cuid())
+  stepId    String      @map("step_id")
+  step      WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  
+  // Contenu du message
+  content     String
+  type        MessageType
+  
+  // Auteur
+  authorId   String @map("author_id")
+  author     User   @relation(fields: [authorId], references: [id])
+  
+  // Statut
+  isRead     Boolean @default(false)
+  readAt     DateTime?
+  
+  // Relations
+  attachments StepMessageAttachment[]
+  
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("step_messages")
+}
+
+// Modèle pour les pièces jointes des messages
+model StepMessageAttachment {
+  id        String      @id @default(cuid())
+  messageId String      @map("message_id")
+  message   StepMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  // Fichier
+  fileName     String
+  originalName String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  
+  // Audit
+  uploadedAt DateTime @default(now())
+  
+  @@map("step_message_attachments")
+}
+
+// Modèle pour les templates d'étapes
+model StepTemplate {
+  id          String @id @default(cuid())
+  name        String
+  description String?
+  
+  // Configuration du template
+  title       String
+  
+  // Inputs par défaut du template
+  defaultInputs Json // Array de StepInput configs
+  
+  // Utilisation
+  isActive    Boolean @default(true)
+  usageCount  Int     @default(0)
+  
+  // Relations
+  steps WorkflowStep[] // Étapes créées à partir de ce template
+  
+  // Audit
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("step_templates")
 }

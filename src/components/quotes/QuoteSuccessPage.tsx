@@ -76,6 +76,11 @@ export default function QuoteSuccessPage({
           
           // Conversion selon le type de champ et le paramètre
           switch (paramKey) {
+            case 'enCreation':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
             case 'caDeclared':
             case 'etp':
             case 'anneeExperience':
