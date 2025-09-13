@@ -13,6 +13,9 @@ import ActivityBreakdownField from "@/components/quotes/ActivityBreakdown";
 import LossHistoryField from "@/components/quotes/LossHistoryField";
 import AdminWorkflowManager from "@/components/workflow/AdminWorkflowManager";
 import BrokerWorkflowExecutor from "@/components/workflow/BrokerWorkflowExecutor";
+import Image from "next/image";
+import { pdf } from '@react-pdf/renderer';
+import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
 
 interface CompanyData {
   siret: string;
@@ -29,6 +32,7 @@ interface ActivityShare {
 }
 
 interface FormData {
+  directorName: string;
   siret: string;
   address: string;
   includePJ: boolean;
@@ -215,7 +219,7 @@ const ModificationForm = React.memo(({
 
     
     onUpdate(newResult);
-  }, [calculationResult, onUpdate, setNestedValue]);
+  }, [calculationResult]);
 
   return (
     <div className="space-y-6">
@@ -608,6 +612,16 @@ export default function QuoteDetailPage() {
           
           // Conversion selon le type de champ et le paramètre
           switch (paramKey) {
+            case 'directorName':
+              if (field.type === 'text' || field.type === 'select') {
+                mappedParams[paramKey] = value || "";
+              }
+              break;
+            case 'reprisePasse':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
             case 'enCreation':
               if (field.type === 'checkbox') {
                 mappedParams[paramKey] = Boolean(value);
@@ -1214,11 +1228,51 @@ export default function QuoteDetailPage() {
 
   const handleSendEmail = async () => {
     try {
-      // TODO: Implémenter l'envoi par email
-      console.log("Envoi de la lettre d'intention par email...");
-      alert("Fonctionnalité d'envoi par email à implémenter");
+      if (!quote?.formData?.directorName) {
+        alert("Impossible d'envoyer l'email : nom du dirigeant manquant");
+        return;
+      }
+
+      // Demander l'email du client
+      const clientEmail = session?.user?.email;
+
+      if (!clientEmail) {
+        alert("Impossible d'envoyer l'email : email du broker manquant");
+        return;
+      }
+
+      // Validation basique de l'email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(clientEmail)) {
+        alert("Veuillez saisir un email valide");
+        return;
+      }
+
+      // Générer le PDF
+      const pdfBlob = await pdf(<LetterOfIntentPDF quote={quote} calculationResult={calculationResult} />).toBlob();
+      
+      // Préparer les données pour l'API
+      const formData = new FormData();
+      formData.append('quoteId', quote.id);
+      formData.append('directorName', quote.formData.directorName);
+      formData.append('companyName', quote.formData.companyName || quote.companyData.companyName);
+      formData.append('clientEmail', clientEmail);
+      formData.append('pdf', pdfBlob, `lettre-intention-${quote.reference}.pdf`);
+
+      const response = await fetch('/api/email/send-letter-intent', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        alert(`Lettre d'intention envoyée par email à ${clientEmail} avec succès !`);
+      } else {
+        const errorData = await response.json();
+        alert(`Erreur lors de l'envoi : ${errorData.error}`);
+      }
     } catch (error) {
       console.error("Erreur envoi email:", error);
+      alert("Erreur lors de l'envoi de l'email");
     }
   };
 
@@ -1721,7 +1775,7 @@ export default function QuoteDetailPage() {
                 <BrokerWorkflowExecutor quoteId={quote.id} />
 
                 {/* My Assigned Tasks Card */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Mes tâches assignées</h2>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1758,10 +1812,10 @@ export default function QuoteDetailPage() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Progress Timeline (Read-only) */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Progression du devis</h2>
                   <div className="relative">
                     <div className="flex items-center justify-between">
@@ -1803,10 +1857,10 @@ export default function QuoteDetailPage() {
                       })}
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Notes Section */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes pour l'administrateur</h2>
                   <div className="space-y-3">
                     <textarea
@@ -1818,7 +1872,7 @@ export default function QuoteDetailPage() {
                       Envoyer la note
                     </button>
                   </div>
-                </div>
+                </div> */}
               </>
             )}
           </div>
@@ -2891,148 +2945,197 @@ export default function QuoteDetailPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
               <div className="p-8">
                 <div className="max-w-4xl mx-auto">
-                  {/* En-tête */}
-                  <div className="text-center mb-8">
-                    <div className="text-2xl font-bold text-gray-900 mb-2">
-                      LETTRE D'INTENTION
-                    </div>
-                    <div className="text-lg text-gray-600">
-                      Assurance Responsabilité Civile Décennale
-                    </div>
-                    <div className="text-sm text-gray-500 mt-2">
-                      Devis n° {quote?.reference || "N/A"} - {new Date().toLocaleDateString("fr-FR")}
+                  {/* En-tête avec validité et logo */}
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="text-sm font-bold text-gray-900">Valable 30 jours</div>
+                    <div className="text-center">
+                      <div className="w-20 h-10 rounded mb-2 mx-auto">
+                        <Image src="/couleur_1.png" alt="ENCYCLIE CONSTRUCTION" width={80} height={40} />
+                      </div>
+                      <div className="text-sm font-bold text-gray-900">ENCYCLIE CONSTRUCTION</div>
+                      <div className="text-xs text-gray-600">Paris le {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                   </div>
 
                   {/* Destinataire */}
-                  <div className="mb-8">
-                    <div className="text-sm text-gray-500 mb-2">À l'attention de :</div>
-                    <div className="font-semibold text-gray-900">
-                      {quote?.companyData?.companyName || "Nom de l'entreprise"}
-                    </div>
-                    <div className="text-gray-600">
-                      {quote?.companyData?.address || "Adresse de l'entreprise"}
-                    </div>
-                    <div className="text-gray-600">
-                      SIRET : {quote?.companyData?.siret || "N/A"}
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-700">A l'attention de {quote?.formData?.directorName}</div>
+                  </div>
+
+                  {/* Objet */}
+                  <div className="mb-4">
+                    <div className="text-sm font-bold text-gray-900">
+                      Objet: Indication tarifaire <span className="text-red-600">RC Décennale</span>
                     </div>
                   </div>
 
-                  {/* Corps de la lettre */}
-                  <div className="space-y-6 text-gray-700 leading-relaxed">
-                    <p>
-                      <strong>Objet :</strong> Proposition d'assurance Responsabilité Civile Décennale
-                    </p>
+                  {/* Salutation */}
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-700">Cher Monsieur,</div>
+                  </div>
 
-                    <p>
-                      Madame, Monsieur,
-                    </p>
+                  {/* Accusé de réception */}
+                  <div className="mb-6">
+                    <div className="text-sm text-gray-700">
+                      Nous accusons réception de votre demande et nous vous remercions:
+                    </div>
+                  </div>
 
-                    <p>
-                      Suite à votre demande d'assurance Responsabilité Civile Décennale, nous avons le plaisir de vous présenter notre proposition d'assurance adaptée à votre activité.
-                    </p>
+                  {/* Informations entreprise */}
+                  <div className="mb-6 space-y-2">
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">Nom de la société / Raison sociale :</span>
+                      <span>{quote?.formData?.companyName || quote?.companyData?.companyName || "________________"}</span>
+                    </div>
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">Forme juridique :</span>
+                      <span>{quote?.formData?.legalForm || quote?.companyData?.legalForm || "________________"}</span>
+                    </div>
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">Nom & Prénom du ou des dirigeants :</span>
+                      <span>{quote?.formData?.directorName || "________________"}</span>
+                    </div>
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">Rue du siège social :</span>
+                      <span>{quote?.formData?.address || quote?.companyData?.address || "________________"}</span>
+                    </div>
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">CP Ville du siège social :</span>
+                      <span>{quote?.formData?.address || quote?.companyData?.address || "________________"}</span>
+                    </div>
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">N° SIREN</span>
+                      <span>{quote?.formData?.siret || quote?.companyData?.siret || "________________"}</span>
+                    </div>
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">Chiffre d'affaires :</span>
+                      <span>{calculationResult?.caCalculee?.toLocaleString("fr-FR") || quote?.formData?.chiffreAffaires || "________________"} €</span>
+                    </div>
+                    <div className="flex text-sm">
+                      <span className="font-bold mr-2">Date d'effet :</span>
+                      <span>{quote?.formData?.dateDeffet ? new Date(quote.formData.dateDeffet).toLocaleDateString('fr-FR') : "________________"}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-bold mr-2">Effectif y compris le chef d'entreprise :</span>
+                      <span>{quote?.formData?.nombreSalaries || "xxx"} personnes</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-bold mr-2">Date de création de l'entreprise :</span>
+                      <span>{quote?.formData?.companyCreationDate || quote?.companyData?.creationDate || "xxx"}</span>
+                    </div>
+                  </div>
 
-                    {/* Informations du calcul */}
-                    {calculationResult && !calculationResult.refus ? (
-                      <div className="bg-gray-50 rounded-lg p-6 my-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Résumé de notre proposition :</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-sm text-gray-600">Chiffre d'affaires déclaré</div>
-                            <div className="font-semibold text-gray-900">
-                              {calculationResult.caCalculee?.toLocaleString("fr-FR") || "0"} €
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-600">Prime HT</div>
-                            <div className="font-semibold text-gray-900">
-                              {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-600">Protection Juridique</div>
-                            <div className="font-semibold text-gray-900">
-                              {calculationResult.protectionJuridique?.toLocaleString("fr-FR") || "0"} €
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-600">Total TTC</div>
-                            <div className="font-semibold text-indigo-600 text-lg">
-                              {calculationResult.totalTTC?.toLocaleString("fr-FR") || "0"} €
-                            </div>
-                          </div>
-                        </div>
+                  {/* Expérience professionnelle */}
+                  <div className="mb-6">
+                    <div className="text-sm font-bold text-gray-900 mb-3">
+                      Expérience professionnelle (y compris en qualité de salarié) :
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center text-sm">
+                        <div className={`w-3 h-3 border border-gray-400 mr-2 ${parseFloat(quote?.formData?.experienceMetier) < 1 ? "bg-gray-900" : ""}`}></div>
+                        <span>Moins de 1 an (refus):</span>
                       </div>
-                    ) : calculationResult?.refus ? (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-6 my-6">
-                        <h3 className="text-lg font-semibold text-red-900 mb-2">Demande non acceptée</h3>
-                        <p className="text-red-700">
-                          Malheureusement, nous ne pouvons pas accepter votre demande d'assurance pour la raison suivante : {calculationResult.refusReason || "Critères non respectés"}.
-                        </p>
+                      <div className="flex items-center text-sm">
+                        <div className={`w-3 h-3 border border-gray-400 mr-2 ${parseFloat(quote?.formData?.experienceMetier) >= 1 && parseFloat(quote?.formData?.experienceMetier) < 3 ? "bg-gray-900" : ""}`}></div>
+                        <span>1 à 3 ans:</span>
                       </div>
-                    ) : (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 my-6">
-                        <h3 className="text-lg font-semibold text-yellow-900 mb-2">Calcul en cours</h3>
-                        <p className="text-yellow-700">
-                          Le calcul de votre prime est en cours de finalisation. Nous vous contacterons prochainement avec notre proposition.
-                        </p>
+                      <div className="flex items-center text-sm">
+                        <div className={`w-3 h-3 border border-gray-400 mr-2 ${parseFloat(quote?.formData?.experienceMetier) >= 3 && parseFloat(quote?.formData?.experienceMetier) < 5 ? "bg-gray-900" : ""}`}></div>
+                        <span>3 à 5 ans:</span>
                       </div>
-                    )}
-
-                    <p>
-                      Notre proposition d'assurance comprend :
-                    </p>
-
-                    <ul className="list-disc list-inside space-y-2 ml-4">
-                      <li>Couverture Responsabilité Civile Décennale selon les conditions générales en vigueur</li>
-                      <li>Protection Juridique incluse</li>
-                      <li>Garantie des travaux de construction, rénovation et réparation</li>
-                      <li>Couverture des dommages corporels, matériels et immatériels</li>
-                      <li>Assistance juridique et technique</li>
-                    </ul>
-
-                    {/* Échéancier si disponible */}
-                    {calculationResult?.echeancier?.echeances && calculationResult.echeancier.echeances.length > 0 && (
-                      <div className="bg-blue-50 rounded-lg p-6 my-6">
-                        <h3 className="text-lg font-semibold text-blue-900 mb-4">Modalités de paiement :</h3>
-                        <div className="text-sm text-blue-800">
-                          <p className="mb-2">Votre prime sera payable selon l'échéancier suivant :</p>
-                          <ul className="list-disc list-inside space-y-1">
-                            {calculationResult.echeancier.echeances.slice(0, 3).map((echeance: any, index: number) => (
-                              <li key={index}>
-                                {echeance.date} : {echeance.totalTTC?.toLocaleString("fr-FR") || "0"} €
-                              </li>
-                            ))}
-                            {calculationResult.echeancier.echeances.length > 3 && (
-                              <li>... et {calculationResult.echeancier.echeances.length - 3} autres échéances</li>
-                            )}
-                          </ul>
-                        </div>
+                      <div className="flex items-center text-sm">
+                        <div className={`w-3 h-3 border border-gray-400 mr-2 ${parseFloat(quote?.formData?.experienceMetier) >= 5 ? "bg-gray-900" : ""}`}></div>
+                        <span>Sup à 5 ans:</span>
                       </div>
-                    )}
+                    </div>
+                  </div>
 
-                    <p>
-                      Cette proposition est valable 30 jours à compter de la date d'émission. Pour accepter cette offre, veuillez nous retourner le présent document signé accompagné des pièces justificatives demandées.
-                    </p>
+                  {/* Paragraphe d'introduction */}
+                  <div className="mb-6 text-sm text-gray-700 leading-relaxed">
+                    Nous sommes en mesure de vous confirmer notre intérêt pour vos projets suite à une étude préliminaire, 
+                    et votre demande d'une approche tarifaire sera examinée, sous réserves du dossier complet et sous 
+                    réserves de la validation par la Compagnie à laquelle le projet sera soumis, notre proposition 
+                    tarifaire indicative est de :
+                  </div>
 
-                    <p>
-                      Nous restons à votre disposition pour tout complément d'information.
-                    </p>
-
-                    <div className="mt-8">
-                      <p>Cordialement,</p>
-                      <div className="mt-4">
-                        <div className="font-semibold text-gray-900">L'équipe commerciale</div>
-                        <div className="text-gray-600">Encyclie Logiciel</div>
+                  {/* Tableau de tarification */}
+                  <div className="mb-6">
+                    <div className="border border-gray-300 rounded-lg overflow-hidden">
+                      <div className="grid grid-cols-4 bg-gray-100 border-b border-gray-300">
+                        <div className="p-2 text-xs font-bold text-center"></div>
+                        <div className="p-2 text-xs font-bold text-center">Montants H.T</div>
+                        <div className="p-2 text-xs font-bold text-center">Montants Taxes</div>
+                        <div className="p-2 text-xs font-bold text-center">Montant TTC</div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 border-b border-gray-200">
+                        <div className="p-2 text-xs">PRIMES année en cours pour la période du au</div>
+                        <div className="p-2 text-xs text-right"></div>
+                        <div className="p-2 text-xs text-right"></div>
+                        <div className="p-2 text-xs text-right"></div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 border-b border-gray-200">
+                        <div className="p-2 text-xs">Prime RCD provisionnelle hors reprise du passé</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.primeTotal?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.autres?.taxeAssurance?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €</div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 border-b border-gray-200">
+                        <div className="p-2 text-xs">Prime Protection Juridique</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.protectionJuridique * (1-0.045))?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.protectionJuridique * 0.045).toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.protectionJuridique?.toLocaleString("fr-FR") || ""} €</div>
+                      </div>
+                      
+                    
+                      
+                      <div className="grid grid-cols-4 border-b border-gray-200">
+                        <div className="p-2 text-xs">Montant total RCD + PJ</div>
+                        <div className="p-2 text-xs text-right">{((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique* (1-0.045) || 0)).toLocaleString("fr-FR")} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.autres?.taxeAssurance + (calculationResult?.protectionJuridique * 0.045))?.toLocaleString("fr-FR")  || ""} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.primeTotal + calculationResult?.autres?.taxeAssurance + calculationResult?.protectionJuridique)?.toLocaleString("fr-FR") || ""} €</div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 border-b border-gray-200">
+                        <div className="p-2 text-xs">Honoraire de gestion</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.fraisGestion?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right"></div>
+                        <div className="p-2 text-xs text-right"></div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 border-b border-gray-200">
+                        <div className="p-2 text-xs">Montant RCD +PJ+ Frais gestion</div>
+                        <div className="p-2 text-xs text-right">{((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0)).toLocaleString("fr-FR")} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.autres?.taxeAssurance + (calculationResult?.protectionJuridique * 0.045))?.toLocaleString("fr-FR")  || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €</div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 border-b border-gray-200">
+                        <div className="p-2 text-xs">Prime RCD pour la garantie reprise du passé (Prime unique à la souscription)</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.primeReprisePasse?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right"></div>
+                        <div className="p-2 text-xs text-right"></div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4">
+                        <div className="p-2 text-xs">Prime totale à régler(avec reprise passé)</div>
+                        <div className="p-2 text-xs text-right">{((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0) + (calculationResult?.primeReprisePasse || 0)).toLocaleString("fr-FR")} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.autres?.taxeAssurance + (calculationResult?.protectionJuridique * 0.045))?.toLocaleString("fr-FR")  || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Pied de page */}
-                  <div className="mt-12 pt-6 border-t border-gray-200 text-xs text-gray-500">
+                  <div className="mt-8 pt-4 border-t border-gray-200 text-xs text-gray-600 leading-relaxed">
                     <p>
-                      Cette lettre d'intention est établie sous réserve de l'acceptation définitive de votre dossier par notre compagnie d'assurance partenaire.
-                      Les conditions définitives seront précisées dans le contrat d'assurance.
+                      ENCYCLIE CONSTRUCTION - 42 Rue Notre-Dame des Victoire, 75002 PARIS - SAS au capital de 1 000 € - 
+                      SIREN 897 796 785 - RCS ST NAZAIRE - N° ORIAS : 21 004 564 - www.orias.fr - Sous le contrôle de 
+                      l'ACPR, Autorité de Contrôle Prudentiel et de Résolution - 4 Place de Budapest, CS 92459, 75436 
+                      PARIS CEDEX 09 - acpr.banque-france.fr - Assurance de Responsabilité Civile Professionnelle et 
+                      Garantie Financière conformes au Code des assurances.
                     </p>
                   </div>
                 </div>

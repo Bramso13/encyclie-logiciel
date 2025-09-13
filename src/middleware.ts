@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
       headers: request.headers,
     });
 
-    if (pathname === "/register") {
+    if (pathname === "/register" || pathname==="/") {
       if (session) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       } else {

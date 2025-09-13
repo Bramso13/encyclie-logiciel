@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import AdminScreen from "./AdminScreen";
 import BrokerScreen from "./BrokerScreen";
 import ClientScreen from "./ClientScreen";
-
+import Image from "next/image";
 export default function DashboardPage() {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
@@ -61,7 +61,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <img src="/couleur_1.png" alt="Logo" className="h-12" />
+            <Image src="/couleur_1.png" alt="Logo" className="h-12" width={100} height={100} />
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-700">

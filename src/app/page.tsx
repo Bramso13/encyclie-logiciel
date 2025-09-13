@@ -33,7 +33,7 @@ export default function Home() {
         <div className="flex flex-col items-center justify-center min-h-screen py-12">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 sm:text-6xl">
-              Dune Assurances
+              Encyclie Construction
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600">
               Plateforme de gestion d'assurances pour les courtiers et les clients.

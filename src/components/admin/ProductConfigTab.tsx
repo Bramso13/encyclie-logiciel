@@ -376,6 +376,8 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
   // État pour le mapping des paramètres
   const [parameterMapping, setParameterMapping] = useState<Record<string, string>>({
     enCreation: "",
+    directorName: "",
+
     caDeclared: "",
     etp: "",
     activites: "",
@@ -680,6 +682,16 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
         
         // Conversion selon le type de champ
         switch (paramKey) {
+          case 'directorName':
+            if (field.type === 'text' || field.type === 'select') {
+              (newTestParams as any)[paramKey] = field.default || "";
+            }
+            break;
+          case 'reprisePasse':
+            if (field.type === 'checkbox') {
+              (newTestParams as any)[paramKey] = Boolean(field.default);
+            }
+            break;
           case 'enCreation':
               if (field.type === 'checkbox') {
                 (newTestParams as any)[paramKey] = Boolean(field.default);
@@ -874,6 +886,16 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
           
           // Conversion selon le type de champ
           switch (paramKey) {
+            case 'directorName':
+              if (field.type === 'text' || field.type === 'select') {
+                mappedParams[paramKey] = field.default || "";
+              }
+              break;
+            case 'reprisePasse':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(field.default);
+              }
+              break;
             case 'enCreation':
               if (field.type === 'checkbox') {
                 mappedParams[paramKey] = field.default || false;

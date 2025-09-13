@@ -76,6 +76,16 @@ export default function QuoteSuccessPage({
           
           // Conversion selon le type de champ et le paramètre
           switch (paramKey) {
+            case 'directorName':
+              if (field.type === 'text' || field.type === 'select') {
+                mappedParams[paramKey] = value || "";
+              }
+              break;
+            case 'reprisePasse':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
             case 'enCreation':
               if (field.type === 'checkbox') {
                 mappedParams[paramKey] = Boolean(value);

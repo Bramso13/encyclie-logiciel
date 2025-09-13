@@ -13,6 +13,50 @@ export const createEmailTransporter = () => {
   });
 };
 
+// Fonction d'envoi d'email avec pièce jointe
+export const sendEmailWithAttachment = async (
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  attachments: Array<{
+    filename: string;
+    content: Buffer;
+    contentType: string;
+  }>
+) => {
+  
+  
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  });
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Encyclie Construction" <${
+        process.env.SMTP_FROM || process.env.SMTP_USER
+      }>`,
+      to,
+      subject,
+      html,
+      text,
+      attachments
+    });
+
+    console.log("Email with attachment sent:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Email with attachment sending failed:", error);
+    throw error;
+  }
+};
+
 // Template d'email d'invitation pour courtier
 export const getBrokerInvitationTemplate = (
   name: string,
@@ -23,14 +67,14 @@ export const getBrokerInvitationTemplate = (
   console.log("setupUrl", setupUrl);
 
   return {
-    subject: "Invitation - Plateforme Dune Assurances",
+    subject: "Invitation - Plateforme Encyclie Construction",
     html: `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Invitation Dune Assurances</title>
+          <title>Invitation Encyclie Construction</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -87,14 +131,14 @@ export const getBrokerInvitationTemplate = (
         </head>
         <body>
           <div class="header">
-            <h1>🏢 Dune Assurances</h1>
+            <h1>🏢 Encyclie Construction</h1>
             <p>Bienvenue dans notre plateforme</p>
           </div>
           
           <div class="content">
             <h2>Bonjour ${name},</h2>
             
-            <p>Vous avez été invité(e) à rejoindre la plateforme <strong>Dune Assurances</strong> en tant que courtier.</p>
+            <p>Vous avez été invité(e) à rejoindre la plateforme <strong>Encyclie Construction</strong> en tant que courtier.</p>
             
             <div class="card">
               <h3>🆔 Vos informations de courtier</h3>
@@ -124,13 +168,13 @@ export const getBrokerInvitationTemplate = (
             
             <p>Si vous avez des questions, n'hésitez pas à contacter notre équipe support.</p>
             
-            <p>Cordialement,<br>L'équipe Dune Assurances</p>
+            <p>Cordialement,<br>L'équipe Encyclie Construction</p>
           </div>
           
           <div class="footer">
             <p>Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :</p>
             <p><a href="${setupUrl}">${setupUrl}</a></p>
-            <p>© ${new Date().getFullYear()} Dune Assurances. Tous droits réservés.</p>
+            <p>© ${new Date().getFullYear()} Encyclie Construction. Tous droits réservés.</p>
           </div>
         </body>
       </html>
@@ -138,7 +182,7 @@ export const getBrokerInvitationTemplate = (
     text: `
 Bonjour ${name},
 
-Vous avez été invité(e) à rejoindre la plateforme Dune Assurances en tant que courtier.
+Vous avez été invité(e) à rejoindre la plateforme Encyclie Construction en tant que courtier.
 
 Votre code courtier : ${brokerCode}
 
@@ -155,7 +199,7 @@ Prochaines étapes :
 5. Commencer à créer des devis
 
 Cordialement,
-L'équipe Dune Assurances
+L'équipe Encyclie Construction
     `,
   };
 };
@@ -171,7 +215,7 @@ export const sendEmail = async (
 
   try {
     const info = await transporter.sendMail({
-      from: `"Dune Assurances" <${
+      from: `"Encyclie Construction" <${
         process.env.SMTP_FROM || process.env.SMTP_USER
       }>`,
       to,

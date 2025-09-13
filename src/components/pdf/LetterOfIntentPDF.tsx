@@ -1,185 +1,163 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import Image from 'next/image';
 
 // Définir les styles
 const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#FFFFFF',
-    padding: 40,
-    fontSize: 12,
-    lineHeight: 1.5,
+    padding: 30,
+    fontSize: 11,
+    lineHeight: 1.4,
   },
   header: {
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#1f2937',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 5,
-  },
-  date: {
-    fontSize: 10,
-    color: '#9ca3af',
-  },
-  recipient: {
-    marginBottom: 30,
-  },
-  recipientLabel: {
-    fontSize: 10,
-    color: '#6b7280',
-    marginBottom: 5,
-  },
-  recipientName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  recipientAddress: {
-    fontSize: 12,
-    color: '#374151',
-    marginBottom: 2,
-  },
-  content: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 20,
   },
-  paragraph: {
+  validity: {
+    fontSize: 10,
+    color: '#000000',
+    fontWeight: 'bold',
+  },
+  logoSection: {
+    alignItems: 'center',
+  },
+  logo: {
+    width: 80,
+    height: 40,
+    backgroundColor: '#4A90E2',
+    marginBottom: 5,
+  },
+  companyName: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  dateLocation: {
+    fontSize: 10,
+    color: '#000000',
+  },
+  recipient: {
     marginBottom: 15,
-    textAlign: 'justify',
+  },
+  recipientLabel: {
+    fontSize: 11,
+    color: '#000000',
+    marginBottom: 5,
   },
   subject: {
+    fontSize: 12,
     fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 10,
+  },
+  rcDecennale: {
+    color: '#FF0000',
+  },
+  salutation: {
+    fontSize: 11,
+    marginBottom: 10,
+  },
+  acknowledgment: {
+    fontSize: 11,
+    marginBottom: 20,
+  },
+  companyInfo: {
     marginBottom: 15,
   },
-  summaryBox: {
-    backgroundColor: '#f9fafb',
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    padding: 20,
-    marginVertical: 20,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#1f2937',
-  },
-  summaryGrid: {
+  infoField: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    marginBottom: 3,
+    fontSize: 11,
   },
-  summaryItem: {
-    width: '48%',
-    marginBottom: 10,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  summaryValue: {
-    fontSize: 14,
+  fieldLabel: {
     fontWeight: 'bold',
-    color: '#1f2937',
+    marginRight: 5,
   },
-  totalValue: {
-    fontSize: 18,
+  fieldValue: {
+    flex: 1,
+  },
+  workforce: {
+    fontSize: 11,
+    marginBottom: 3,
+  },
+  experienceSection: {
+    marginBottom: 20,
+  },
+  experienceTitle: {
+    fontSize: 11,
     fontWeight: 'bold',
-    color: '#4f46e5',
-  },
-  refusalBox: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
-    borderRadius: 8,
-    padding: 20,
-    marginVertical: 20,
-  },
-  refusalTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#dc2626',
-  },
-  refusalText: {
-    color: '#b91c1c',
-  },
-  waitingBox: {
-    backgroundColor: '#fffbeb',
-    border: '1px solid #fed7aa',
-    borderRadius: 8,
-    padding: 20,
-    marginVertical: 20,
-  },
-  waitingTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#d97706',
-  },
-  waitingText: {
-    color: '#b45309',
-  },
-  paymentBox: {
-    backgroundColor: '#eff6ff',
-    border: '1px solid #bfdbfe',
-    borderRadius: 8,
-    padding: 20,
-    marginVertical: 20,
-  },
-  paymentTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#1d4ed8',
-  },
-  paymentText: {
-    color: '#1e40af',
-    marginBottom: 10,
-  },
-  paymentList: {
-    marginLeft: 20,
-  },
-  paymentItem: {
-    marginBottom: 5,
-    color: '#1e40af',
-  },
-  list: {
-    marginLeft: 20,
-    marginBottom: 15,
-  },
-  listItem: {
     marginBottom: 8,
   },
-  signature: {
-    marginTop: 40,
+  experienceOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 15,
   },
-  signatureText: {
-    marginBottom: 10,
+  experienceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '50%',
+    marginBottom: 5,
+    fontSize: 11,
   },
-  signatureName: {
-    fontSize: 14,
+  checkbox: {
+    width: 12,
+    height: 12,
+    border: '1px solid #000000',
+    marginRight: 8,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#000000',
+  },
+  introParagraph: {
+    fontSize: 11,
+    textAlign: 'justify',
+    marginBottom: 20,
+    lineHeight: 1.5,
+  },
+  pricingTable: {
+    marginBottom: 20,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottom: '1px solid #000000',
+    paddingBottom: 5,
+    marginBottom: 5,
+  },
+  tableHeaderCell: {
+    fontSize: 10,
     fontWeight: 'bold',
-    marginBottom: 2,
+    textAlign: 'center',
   },
-  signatureCompany: {
-    fontSize: 12,
-    color: '#6b7280',
+  tableRow: {
+    flexDirection: 'row',
+    marginBottom: 3,
+    fontSize: 10,
+  },
+  tableCell: {
+    paddingVertical: 2,
+  },
+  tableCellDescription: {
+    flex: 2,
+    paddingRight: 5,
+  },
+  tableCellAmount: {
+    flex: 1,
+    textAlign: 'right',
+    paddingLeft: 5,
   },
   footer: {
-    marginTop: 40,
-    paddingTop: 20,
-    borderTop: '1px solid #e5e7eb',
-    fontSize: 10,
-    color: '#9ca3af',
+    marginTop: 30,
+    fontSize: 9,
+    color: '#000000',
     textAlign: 'justify',
+    lineHeight: 1.3,
   },
 });
 
@@ -190,146 +168,276 @@ interface LetterOfIntentPDFProps {
 
 const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculationResult }) => {
   const currentDate = new Date().toLocaleDateString('fr-FR');
+  const currentTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  // Fonction pour déterminer quelle case d'expérience cocher
+  const getExperienceCheckbox = (experienceValue: string) => {
+    const experience = parseFloat(quote?.formData?.experienceMetier || "0");
+    switch (experienceValue) {
+      case "moins_1_an":
+        return experience < 1;
+      case "1_3_ans":
+        return experience >= 1 && experience < 3;
+      case "3_5_ans":
+        return experience >= 3 && experience < 5;
+      case "plus_5_ans":
+        return experience >= 5;
+      default:
+        return false;
+    }
+  };
+
+  // Fonction pour formater la date
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Fonction pour extraire le code postal et la ville de l'adresse
+  const getCityFromAddress = (address: string) => {
+    if (!address) return "";
+    // Recherche d'un pattern code postal + ville (ex: "75001 Paris")
+    const match = address.match(/(\d{5})\s+(.+)/);
+    if (match) {
+      return `${match[1]} ${match[2]}`;
+    }
+    return address;
+  };
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* En-tête */}
+        {/* En-tête avec validité et logo */}
         <View style={styles.header}>
-          <Text style={styles.title}>LETTRE D'INTENTION</Text>
-          <Text style={styles.subtitle}>Assurance Responsabilité Civile Décennale</Text>
-          <Text style={styles.date}>
-            Devis n° {quote?.reference || "N/A"} - {currentDate}
-          </Text>
+          <Text style={styles.validity}>Valable 30 jours</Text>
+          <View style={styles.logoSection}>
+          <img src="/couleur_1.png" alt="ENCYCLIE CONSTRUCTION" width={80} height={40} />
+            <Text style={styles.companyName}>ENCYCLIE CONSTRUCTION</Text>
+            <Text style={styles.dateLocation}>Paris le {currentTime}</Text>
+          </View>
         </View>
 
         {/* Destinataire */}
         <View style={styles.recipient}>
-          <Text style={styles.recipientLabel}>À l'attention de :</Text>
-          <Text style={styles.recipientName}>
-            {quote?.companyData?.companyName || "Nom de l'entreprise"}
+          <Text style={styles.recipientLabel}>A l'attention de {quote?.formData?.directorName || "XXX"}</Text>
+        </View>
+
+        {/* Objet */}
+        <Text style={styles.subject}>
+          Objet: Indication tarifaire <Text style={styles.rcDecennale}>RC Décennale</Text>
+        </Text>
+
+        {/* Salutation */}
+        <Text style={styles.salutation}>Cher Monsieur,</Text>
+
+        {/* Accusé de réception */}
+        <Text style={styles.acknowledgment}>
+          Nous accusons réception de votre demande et nous vous remercions:
+        </Text>
+
+        {/* Informations entreprise */}
+        <View style={styles.companyInfo}>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>Nom de la société / Raison sociale :</Text>
+            <Text style={styles.fieldValue}>{quote?.formData?.companyName || quote?.companyData?.companyName || "________________"}</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>Forme juridique :</Text>
+            <Text style={styles.fieldValue}>{quote?.formData?.legalForm || quote?.companyData?.legalForm || "________________"}</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>Nom & Prénom du ou des dirigeants :</Text>
+            <Text style={styles.fieldValue}>{quote?.formData?.directorName || "________________"}</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>Rue du siège social :</Text>
+            <Text style={styles.fieldValue}>{quote?.formData?.address || quote?.companyData?.address || "________________"}</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>CP Ville du siège social :</Text>
+            <Text style={styles.fieldValue}>{getCityFromAddress(quote?.formData?.address || quote?.companyData?.address) || "________________"}</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>N° SIREN</Text>
+            <Text style={styles.fieldValue}>{quote?.formData?.siret || quote?.companyData?.siret || "________________"}</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>Chiffre d'affaires :</Text>
+            <Text style={styles.fieldValue}>{calculationResult?.caCalculee?.toLocaleString("fr-FR") || quote?.formData?.chiffreAffaires || "________________"} €</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.fieldLabel}>Date d'effet :</Text>
+            <Text style={styles.fieldValue}>{formatDate(quote?.formData?.dateDeffet) || "________________"}</Text>
+          </View>
+          <Text style={styles.workforce}>
+            Effectif y compris le chef d'entreprise : {quote?.formData?.nombreSalaries || "xxx"} personnes
           </Text>
-          <Text style={styles.recipientAddress}>
-            {quote?.companyData?.address || "Adresse de l'entreprise"}
-          </Text>
-          <Text style={styles.recipientAddress}>
-            SIRET : {quote?.companyData?.siret || "N/A"}
+          <Text style={styles.workforce}>
+            Date de création de l'entreprise : {formatDate(quote?.formData?.companyCreationDate || quote?.companyData?.creationDate) || "xxx"}
           </Text>
         </View>
 
-        {/* Corps de la lettre */}
-        <View style={styles.content}>
-          <Text style={styles.subject}>
-            Objet : Proposition d'assurance Responsabilité Civile Décennale
+        {/* Expérience professionnelle */}
+        <View style={styles.experienceSection}>
+          <Text style={styles.experienceTitle}>
+            Expérience professionnelle (y compris en qualité de salarié) :
           </Text>
-
-          <Text style={styles.paragraph}>Madame, Monsieur,</Text>
-
-          <Text style={styles.paragraph}>
-            Suite à votre demande d'assurance Responsabilité Civile Décennale, nous avons le plaisir de vous présenter notre proposition d'assurance adaptée à votre activité.
-          </Text>
-
-          {/* Informations du calcul */}
-          {calculationResult && !calculationResult.refus ? (
-            <View style={styles.summaryBox}>
-              <Text style={styles.summaryTitle}>Résumé de notre proposition :</Text>
-              <View style={styles.summaryGrid}>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Chiffre d'affaires déclaré</Text>
-                  <Text style={styles.summaryValue}>
-                    {calculationResult.caCalculee?.toLocaleString("fr-FR") || "0"} €
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Prime HT</Text>
-                  <Text style={styles.summaryValue}>
-                    {calculationResult.primeTotal?.toLocaleString("fr-FR") || "0"} €
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Protection Juridique</Text>
-                  <Text style={styles.summaryValue}>
-                    {calculationResult.protectionJuridique?.toLocaleString("fr-FR") || "0"} €
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryLabel}>Total TTC</Text>
-                  <Text style={[styles.summaryValue, styles.totalValue]}>
-                    {calculationResult.totalTTC?.toLocaleString("fr-FR") || "0"} €
-                  </Text>
-                </View>
-              </View>
+          <View style={styles.experienceOptions}>
+            <View style={styles.experienceOption}>
+              <View style={[styles.checkbox, getExperienceCheckbox("moins_1_an") ? styles.checkboxChecked : {}]} />
+              <Text>Moins de 1 an (refus):</Text>
             </View>
-          ) : calculationResult?.refus ? (
-            <View style={styles.refusalBox}>
-              <Text style={styles.refusalTitle}>Demande non acceptée</Text>
-              <Text style={styles.refusalText}>
-                Malheureusement, nous ne pouvons pas accepter votre demande d'assurance pour la raison suivante : {calculationResult.refusReason || "Critères non respectés"}.
-              </Text>
+            <View style={styles.experienceOption}>
+              <View style={[styles.checkbox, getExperienceCheckbox("1_3_ans") ? styles.checkboxChecked : {}]} />
+              <Text>1 à 3 ans:</Text>
             </View>
-          ) : (
-            <View style={styles.waitingBox}>
-              <Text style={styles.waitingTitle}>Calcul en cours</Text>
-              <Text style={styles.waitingText}>
-                Le calcul de votre prime est en cours de finalisation. Nous vous contacterons prochainement avec notre proposition.
-              </Text>
+            <View style={styles.experienceOption}>
+              <View style={[styles.checkbox, getExperienceCheckbox("3_5_ans") ? styles.checkboxChecked : {}]} />
+              <Text>3 à 5 ans:</Text>
             </View>
-          )}
-
-          <Text style={styles.paragraph}>
-            Notre proposition d'assurance comprend :
-          </Text>
-
-          <View style={styles.list}>
-            <Text style={styles.listItem}>• Couverture Responsabilité Civile Décennale selon les conditions générales en vigueur</Text>
-            <Text style={styles.listItem}>• Protection Juridique incluse</Text>
-            <Text style={styles.listItem}>• Garantie des travaux de construction, rénovation et réparation</Text>
-            <Text style={styles.listItem}>• Couverture des dommages corporels, matériels et immatériels</Text>
-            <Text style={styles.listItem}>• Assistance juridique et technique</Text>
+            <View style={styles.experienceOption}>
+              <View style={[styles.checkbox, getExperienceCheckbox("plus_5_ans") ? styles.checkboxChecked : {}]} />
+              <Text>Sup à 5 ans:</Text>
+            </View>
           </View>
+        </View>
 
-          {/* Échéancier si disponible */}
-          {calculationResult?.echeancier?.echeances && calculationResult.echeancier.echeances.length > 0 && (
-            <View style={styles.paymentBox}>
-              <Text style={styles.paymentTitle}>Modalités de paiement :</Text>
-              <Text style={styles.paymentText}>
-                Votre prime sera payable selon l'échéancier suivant :
-              </Text>
-              <View style={styles.paymentList}>
-                {calculationResult.echeancier.echeances.slice(0, 3).map((echeance: any, index: number) => (
-                  <Text key={index} style={styles.paymentItem}>
-                    • {echeance.date} : {echeance.totalTTC?.toLocaleString("fr-FR") || "0"} €
-                  </Text>
-                ))}
-                {calculationResult.echeancier.echeances.length > 3 && (
-                  <Text style={styles.paymentItem}>
-                    • ... et {calculationResult.echeancier.echeances.length - 3} autres échéances
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
+        {/* Paragraphe d'introduction */}
+        <Text style={styles.introParagraph}>
+          Nous sommes en mesure de vous confirmer notre intérêt pour vos projets suite à une étude préliminaire, 
+          et votre demande d'une approche tarifaire sera examinée, sous réserves du dossier complet et sous 
+          réserves de la validation par la Compagnie à laquelle le projet sera soumis, notre proposition 
+          tarifaire indicative est de :
+        </Text>
 
-          <Text style={styles.paragraph}>
-            Cette proposition est valable 30 jours à compter de la date d'émission. Pour accepter cette offre, veuillez nous retourner le présent document signé accompagné des pièces justificatives demandées.
-          </Text>
-
-          <Text style={styles.paragraph}>
-            Nous restons à votre disposition pour tout complément d'information.
-          </Text>
-
-          <View style={styles.signature}>
-            <Text style={styles.signatureText}>Cordialement,</Text>
-            <Text style={styles.signatureName}>L'équipe commerciale</Text>
-            <Text style={styles.signatureCompany}>Encyclie Logiciel</Text>
+        {/* Tableau de tarification */}
+        <View style={styles.pricingTable}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderCell, { flex: 2 }]}></Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Montants H.T</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Montants Taxes</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Montant TTC</Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              PRIMES année en cours pour la période du au
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              Prime RCD provisionnelle hors reprise du passé
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.primeTotal?.toLocaleString("fr-FR") || ""} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.autres?.taxeAssurance?.toLocaleString("fr-FR") || ""} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €
+            </Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              Prime Protection Juridique
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.protectionJuridique || 0) * (1-0.045)).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.protectionJuridique || 0) * 0.045).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.protectionJuridique?.toLocaleString("fr-FR") || ""} €
+            </Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              Montant total RCD + PJ
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.primeTotal || 0) + ((calculationResult?.protectionJuridique || 0) * (1-0.045))).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.autres?.taxeAssurance || 0) + ((calculationResult?.protectionJuridique || 0) * 0.045)).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.primeTotal || 0) + (calculationResult?.autres?.taxeAssurance || 0) + (calculationResult?.protectionJuridique || 0)).toLocaleString("fr-FR")} €
+            </Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              Honoraire de gestion
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.fraisGestion?.toLocaleString("fr-FR") || ""} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              Montant RCD +PJ+ Frais gestion
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0)).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.autres?.taxeAssurance || 0) + ((calculationResult?.protectionJuridique || 0) * 0.045)).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €
+            </Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              Prime RCD pour la garantie reprise du passé (Prime unique à la souscription)
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.primeReprisePasse?.toLocaleString("fr-FR") || ""} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
+          </View>
+          
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, styles.tableCellDescription]}>
+              Prime totale à régler(avec reprise passé)
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0) + (calculationResult?.primeReprisePasse || 0)).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {((calculationResult?.autres?.taxeAssurance || 0) + ((calculationResult?.protectionJuridique || 0) * 0.045)).toLocaleString("fr-FR")} €
+            </Text>
+            <Text style={[styles.tableCell, styles.tableCellAmount]}>
+              {calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €
+            </Text>
           </View>
         </View>
 
         {/* Pied de page */}
         <View style={styles.footer}>
           <Text>
-            Cette lettre d'intention est établie sous réserve de l'acceptation définitive de votre dossier par notre compagnie d'assurance partenaire.
-            Les conditions définitives seront précisées dans le contrat d'assurance.
+            ENCYCLIE CONSTRUCTION - 42 Rue Notre-Dame des Victoire, 75002 PARIS - SAS au capital de 1 000 € - 
+            SIREN 897 796 785 - RCS ST NAZAIRE - N° ORIAS : 21 004 564 - www.orias.fr - Sous le contrôle de 
+            l'ACPR, Autorité de Contrôle Prudentiel et de Résolution - 4 Place de Budapest, CS 92459, 75436 
+            PARIS CEDEX 09 - acpr.banque-france.fr - Assurance de Responsabilité Civile Professionnelle et 
+            Garantie Financière conformes au Code des assurances.
           </Text>
         </View>
       </Page>
