@@ -1,6 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 import Image from 'next/image';
+import { getTaxeByRegion } from '@/lib/tarificateurs/rcd';
 
 // Définir les styles
 const styles = StyleSheet.create({
@@ -208,16 +209,20 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
     return address;
   };
 
+  function financial(x: number) {
+    return x.toFixed(2);
+  }
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* En-tête avec validité et logo */}
         <View style={styles.header}>
-          <Text style={styles.validity}>Valable 30 jours</Text>
+          <Text style={styles.validity}>{new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
           <View style={styles.logoSection}>
           <img src="/couleur_1.png" alt="ENCYCLIE CONSTRUCTION" width={80} height={40} />
             <Text style={styles.companyName}>ENCYCLIE CONSTRUCTION</Text>
-            <Text style={styles.dateLocation}>Paris le {currentTime}</Text>
+
           </View>
         </View>
 
@@ -228,11 +233,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
 
         {/* Objet */}
         <Text style={styles.subject}>
-          Objet: Indication tarifaire <Text style={styles.rcDecennale}>RC Décennale</Text>
+          Objet: Indication tarifaire RC Décennale
         </Text>
 
         {/* Salutation */}
-        <Text style={styles.salutation}>Cher Monsieur,</Text>
+        <Text style={styles.salutation}>Cher Monsieur, Madame,</Text>
 
         {/* Accusé de réception */}
         <Text style={styles.acknowledgment}>
@@ -337,13 +342,13 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
               Prime RCD provisionnelle hors reprise du passé
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.primeTotal?.toLocaleString("fr-FR") || ""} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd - echeance.taxe || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.autres?.taxeAssurance?.toLocaleString("fr-FR") || ""} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.taxe || 0), 0)) || ""} €
             </Text>
           </View>
           
@@ -352,13 +357,13 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
               Prime Protection Juridique
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.protectionJuridique || 0) * (1-0.045)).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.pj || 0), 0) * (1-getTaxeByRegion(quote?.formData?.territory))) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.protectionJuridique || 0) * 0.045).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.pj || 0), 0)*(getTaxeByRegion(quote?.formData?.territory))) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.protectionJuridique?.toLocaleString("fr-FR") || ""} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.pj || 0), 0)) || ""} €
             </Text>
           </View>
           
@@ -367,13 +372,13 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
               Montant total RCD + PJ
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.primeTotal || 0) + ((calculationResult?.protectionJuridique || 0) * (1-0.045))).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.autres?.taxeAssurance || 0) + ((calculationResult?.protectionJuridique || 0) * 0.045)).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.primeTotal || 0) + (calculationResult?.autres?.taxeAssurance || 0) + (calculationResult?.protectionJuridique || 0)).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.taxe || 0), 0)) || ""} €
             </Text>
           </View>
           
@@ -382,7 +387,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
               Honoraire de gestion
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.fraisGestion?.toLocaleString("fr-FR") || ""} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.fraisGestion || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
@@ -393,39 +398,28 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
               Montant RCD +PJ+ Frais gestion
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0)).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.fraisGestion || 0) - (echeance.taxe || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.autres?.taxeAssurance || 0) + ((calculationResult?.protectionJuridique || 0) * 0.045)).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.fraisGestion || 0), 0)) || ""} €
             </Text>
           </View>
           
           <View style={styles.tableRow}>
             <Text style={[styles.tableCell, styles.tableCellDescription]}>
-              Prime RCD pour la garantie reprise du passé (Prime unique à la souscription)
+              Prime totale à régler
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.primeReprisePasse?.toLocaleString("fr-FR") || ""} €
-            </Text>
-            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
-            <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
-          </View>
-          
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, styles.tableCellDescription]}>
-              Prime totale à régler(avec reprise passé)
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.fraisGestion || 0) + (echeance.reprise || 0) - (echeance.taxe || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0) + (calculationResult?.primeReprisePasse || 0)).toLocaleString("fr-FR")} €
+              {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)) || ""} €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {((calculationResult?.autres?.taxeAssurance || 0) + ((calculationResult?.protectionJuridique || 0) * 0.045)).toLocaleString("fr-FR")} €
-            </Text>
-            <Text style={[styles.tableCell, styles.tableCellAmount]}>
-              {calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €
+                {financial(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.totalTTC || 0), 0)) || ""} €
             </Text>
           </View>
         </View>

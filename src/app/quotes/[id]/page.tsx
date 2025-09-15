@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { calculPrimeRCD, genererEcheancier } from "@/lib/tarificateurs/rcd";
+import { calculPrimeRCD, genererEcheancier, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import { authClient } from "@/lib/auth-client";
 import useQuotesStore, { QuoteDocument } from "@/lib/stores/quotes-store";
 import useProductsStore, {
@@ -612,6 +612,13 @@ export default function QuoteDetailPage() {
           
           // Conversion selon le type de champ et le paramètre
           switch (paramKey) {
+
+            case 'territory':
+              if (field.type === 'select') {
+                mappedParams[paramKey] = value || "";
+              }
+              mappedParams.taxeAssurance = getTaxeByRegion(value);
+              break;
             case 'directorName':
               if (field.type === 'text' || field.type === 'select') {
                 mappedParams[paramKey] = value || "";
@@ -690,6 +697,16 @@ export default function QuoteDetailPage() {
               // Pour les sinistres, utiliser les données du formulaire
               mappedParams[paramKey] = quoteData.formData.lossHistory || [];
               break;
+            case 'assureurDefaillant':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
+            case 'qualif':
+              if (field.type === 'checkbox') {
+                mappedParams[paramKey] = Boolean(value);
+              }
+              break;
           }
         }
       });
@@ -727,6 +744,7 @@ export default function QuoteDetailPage() {
         partNegoce: 0,
         nonFournitureBilanN_1: false,
         reprisePasse: false,
+        taxeAssurance: getTaxeByRegion(quoteData.formData.territory),
         // Remplacer par les valeurs mappées
         ...mappedParams
       };
@@ -2947,13 +2965,13 @@ export default function QuoteDetailPage() {
                 <div className="max-w-4xl mx-auto">
                   {/* En-tête avec validité et logo */}
                   <div className="flex justify-between items-start mb-6">
-                    <div className="text-sm font-bold text-gray-900">Valable 30 jours</div>
+                    <div className="text-sm font-bold text-gray-900">{new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                     <div className="text-center">
                       <div className="w-20 h-10 rounded mb-2 mx-auto">
                         <Image src="/couleur_1.png" alt="ENCYCLIE CONSTRUCTION" width={80} height={40} />
                       </div>
                       <div className="text-sm font-bold text-gray-900">ENCYCLIE CONSTRUCTION</div>
-                      <div className="text-xs text-gray-600">Paris le {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+
                     </div>
                   </div>
 
@@ -2965,13 +2983,13 @@ export default function QuoteDetailPage() {
                   {/* Objet */}
                   <div className="mb-4">
                     <div className="text-sm font-bold text-gray-900">
-                      Objet: Indication tarifaire <span className="text-red-600">RC Décennale</span>
+                      Objet: Indication tarifaire RC Décennale
                     </div>
                   </div>
 
                   {/* Salutation */}
                   <div className="mb-4">
-                    <div className="text-sm text-gray-700">Cher Monsieur,</div>
+                    <div className="text-sm text-gray-700">Cher Monsieur, Madame,</div>
                   </div>
 
                   {/* Accusé de réception */}
@@ -3021,7 +3039,7 @@ export default function QuoteDetailPage() {
                     </div>
                     <div className="text-sm">
                       <span className="font-bold mr-2">Date de création de l'entreprise :</span>
-                      <span>{quote?.formData?.companyCreationDate || quote?.companyData?.creationDate || "xxx"}</span>
+                      <span>{new Date(quote?.formData?.companyCreationDate || quote?.companyData?.creationDate).toLocaleDateString('fr-FR') || "xxx"}</span>
                     </div>
                   </div>
 
@@ -3077,53 +3095,53 @@ export default function QuoteDetailPage() {
                       
                       <div className="grid grid-cols-4 border-b border-gray-200">
                         <div className="p-2 text-xs">Prime RCD provisionnelle hors reprise du passé</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.primeTotal?.toLocaleString("fr-FR") || ""} €</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.autres?.taxeAssurance?.toLocaleString("fr-FR") || ""} €</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd - echeance.taxe || 0), 0))?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                       </div>
                       
                       <div className="grid grid-cols-4 border-b border-gray-200">
                         <div className="p-2 text-xs">Prime Protection Juridique</div>
-                        <div className="p-2 text-xs text-right">{(calculationResult?.protectionJuridique * (1-0.045))?.toLocaleString("fr-FR") || ""} €</div>
-                        <div className="p-2 text-xs text-right">{(calculationResult?.protectionJuridique * 0.045).toLocaleString("fr-FR") || ""} €</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.protectionJuridique?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.pj || 0), 0) * (1-getTaxeByRegion(quote?.formData?.territory)))?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{(calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.pj || 0), 0)*(getTaxeByRegion(quote?.formData?.territory)))?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.pj || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                       </div>
                       
                     
                       
                       <div className="grid grid-cols-4 border-b border-gray-200">
                         <div className="p-2 text-xs">Montant total RCD + PJ</div>
-                        <div className="p-2 text-xs text-right">{((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique* (1-0.045) || 0)).toLocaleString("fr-FR")} €</div>
-                        <div className="p-2 text-xs text-right">{(calculationResult?.autres?.taxeAssurance + (calculationResult?.protectionJuridique * 0.045))?.toLocaleString("fr-FR")  || ""} €</div>
-                        <div className="p-2 text-xs text-right">{(calculationResult?.primeTotal + calculationResult?.autres?.taxeAssurance + calculationResult?.protectionJuridique)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                       </div>
                       
                       <div className="grid grid-cols-4 border-b border-gray-200">
                         <div className="p-2 text-xs">Honoraire de gestion</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.fraisGestion?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.fraisGestion || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                         <div className="p-2 text-xs text-right"></div>
                         <div className="p-2 text-xs text-right"></div>
                       </div>
                       
                       <div className="grid grid-cols-4 border-b border-gray-200">
                         <div className="p-2 text-xs">Montant RCD +PJ+ Frais gestion</div>
-                        <div className="p-2 text-xs text-right">{((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0)).toLocaleString("fr-FR")} €</div>
-                        <div className="p-2 text-xs text-right">{(calculationResult?.autres?.taxeAssurance + (calculationResult?.protectionJuridique * 0.045))?.toLocaleString("fr-FR")  || ""} €</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.fraisGestion || 0) - (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.fraisGestion || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                       </div>
                       
-                      <div className="grid grid-cols-4 border-b border-gray-200">
+                      {/* <div className="grid grid-cols-4 border-b border-gray-200">
                         <div className="p-2 text-xs">Prime RCD pour la garantie reprise du passé (Prime unique à la souscription)</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.primeReprisePasse?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.reprise || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                         <div className="p-2 text-xs text-right"></div>
                         <div className="p-2 text-xs text-right"></div>
-                      </div>
+                      </div> */}
                       
                       <div className="grid grid-cols-4">
-                        <div className="p-2 text-xs">Prime totale à régler(avec reprise passé)</div>
-                        <div className="p-2 text-xs text-right">{((calculationResult?.primeTotal || 0) + (calculationResult?.protectionJuridique || 0) + (calculationResult?.honorairesGestion || 0) + (calculationResult?.primeReprisePasse || 0)).toLocaleString("fr-FR")} €</div>
-                        <div className="p-2 text-xs text-right">{(calculationResult?.autres?.taxeAssurance + (calculationResult?.protectionJuridique * 0.045))?.toLocaleString("fr-FR")  || ""} €</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.totalTTC?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs">Prime totale à régler</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.rcd || 0) + (echeance.pj || 0) + (echeance.fraisGestion || 0) + (echeance.reprise || 0) - (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.taxe || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.totalTTC || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                       </div>
                     </div>
                   </div>

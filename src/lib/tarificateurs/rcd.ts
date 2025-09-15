@@ -1210,16 +1210,13 @@ type ReturnValueRefus = {
   partNegoce: boolean;
 };
 
-function verifRefus(
-  params: {
-    experienceDirigeant: number;
+function verifRefus(params: {
+  experienceDirigeant: number;
 
-    tempsSansActivite: Enum_Temps_sans_activite;
-    partSoutraitance: number;
-    partNegoce: number;
-  },
-
-) {
+  tempsSansActivite: Enum_Temps_sans_activite;
+  partSoutraitance: number;
+  partNegoce: number;
+}) {
   const {
     experienceDirigeant,
     tempsSansActivite,
@@ -1329,11 +1326,14 @@ function calculateMajorations(params: {
     tempsSansActivite: calculMajTempsSansActivite(tempsSansActivite),
     anneeExperience: calculMajExp(anneeExperience),
     assureurDefaillant:
-      !enCreation && assureurDefaillant &&
+      !enCreation &&
+      assureurDefaillant &&
       !(absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT")
         ? 0.2
         : 0,
-    nombreAnneeAssuranceContinue: enCreation ? 0 : calculMajNAAC(nombreAnneeAssuranceContinue),
+    nombreAnneeAssuranceContinue: enCreation
+      ? 0
+      : calculMajNAAC(nombreAnneeAssuranceContinue),
     nonFournitureBilanN_1: enCreation ? 0 : nonFournitureBilanN_1 ? 0.5 : 0,
     sansActiviteDepuisPlusDe12MoisSansFermeture:
       sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" ? 0.2 : 0,
@@ -1592,6 +1592,20 @@ const calculDeg = (params: {
   });
   return resultValue;
 };
+export function getTaxeByRegion(region: string) {
+  const regionRea = region.toLowerCase().replace(" ", "-");
+  console.log("regionRea", regionRea);
+  const taxeByRegion: { [key: string]: number } = {
+    martinique: 0.09,
+    guadeloupe: 0.09,
+    reunion: 0.09,
+    guyane: 0.09,
+    mayotte: 0.045,
+    "st-martin": 0.05,
+    "st-barth": 0.0,
+  };
+  return taxeByRegion[regionRea];
+}
 export function calculPrimeRCD(params: {
   enCreation: boolean;
   caDeclared: number;
@@ -1649,9 +1663,9 @@ export function calculPrimeRCD(params: {
     absenceDeSinistreSurLes5DernieresAnnees,
     protectionJuridique,
     fractionnementPrime,
-    protectionJuridique1an = 113,
+    protectionJuridique1an = 106.0,
     txFraisGestion = 0.1,
-    taxeAssurance = 0.045,
+    taxeAssurance,
     fraisFractionnementPrime = 40,
     partSoutraitance,
     partNegoce,
@@ -1683,17 +1697,12 @@ export function calculPrimeRCD(params: {
 
   const caCalculee = calculCA({ caDeclared, etp });
 
-  const refus: ReturnValueRefus = verifRefus(
-    {
-      experienceDirigeant: anneeExperience,
-      tempsSansActivite,
-      partSoutraitance,
-      partNegoce,
-    },
-
-  );
-
-  
+  const refus: ReturnValueRefus = verifRefus({
+    experienceDirigeant: anneeExperience,
+    tempsSansActivite,
+    partSoutraitance,
+    partNegoce,
+  });
 
   const isAssureurDefaillant = assureursDefaillants.includes(nomDeLAsurreur);
 
@@ -1780,7 +1789,7 @@ export function calculPrimeRCD(params: {
     primeTotal: 0,
     majorations: majorations,
     reprisePasseResult: undefined,
-    protectionJuridique: protectionJuridique1an,
+    protectionJuridique: protectionJuridique1an * (1 + taxeAssurance),
     fraisGestion: 0,
     totalTTC: 0,
     nbEcheances: {
@@ -1825,10 +1834,12 @@ export function calculPrimeRCD(params: {
     const deg400k = tableauDeg.find(
       (deg) => deg.code === activite.code && deg.type === "CA"
     )?.degressivity;
-    const primeRefAct = (deg400k && caCalculee > 250000) ? primeMiniAct * deg400k : primeMiniAct;
-    const prime100Ref = (deg400k && caCalculee > 250000)
-      ? tauxBase * deg400k * caCalculee - primeRefAct
-      : tauxBase * caCalculee - primeRefAct;
+    const primeRefAct =
+      deg400k && caCalculee > 250000 ? primeMiniAct * deg400k : primeMiniAct;
+    const prime100Ref =
+      deg400k && caCalculee > 250000
+        ? tauxBase * deg400k * caCalculee - primeRefAct
+        : tauxBase * caCalculee - primeRefAct;
     const prime100Min = prime100Ref * activite.caSharePercent;
 
     returnTab.push({
@@ -1867,7 +1878,7 @@ export function calculPrimeRCD(params: {
   returnValue.autres.taxeAssurance =
     returnValue.primeTotal * taxeAssurance +
     returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance;
-  returnValue.autres.protectionJuridiqueTTC = protectionJuridique1an;
+  returnValue.autres.protectionJuridiqueTTC = protectionJuridique1an * (1 + taxeAssurance);
   returnValue.autres.total =
     returnValue.autres.taxeAssurance +
     returnValue.autres.protectionJuridiqueTTC +
@@ -1916,7 +1927,14 @@ export function calculPrimeRCD(params: {
   ) {
     try {
       const reprisePasseResult = calculReprisePasseRCD({
-        tauxTI: [0.700, 0.686, 0.672, 0.658, 0.644, 0.630, 0.616, 0.602, 0.588, 0.574, 0.560, 0.546, 0.532, 0.518, 0.504, 0.490, 0.476, 0.462, 0.448, 0.434, 0.420, 0.406, 0.392, 0.378, 0.364, 0.350, 0.336, 0.322, 0.308, 0.294, 0.280, 0.266, 0.252, 0.238, 0.224, 0.210, 0.196, 0.182, 0.168, 0.154, 0.140, 0.126, 0.112, 0.098, 0.084, 0.070, 0.056, 0.042, 0.028, 0.014, 0.000],
+        tauxTI: [
+          0.7, 0.686, 0.672, 0.658, 0.644, 0.63, 0.616, 0.602, 0.588, 0.574,
+          0.56, 0.546, 0.532, 0.518, 0.504, 0.49, 0.476, 0.462, 0.448, 0.434,
+          0.42, 0.406, 0.392, 0.378, 0.364, 0.35, 0.336, 0.322, 0.308, 0.294,
+          0.28, 0.266, 0.252, 0.238, 0.224, 0.21, 0.196, 0.182, 0.168, 0.154,
+          0.14, 0.126, 0.112, 0.098, 0.084, 0.07, 0.056, 0.042, 0.028, 0.014,
+          0.0,
+        ],
         primeAnnuelleHT: returnValue.PrimeHTSansMajorations,
         dureeCouvertureAssureur: 5, // Par défaut 5 ans, à adapter selon les besoins
         dateFinCouverturePrecedente,
@@ -2049,7 +2067,10 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
     (dateDebut.getTime() - new Date(year, 0, 1).getTime()) /
       (1000 * 60 * 60 * 24)
   );
-  console.log("Nombre de jours depuis le 1er janvier :", nbJoursDepuisDateDebut);
+  console.log(
+    "Nombre de jours depuis le 1er janvier :",
+    nbJoursDepuisDateDebut
+  );
 
   const nbEcheancesNbJours = 365.25 / nbEcheances;
   console.log("Nombre de jours par échéance :", nbEcheancesNbJours);
@@ -2084,19 +2105,23 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
         const y = date.getFullYear();
         return `${d}/${m}/${y}`;
       };
-      const dateEcheanceIPLus1D=new Date(
+      const dateEcheanceIPLus1D = new Date(
         new Date(year, 0, 1).getTime() +
-          nbEcheancesNbJours * (j+1) * 24 * 60 * 60 * 1000
+          nbEcheancesNbJours * (j + 1) * 24 * 60 * 60 * 1000
       );
       const dateEcheanceIPLus1 = formatDate(dateEcheanceIPLus1D);
 
       const dateEcheance = formatDate(
-        j === i-1 ? dateDebut : new Date(
-          new Date(year, 0, 1).getTime() +
-            nbEcheancesNbJours * j * 24 * 60 * 60 * 1000
-        )
+        j === i - 1
+          ? dateDebut
+          : new Date(
+              new Date(year, 0, 1).getTime() +
+                nbEcheancesNbJours * j * 24 * 60 * 60 * 1000
+            )
       );
-      console.log(`Échéance ${j}: dateEcheanceI_1 = ${dateEcheanceIPLus1}, dateEcheance = ${dateEcheance}`);
+      console.log(
+        `Échéance ${j}: dateEcheanceI_1 = ${dateEcheanceIPLus1}, dateEcheance = ${dateEcheance}`
+      );
 
       if (
         dateEcheanceIPLus1D.getFullYear() === year + 1 &&
@@ -2105,22 +2130,34 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
         premierPaiementDeLAnnee = true;
         console.log("Premier paiement de l'année détecté pour j =", j);
       }
-      const ratio = nbJoursPaye%nbEcheancesNbJours === 0 ? 1 :( (nbEcheancesNbJours*(j+1))-nbJoursPaye)/nbEcheancesNbJours;
+      const ratio =
+        nbJoursPaye % nbEcheancesNbJours === 0
+          ? 1
+          : (nbEcheancesNbJours * (j + 1) - nbJoursPaye) / nbEcheancesNbJours;
       console.log(`ratio pour j=${j} :`, ratio);
 
-      const taxeEcheance = ((taxe / nbEcheances) * ratio) + (premierPaiementDeLAnnee ? frais*(0.045) : 0);
-      
-      const rcdEcheance = ((rcd  +taxe+ (frais)) / nbEcheances) * ratio;
-      console.log(rcd, taxe, frais, "rcdEcheance", rcdEcheance, ratio)
+      const taxeEcheance =
+        (taxe / nbEcheances) * ratio +
+        (premierPaiementDeLAnnee ? frais * 0.045 : 0);
+
+      const rcdEcheance = ((rcd + taxe + frais) / nbEcheances) * ratio;
+      console.log(rcd, taxe, frais, "rcdEcheance", rcdEcheance, ratio);
       const pjEcheance = premierPaiementDeLAnnee ? pj : 0;
       const fraisEcheance = premierPaiementDeLAnnee ? frais : 0;
       const repriseEcheance = premierPaiementDeLAnnee ? reprise : 0;
       const fraisGestionEcheance = premierPaiementDeLAnnee ? fraisGestion : 0;
-      const totalHTEcheance = rcdEcheance+fraisGestionEcheance+pjEcheance+(repriseEcheance === undefined ? 0 : repriseEcheance)-taxeEcheance;
+      const totalHTEcheance =
+        rcdEcheance +
+        fraisGestionEcheance +
+        pjEcheance +
+        (repriseEcheance === undefined ? 0 : repriseEcheance) -
+        taxeEcheance;
 
-      const totalTCHEcheance = ((totalHTEcheance+taxeEcheance)) ;
+      const totalTCHEcheance = totalHTEcheance + taxeEcheance;
 
-      console.log(`totalHTEcheance : ${totalHTEcheance}, taxeEcheance : ${taxeEcheance}, totalTCHEcheance : ${totalTCHEcheance}, rcdEcheance : ${rcdEcheance}, pjEcheance : ${pjEcheance}, fraisEcheance : ${fraisEcheance}, repriseEcheance : ${repriseEcheance}, fraisGestionEcheance : ${fraisGestionEcheance}`);
+      console.log(
+        `totalHTEcheance : ${totalHTEcheance}, taxeEcheance : ${taxeEcheance}, totalTCHEcheance : ${totalTCHEcheance}, rcdEcheance : ${rcdEcheance}, pjEcheance : ${pjEcheance}, fraisEcheance : ${fraisEcheance}, repriseEcheance : ${repriseEcheance}, fraisGestionEcheance : ${fraisGestionEcheance}`
+      );
 
       totalPaiement +=
         totalHTEcheance +
@@ -2198,8 +2235,6 @@ type ReprisePasseResult = {
     primeRepriseAnnee: number;
   }[];
 
-  
-
   // Analyse sinistralité
   ratioSP: number; // S/P = (coût sinistres cumulé) / (prime annuelle HT * coeff antécédent)
   frequenceSinistres: number; // Min(Nb sinistres / Nb années ; Nb sinistres avec suite / Nb années)
@@ -2209,12 +2244,9 @@ type ReprisePasseResult = {
   categorieFrequence: string; // "0", "0 à 0.5", "0.5 à 1", "1 à 2", "> 2"
   categorieRatioSP: string; // "0", "0 à 0.5", "0.5 à 0.7", "0.7 à 1", "> 1"
 
- 
   tauxMajoration: number; // Taux de majoration
   primeReprisePasseTTC: number; // Prime de reprise du passé TTC finale
   primeApresSinistralite: number; // Prime après sinistralité
-
-  
 };
 
 /**
@@ -2236,7 +2268,10 @@ export function calculReprisePasseRCD(
     coefficientAntecedent,
   } = params;
 
-  const anciennete = (new Date().getFullYear() - dateCreation.getFullYear()) === 0 ? 1 : new Date().getFullYear() - dateCreation.getFullYear();
+  const anciennete =
+    new Date().getFullYear() - dateCreation.getFullYear() === 0
+      ? 1
+      : new Date().getFullYear() - dateCreation.getFullYear();
 
   console.log("anciennete reprise passe", anciennete);
 
@@ -2254,54 +2289,187 @@ export function calculReprisePasseRCD(
     { anciennete: 10, coefficient: 5.9 },
     { anciennete: 11, coefficient: 6.8 },
     { anciennete: 12, coefficient: 7.8 },
-    { anciennete: 13, coefficient: 8.8 }
+    { anciennete: 13, coefficient: 8.8 },
   ];
 
-  console.log("tableauCoefficientsAnciennete reprise passe", tableauCoefficientsAnciennete);
+  console.log(
+    "tableauCoefficientsAnciennete reprise passe",
+    tableauCoefficientsAnciennete
+  );
 
   // Tableau principal de coefficients selon ancienneté, fréquence et ratio S/P
   const tableauCoefficients = {
     "< 3ans": {
-      "0": { "0": 1.0, "0 à 0.5": 1.0, "0.5 à 0.7": 1.0, "0.7 à 1": 1.0, "> 1": 1.0 },
-      "0 à 0.5": { "0": 1.0, "0 à 0.5": 1.1, "0.5 à 0.7": 1.2, "0.7 à 1": 1.3, "> 1": "Analyse Cie" },
-      "0.5 à 1": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": "Non", "0.7 à 1": "Non", "> 1": "Non" },
-      "1 à 2": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": "Non", "0.7 à 1": "Non", "> 1": "Non" },
-      "> 2": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": "Non", "0.7 à 1": "Non", "> 1": "Non" }
+      "0": {
+        "0": 1.0,
+        "0 à 0.5": 1.0,
+        "0.5 à 0.7": 1.0,
+        "0.7 à 1": 1.0,
+        "> 1": 1.0,
+      },
+      "0 à 0.5": {
+        "0": 1.0,
+        "0 à 0.5": 1.1,
+        "0.5 à 0.7": 1.2,
+        "0.7 à 1": 1.3,
+        "> 1": "Analyse Cie",
+      },
+      "0.5 à 1": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": "Non",
+        "0.7 à 1": "Non",
+        "> 1": "Non",
+      },
+      "1 à 2": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": "Non",
+        "0.7 à 1": "Non",
+        "> 1": "Non",
+      },
+      "> 2": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": "Non",
+        "0.7 à 1": "Non",
+        "> 1": "Non",
+      },
     },
     "3 à 7 ans": {
-      "0": { "0": 0.9, "0 à 0.5": 0.9, "0.5 à 0.7": 0.9, "0.7 à 1": 0.9, "> 1": 0.9 },
-      "0 à 0.5": { "0": 0.9, "0 à 0.5": 0.97, "0.5 à 0.7": 1.1, "0.7 à 1": 1.2, "> 1": "Analyse Cie" },
-      "0.5 à 1": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": 0.95, "0.7 à 1": 1.05, "> 1": 1.15 },
-      "1 à 2": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": "Non", "0.7 à 1": "Non", "> 1": "Non" },
-      "> 2": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": "Non", "0.7 à 1": "Non", "> 1": "Non" }
+      "0": {
+        "0": 0.9,
+        "0 à 0.5": 0.9,
+        "0.5 à 0.7": 0.9,
+        "0.7 à 1": 0.9,
+        "> 1": 0.9,
+      },
+      "0 à 0.5": {
+        "0": 0.9,
+        "0 à 0.5": 0.97,
+        "0.5 à 0.7": 1.1,
+        "0.7 à 1": 1.2,
+        "> 1": "Analyse Cie",
+      },
+      "0.5 à 1": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": 0.95,
+        "0.7 à 1": 1.05,
+        "> 1": 1.15,
+      },
+      "1 à 2": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": "Non",
+        "0.7 à 1": "Non",
+        "> 1": "Non",
+      },
+      "> 2": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": "Non",
+        "0.7 à 1": "Non",
+        "> 1": "Non",
+      },
     },
     "> 7 ans": {
-      "0": { "0": 0.8, "0 à 0.5": 0.8, "0.5 à 0.7": 0.8, "0.7 à 1": 0.8, "> 1": 0.8 },
-      "0 à 0.5": { "0": 0.8, "0 à 0.5": 0.9, "0.5 à 0.7": 1.0, "0.7 à 1": 1.1, "> 1": 1.2 },
-      "0.5 à 1": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": 0.95, "0.7 à 1": 1.05, "> 1": 1.15 },
-      "1 à 2": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": "Non", "0.7 à 1": "Non", "> 1": "Non" },
-      "> 2": { "0": "Non", "0 à 0.5": "Non", "0.5 à 0.7": "Non", "0.7 à 1": "Non", "> 1": "Non" }
-    }
+      "0": {
+        "0": 0.8,
+        "0 à 0.5": 0.8,
+        "0.5 à 0.7": 0.8,
+        "0.7 à 1": 0.8,
+        "> 1": 0.8,
+      },
+      "0 à 0.5": {
+        "0": 0.8,
+        "0 à 0.5": 0.9,
+        "0.5 à 0.7": 1.0,
+        "0.7 à 1": 1.1,
+        "> 1": 1.2,
+      },
+      "0.5 à 1": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": 0.95,
+        "0.7 à 1": 1.05,
+        "> 1": 1.15,
+      },
+      "1 à 2": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": "Non",
+        "0.7 à 1": "Non",
+        "> 1": "Non",
+      },
+      "> 2": {
+        "0": "Non",
+        "0 à 0.5": "Non",
+        "0.5 à 0.7": "Non",
+        "0.7 à 1": "Non",
+        "> 1": "Non",
+      },
+    },
   };
 
   console.log("tableauCoefficients reprise passe", tableauCoefficients);
 
-  const sP = sinistresPrecedents.reduce((sum, s) => sum + s.totalCost, 0) / (primeAnnuelleHT*(tableauCoefficientsAnciennete.find(item => item.anciennete === anciennete)?.coefficient || 0));
+  const sP =
+    sinistresPrecedents.reduce((sum, s) => sum + s.totalCost, 0) /
+    (primeAnnuelleHT *
+      (tableauCoefficientsAnciennete.find(
+        (item) => item.anciennete === anciennete
+      )?.coefficient || 0));
 
-  const frequence = sinistresPrecedents.reduce((sum, s) => sum + s.numClaims, 0) / anciennete;
+  const frequence =
+    sinistresPrecedents.reduce((sum, s) => sum + s.numClaims, 0) / anciennete;
 
   console.log("sP reprise passe", sP);
   console.log("frequence reprise passe", frequence);
 
-  const categorieAnciennete = (tableauCoefficientsAnciennete.find(item => item.anciennete === anciennete)?.anciennete || 0) < 3 ? "< 3ans" : (tableauCoefficientsAnciennete.find(item => item.anciennete === anciennete)?.anciennete || 0) <= 7 ? "3 à 7 ans" : "> 7 ans";
-  const categorieFrequence = frequence === 0 ? "0" : frequence <= 0.5 ? "0 à 0.5" : frequence <= 1 ? "0.5 à 1" : frequence <= 2 ? "1 à 2" : "> 2";
-  const categorieRatioSP = sP === 0 ? "0" : sP <= 0.5 ? "0 à 0.5" : sP <= 0.7 ? "0.5 à 0.7" : sP <= 1 ? "0.7 à 1" : "> 1";
+  const categorieAnciennete =
+    (tableauCoefficientsAnciennete.find(
+      (item) => item.anciennete === anciennete
+    )?.anciennete || 0) < 3
+      ? "< 3ans"
+      : (tableauCoefficientsAnciennete.find(
+          (item) => item.anciennete === anciennete
+        )?.anciennete || 0) <= 7
+      ? "3 à 7 ans"
+      : "> 7 ans";
+  const categorieFrequence =
+    frequence === 0
+      ? "0"
+      : frequence <= 0.5
+      ? "0 à 0.5"
+      : frequence <= 1
+      ? "0.5 à 1"
+      : frequence <= 2
+      ? "1 à 2"
+      : "> 2";
+  const categorieRatioSP =
+    sP === 0
+      ? "0"
+      : sP <= 0.5
+      ? "0 à 0.5"
+      : sP <= 0.7
+      ? "0.5 à 0.7"
+      : sP <= 1
+      ? "0.7 à 1"
+      : "> 1";
 
   console.log("categorieAnciennete reprise passe", categorieAnciennete);
   console.log("categorieFrequence reprise passe", categorieFrequence);
   console.log("categorieRatioSP reprise passe", categorieRatioSP);
 
-  const tauxMajoration = (tableauCoefficients as any)[categorieAnciennete]?.[categorieFrequence]?.[categorieRatioSP] === "Non" ? -1 : (tableauCoefficients as any)[categorieAnciennete]?.[categorieFrequence]?.[categorieRatioSP];
+  const tauxMajoration =
+    (tableauCoefficients as any)[categorieAnciennete]?.[categorieFrequence]?.[
+      categorieRatioSP
+    ] === "Non"
+      ? -1
+      : (tableauCoefficients as any)[categorieAnciennete]?.[
+          categorieFrequence
+        ]?.[categorieRatioSP];
   console.log("tauxMajoration reprise passe", tauxMajoration);
 
   // 1. Construction du tableau des années (de la plus récente à la plus ancienne)
@@ -2320,22 +2488,29 @@ export function calculReprisePasseRCD(
   for (let i = 0; i < dureeCouvertureAssureur; i++) {
     const annee = anneeFin - i;
     const tauxTIAnnee = tauxTI[i] || 0; // Taux TI pour cette année
-    
+
     // Calcul du pourcentage de l'année
     let pourcentageAnnee = 1; // Par défaut, année complète
-    
+
     if (i === 0) {
       // Première année (la plus récente) : calculer le pourcentage depuis le début de l'année
       const debutAnnee = new Date(annee, 0, 1);
       const finAnnee = new Date(annee, 11, 31);
-      const totalJoursAnnee = Math.ceil((finAnnee.getTime() - debutAnnee.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const joursDepuisDebutAnnee = Math.ceil((dateFinCouverturePrecedente.getTime() - debutAnnee.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const totalJoursAnnee =
+        Math.ceil(
+          (finAnnee.getTime() - debutAnnee.getTime()) / (1000 * 60 * 60 * 24)
+        ) + 1;
+      const joursDepuisDebutAnnee =
+        Math.ceil(
+          (dateFinCouverturePrecedente.getTime() - debutAnnee.getTime()) /
+            (1000 * 60 * 60 * 24)
+        ) + 1;
       pourcentageAnnee = Math.min(1, joursDepuisDebutAnnee / totalJoursAnnee);
     }
-    
+
     // Calcul de la prime de reprise pour cette année
     const primeRepriseAnnee = tauxTIAnnee * pourcentageAnnee * primeAnnuelleHT;
-    
+
     tableauAnnees.push({
       annee,
       tauxTI: tauxTIAnnee,
@@ -2343,11 +2518,6 @@ export function calculReprisePasseRCD(
       primeRepriseAnnee: Math.round(primeRepriseAnnee),
     });
   }
-
-
-  
-
-  
 
   return {
     tableauAnnees,
@@ -2357,7 +2527,10 @@ export function calculReprisePasseRCD(
     categorieFrequence,
     categorieRatioSP,
     tauxMajoration,
-    primeReprisePasseTTC: tableauAnnees.reduce((sum, item) => sum + item.primeRepriseAnnee, 0),
+    primeReprisePasseTTC: tableauAnnees.reduce(
+      (sum, item) => sum + item.primeRepriseAnnee,
+      0
+    ),
     primeApresSinistralite: primeAnnuelleHT * tauxMajoration,
   };
 }

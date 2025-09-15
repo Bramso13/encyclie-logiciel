@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import useProductsStore from "@/lib/stores/products-store";
-import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
+import { calculPrimeRCD, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import ActivityBreakdownField from "@/components/quotes/ActivityBreakdown";
 import LossHistoryField from "@/components/quotes/LossHistoryField";
 import {
@@ -886,6 +886,13 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
           
           // Conversion selon le type de champ
           switch (paramKey) {
+            case 'territory':
+              if (field.type === 'select') {
+                mappedParams[paramKey] = field.default || "";
+              }
+              mappedParams[paramKey] = field.default || "";
+              mappedParams.taxeAssurance = getTaxeByRegion(field.default);
+              break;
             case 'directorName':
               if (field.type === 'text' || field.type === 'select') {
                 mappedParams[paramKey] = field.default || "";
@@ -1003,6 +1010,8 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
         partNegoce: 0,
         nonFournitureBilanN_1: false,
         reprisePasse: false,
+        taxeAssurance: getTaxeByRegion(mappedParams.territory),
+
         // Remplacer par les valeurs mappées
         ...mappedParams
       };

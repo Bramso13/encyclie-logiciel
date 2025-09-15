@@ -194,10 +194,10 @@ function SetupAccountContent() {
             <User className="h-6 w-6 text-indigo-600" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Créer votre compte courtier
+            Créer votre espace chez Encyclie Construction
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Bienvenue dans la plateforme Dune Assurances !
+            Bienvenue dans la plateforme Encyclie Construction !
             <br />
             Configurez votre compte pour commencer.
           </p>
@@ -209,7 +209,7 @@ function SetupAccountContent() {
             <div className="flex items-center mb-4">
               <Building2 className="h-5 w-5 text-indigo-600 mr-2" />
               <h3 className="text-lg font-medium text-gray-900">
-                Vos informations de courtier
+                Vos informations
               </h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
