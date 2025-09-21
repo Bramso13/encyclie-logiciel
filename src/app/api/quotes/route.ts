@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate unique reference
-      const reference = generateReference(product.code);
+      const reference = generateReference(product.code === "RC_DECENNALE" ? "RCD" : "RCP");
 
       // Create quote
       const quote = await prisma.quote.create({

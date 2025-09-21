@@ -1345,7 +1345,7 @@ function calculateMajorations(params: {
 
   return majorations;
 }
-const tableauTax = [
+export const tableauTax = [
   { code: 1, title: "Voiries Réseaux Divers (VRD)", rate: 0.0382 },
   { code: 2, title: "Maçonnerie et béton armé", rate: 0.0407 },
   { code: 3, title: "Charpente et structure en bois", rate: 0.0439 },

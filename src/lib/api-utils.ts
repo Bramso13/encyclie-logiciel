@@ -65,7 +65,9 @@ export function generateReference(prefix: string): string {
   const random = Math.floor(Math.random() * 100000)
     .toString()
     .padStart(5, "0");
-  return `${prefix}${year}${random}`;
+  // On ne garde que les deux derniers chiffres de l'année
+  const yearShort = year.toString().slice(-2);
+  return `${prefix}${yearShort}${random}`;
 }
 
 export async function withAuth<T>(

@@ -41,6 +41,10 @@ model User {
   projects Project[]
   messages Message[]
 
+  // Quote messages relations
+  sentQuoteMessages     QuoteMessage[] @relation("SentQuoteMessages")
+  receivedQuoteMessages QuoteMessage[] @relation("ReceivedQuoteMessages")
+
   // Insurance relations
   quotes             Quote[]
   contracts          InsuranceContract[]
@@ -351,7 +355,55 @@ model Quote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Chat messages for this quote
+  quoteMessages QuoteMessage[]
+
   @@map("quotes")
+}
+
+// Chat messages for quotes between broker and admin
+model QuoteMessage {
+  id      String @id @default(cuid())
+  content String
+
+  // Quote relation
+  quoteId String @map("quote_id")
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  // Sender and receiver (broker <-> admin)
+  senderId   String @map("sender_id")
+  sender     User   @relation("SentQuoteMessages", fields: [senderId], references: [id])
+  receiverId String @map("receiver_id")
+  receiver   User   @relation("ReceivedQuoteMessages", fields: [receiverId], references: [id])
+
+  // Message status
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  // Attachments
+  attachments QuoteMessageAttachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("quote_messages")
+}
+
+// Attachments for quote messages
+model QuoteMessageAttachment {
+  id        String       @id @default(cuid())
+  messageId String       @map("message_id")
+  message   QuoteMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  fileName     String
+  originalName String
+  filePath     String
+  fileType     String
+  fileSize     Int
+
+  uploadedAt DateTime @default(now())
+
+  @@map("quote_message_attachments")
 }
 
 // Generic contract model

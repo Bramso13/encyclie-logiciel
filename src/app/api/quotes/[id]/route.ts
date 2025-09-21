@@ -26,10 +26,11 @@ export async function GET(
               code: true,
               formFields: true,
               requiredDocs: true,
+              stepConfig: true,
             },
           },
           broker: {
-            select: { name: true, companyName: true, email: true },
+            select: { id: true, name: true, companyName: true, email: true },
           },
           documents: {
             select: {
