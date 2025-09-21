@@ -6,10 +6,8 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // GET /api/quotes/[id]/messages - Récupérer les messages d'un devis
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -84,10 +82,8 @@ export async function GET(
 }
 
 // POST /api/quotes/[id]/messages - Envoyer un nouveau message
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
