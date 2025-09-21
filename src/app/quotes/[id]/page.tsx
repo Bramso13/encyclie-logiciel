@@ -331,6 +331,42 @@ export default function QuoteDetailPage() {
   const [generatingLetterPDF, setGeneratingLetterPDF] = useState(false);
   const [generatingPremiumCallPDF, setGeneratingPremiumCallPDF] = useState(false);
 
+  // États pour les notifications
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info';
+    title: string;
+    message: string;
+    show: boolean;
+  }>({
+    type: 'info',
+    title: '',
+    message: '',
+    show: false
+  });
+
+  // États pour les switches de calcul
+  const [reprisePasseEnabled, setReprisePasseEnabled] = useState(false);
+  const [nonFournitureBilanEnabled, setNonFournitureBilanEnabled] = useState(false);
+
+  // États pour le loading des boutons
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [updatingQuote, setUpdatingQuote] = useState(false);
+
+  // Fonction pour afficher les notifications
+  const showNotification = (type: 'success' | 'error' | 'info', title: string, message: string) => {
+    setNotification({
+      type,
+      title,
+      message,
+      show: true
+    });
+
+    // Auto-hide après 5 secondes pour les succès, 8 secondes pour les erreurs
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, type === 'error' ? 8000 : 5000);
+  };
+
   // Détection des rôles utilisateur
   const userRole = session?.user?.role;
   const isAdmin = userRole === 'ADMIN';
@@ -606,13 +642,22 @@ export default function QuoteDetailPage() {
       const mappedParams: any = {};
       
       Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
-        if (fieldKey && formFields[fieldKey]) {
+        console.log("paramKeyyyy", paramKey);
+        if (fieldKey && (formFields[fieldKey] || quoteData.formData[paramKey])) {
+        console.log("paramKeyyyyy", paramKey);
+
           const field = formFields[fieldKey];
           const value = quoteData.formData[fieldKey] || field.default;
+
+
           
           // Conversion selon le type de champ et le paramètre
           switch (paramKey) {
+            case "nonFournitureBilanN_1":
+                console.log("value", value, "paramKey", paramKey);
+                mappedParams[paramKey] = Boolean(value);
 
+              break;
             case 'territory':
               if (field.type === 'select') {
                 mappedParams[paramKey] = value || "";
@@ -662,7 +707,7 @@ export default function QuoteDetailPage() {
             case 'qualif':
             case 'assureurDefaillant':
             case 'protectionJuridique':
-            case 'nonFournitureBilanN_1':
+
             case 'reprisePasse':
               if (field.type === 'checkbox') {
                 mappedParams[paramKey] = Boolean(value);
@@ -901,6 +946,84 @@ export default function QuoteDetailPage() {
     } finally {
       setRecalculating(false);
     }
+  };
+
+  // Fonction pour recalculer avec les paramètres des switches
+  const handleRecalculateWithSwitches = () => {
+    if (!quote) return;
+
+    setRecalculating(true);
+    setCalculationError(null);
+
+    try {
+      console.log("Recalcul avec switches:", { reprisePasseEnabled, nonFournitureBilanEnabled });
+
+      // Créer une copie des paramètres avec les valeurs des switches
+      const modifiedQuote = {
+        ...quote,
+        formData: {
+          ...quote.formData,
+          reprisePasse: reprisePasseEnabled,
+          nonFournitureBilanN_1: nonFournitureBilanEnabled
+        }
+      };
+
+      const result = calculateWithMapping(modifiedQuote);
+      setCalculationResult(result);
+    } catch (error) {
+      console.error("Erreur recalcul avec switches:", error);
+      setCalculationError(error instanceof Error ? error.message : "Erreur de recalcul");
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
+  // Fonctions pour gérer les switches
+  const handleReprisePasseChange = (enabled: boolean) => {
+    setReprisePasseEnabled(enabled);
+    // Recalcul automatique
+    setTimeout(() => {
+      if (quote) {
+        const modifiedQuote = {
+          ...quote,
+          formData: {
+            ...quote.formData,
+            reprisePasse: enabled,
+            nonFournitureBilanN_1: nonFournitureBilanEnabled
+          }
+        };
+        try {
+          const result = calculateWithMapping(modifiedQuote);
+          setCalculationResult(result);
+        } catch (error) {
+          console.error("Erreur recalcul automatique:", error);
+        }
+      }
+    }, 100);
+  };
+
+  const handleNonFournitureBilanChange = (enabled: boolean) => {
+    setNonFournitureBilanEnabled(enabled);
+    // Recalcul automatique
+    setTimeout(() => {
+      if (quote) {
+        const modifiedQuote = {
+          ...quote,
+          formData: {
+            ...quote.formData,
+            reprisePasse: reprisePasseEnabled,
+            nonFournitureBilanN_1: enabled
+          }
+        };
+        console.log("modifiedQuote", modifiedQuote);
+        try {
+          const result = calculateWithMapping(modifiedQuote);
+          setCalculationResult(result);
+        } catch (error) {
+          console.error("Erreur recalcul automatique:", error);
+        }
+      }
+    }, 100);
   };
 
   // Fonction pour sauvegarder le calcul actuel en DB
@@ -1161,16 +1284,36 @@ export default function QuoteDetailPage() {
   };
 
   const handleSubmit = async (status: "DRAFT" | "INCOMPLETE") => {
+    // Définir quel bouton est en cours d'utilisation
+    const isDraft = status === "DRAFT";
+    const setLoadingState = isDraft ? setSavingDraft : setUpdatingQuote;
+
+    // Validation du formulaire
     if (!validateForm()) {
+      const errorCount = Object.keys(errors).length;
+      showNotification(
+        'error',
+        'Formulaire invalide',
+        `${errorCount} erreur${errorCount > 1 ? 's' : ''} ${errorCount > 1 ? 'ont' : 'a'} été ${errorCount > 1 ? 'trouvées' : 'trouvée'}. Veuillez corriger les champs en rouge.`
+      );
       return;
     }
-    console.log("formData", formData);
+
+    setLoadingState(true);
+
     try {
       const updateData = {
         companyData,
         formData,
         status,
       };
+
+      // Afficher une notification d'information pendant la sauvegarde
+      showNotification(
+        'info',
+        isDraft ? 'Sauvegarde en cours...' : 'Mise à jour en cours...',
+        isDraft ? 'Votre brouillon est en train d\'être sauvegardé.' : 'Les modifications sont en train d\'être appliquées.'
+      );
 
       // Mettre à jour via l'API
       const response = await fetch(`/api/quotes/${params.id}`, {
@@ -1187,16 +1330,40 @@ export default function QuoteDetailPage() {
       }
 
       const result = await response.json();
-      
+
       // Mettre à jour l'état local
       updateQuote(params.id as string, result.data);
       setQuote(result.data);
+
+      // Afficher le message de succès
+      showNotification(
+        'success',
+        isDraft ? 'Brouillon sauvegardé' : 'Devis mis à jour',
+        isDraft
+          ? 'Votre brouillon a été sauvegardé avec succès. Vous pouvez continuer à le modifier à tout moment.'
+          : 'Le devis a été mis à jour avec succès. Les informations ont été transmises pour traitement.'
+      );
+
+      // Nettoyer les erreurs
+      setErrors({});
+
     } catch (error) {
       console.error("Update error:", error);
+
+      const errorMessage = error instanceof Error ? error.message : "Erreur lors de la mise à jour";
+
+      showNotification(
+        'error',
+        isDraft ? 'Erreur de sauvegarde' : 'Erreur de mise à jour',
+        errorMessage
+      );
+
       setErrors((prev) => ({
         ...prev,
-        submit: "Erreur lors de la mise à jour",
+        submit: errorMessage,
       }));
+    } finally {
+      setLoadingState(false);
     }
   };
 
@@ -1524,6 +1691,22 @@ export default function QuoteDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* CSS pour les switches */}
+      <style jsx>{`
+        .toggle-checkbox:checked {
+          right: 0;
+          border-color: #48bb78;
+        }
+        .toggle-checkbox {
+          transition: all 0.3s ease;
+          top: 0;
+          left: 0;
+        }
+        .toggle-label {
+          transition: all 0.3s ease;
+        }
+      `}</style>
+
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2056,65 +2239,115 @@ export default function QuoteDetailPage() {
 
                 {!calculationResult.refus && session?.user?.role === "ADMIN" && (
                   <>
-                    {/* Boutons pour admin */}
-                    <div className="flex justify-end space-x-3 mb-6">
-                      <button
-                        onClick={handleRecalculate}
-                        disabled={recalculating}
-                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                      >
-                        {recalculating ? (
-                          <>
-                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Recalcul...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            <span>Recalculer</span>
-                          </>
-                        )}
-                      </button>
+                    {/* Options de calcul et boutons pour admin */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+                        {/* Switches de configuration */}
+                        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
+                          <div className="flex items-center space-x-3">
+                            <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                              <input
+                                type="checkbox"
+                                id="reprisePasseSwitch"
+                                checked={reprisePasseEnabled}
+                                onChange={(e) => handleReprisePasseChange(e.target.checked)}
+                                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                              />
+                              <label
+                                htmlFor="reprisePasseSwitch"
+                                className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${
+                                  reprisePasseEnabled ? 'bg-green-400' : 'bg-gray-300'
+                                }`}
+                              ></label>
+                            </div>
+                            <label htmlFor="reprisePasseSwitch" className="text-sm font-medium text-gray-700 cursor-pointer">
+                              Reprise du passé
+                            </label>
+                          </div>
 
-                      {originalCalculationResult && (
-                        <button
-                          onClick={resetCalculationEditing}
-                          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                          </svg>
-                          <span>Version originale</span>
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={saveCalculationToDatabase}
-                        disabled={recalculating}
-                        className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                      >
-                        {recalculating ? (
-                          <>
-                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Sauvegarde...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            <span>Sauvegarder le calcul</span>
-                          </>
-                        )}
-                      </button>
+                          <div className="flex items-center space-x-3">
+                            <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                              <input
+                                type="checkbox"
+                                id="nonFournitureBilanSwitch"
+                                checked={nonFournitureBilanEnabled}
+                                onChange={(e) => handleNonFournitureBilanChange(e.target.checked)}
+                                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                              />
+                              <label
+                                htmlFor="nonFournitureBilanSwitch"
+                                className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${
+                                  nonFournitureBilanEnabled ? 'bg-red-400' : 'bg-gray-300'
+                                }`}
+                              ></label>
+                            </div>
+                            <label htmlFor="nonFournitureBilanSwitch" className="text-sm font-medium text-gray-700 cursor-pointer">
+                              Non fourniture bilan N-1
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Boutons d'action */}
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={handleRecalculate}
+                            disabled={recalculating}
+                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                          >
+                            {recalculating ? (
+                              <>
+                                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Recalcul...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <span>Recalculer</span>
+                              </>
+                            )}
+                          </button>
+
+                          {originalCalculationResult && (
+                            <button
+                              onClick={resetCalculationEditing}
+                              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                              <span>Version originale</span>
+                            </button>
+                          )}
+
+                          <button
+                            onClick={saveCalculationToDatabase}
+                            disabled={recalculating}
+                            className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                          >
+                            {recalculating ? (
+                              <>
+                                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Sauvegarde...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <span>Sauvegarder le calcul</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Résumé financier */}
@@ -3772,19 +4005,31 @@ export default function QuoteDetailPage() {
                     <button
                       type="button"
                       onClick={() => handleSubmit("DRAFT")}
-                      disabled={loading}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={savingDraft || updatingQuote}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                     >
-                      {loading ? "Sauvegarde..." : "Sauvegarder brouillon"}
+                      {savingDraft && (
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                      {savingDraft ? "Sauvegarde..." : "Sauvegarder brouillon"}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleSubmit("INCOMPLETE")}
-                      disabled={loading}
-                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={savingDraft || updatingQuote}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                     >
-                      {loading ? "Mise à jour..." : "Mettre à jour le devis"}
+                      {updatingQuote && (
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      )}
+                      {updatingQuote ? "Mise à jour..." : "Mettre à jour le devis"}
                     </button>
                   </div>
                 </div>
@@ -3793,6 +4038,75 @@ export default function QuoteDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Notification Toast */}
+      {notification.show && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm w-full">
+          <div className={`rounded-lg shadow-lg border p-4 ${
+            notification.type === 'success'
+              ? 'bg-green-50 border-green-200'
+              : notification.type === 'error'
+              ? 'bg-red-50 border-red-200'
+              : 'bg-blue-50 border-blue-200'
+          } animate-in slide-in-from-right duration-300`}>
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                {notification.type === 'success' && (
+                  <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                )}
+                {notification.type === 'error' && (
+                  <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                  </svg>
+                )}
+                {notification.type === 'info' && (
+                  <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                  </svg>
+                )}
+              </div>
+              <div className="ml-3 w-0 flex-1">
+                <h3 className={`text-sm font-medium ${
+                  notification.type === 'success'
+                    ? 'text-green-800'
+                    : notification.type === 'error'
+                    ? 'text-red-800'
+                    : 'text-blue-800'
+                }`}>
+                  {notification.title}
+                </h3>
+                <p className={`mt-1 text-sm ${
+                  notification.type === 'success'
+                    ? 'text-green-700'
+                    : notification.type === 'error'
+                    ? 'text-red-700'
+                    : 'text-blue-700'
+                }`}>
+                  {notification.message}
+                </p>
+              </div>
+              <div className="ml-4 flex-shrink-0 flex">
+                <button
+                  onClick={() => setNotification(prev => ({ ...prev, show: false }))}
+                  className={`rounded-md inline-flex ${
+                    notification.type === 'success'
+                      ? 'text-green-400 hover:text-green-500'
+                      : notification.type === 'error'
+                      ? 'text-red-400 hover:text-red-500'
+                      : 'text-blue-400 hover:text-blue-500'
+                  } focus:outline-none`}
+                >
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Popup de modification des calculs */}
       {showModificationPopup && (

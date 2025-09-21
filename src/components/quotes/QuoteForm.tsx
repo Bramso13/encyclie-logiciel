@@ -7,13 +7,6 @@ import MultiSelect from "./MultiSelect";
 import ActivityBreakdownField from "./ActivityBreakdown";
 import LossHistoryField from "./LossHistoryField";
 
-
-
-
-
-
-
-
 interface QuoteFormProps {
   onSuccess?: (quote: any) => void;
   onCancel?: () => void;
@@ -46,6 +39,9 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     if (selectedProductId) {
       const product = activeProducts.find((p) => p.id === selectedProductId);
       setSelectedProduct(product);
+      if (product) {
+        console.log("formData useEffect validate", product?.formFields);
+      }
       // Reset form data and steps when product changes
       setFormData({});
       setCurrentStep(0);
@@ -72,7 +68,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    console.log("formData", formData);
+    console.log("formData validateForm", formData);
 
     // Validate product selection
     if (!selectedProductId) {
@@ -219,14 +215,100 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
 
     // Validate fields for current step
     if (currentStepConfig.fields) {
+      console.log("currentStepConfig.fields", currentStepConfig.fields);
       currentStepConfig.fields.forEach((fieldName: string) => {
+        console.log("fieldName", fieldName);
         const fieldConfig = selectedProduct?.formFields?.[fieldName];
+        console.log("fieldConfig", fieldConfig);
         if (fieldConfig?.required && !formData[fieldName]) {
           newErrors[fieldName] = `${fieldConfig.label || fieldName} est requis`;
         }
 
         // Validate specific field types for current step
         if (formData[fieldName] && fieldConfig) {
+          // Validate territory
+          if (fieldName === "territory") {
+            if ((formData[fieldName] as string).toLowerCase() === "mayotte") {
+              newErrors[
+                fieldName
+              ] = `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
+            }
+          }
+          if (fieldConfig.type === "date") {
+            // Ici, on vérifie que la date saisie est bien comprise entre aujourd'hui - min jours et aujourd'hui + max jours.
+            // Si min ou max vaut -1, on ne prend pas la contrainte en compte.
+            if (formData[fieldName]) {
+              const valeurDate = new Date(formData[fieldName]);
+              const aujourdHui = new Date();
+              aujourdHui.setHours(0, 0, 0, 0);
+
+              // Calcul des bornes min et max si elles existent et sont différentes de -1
+              let dateMin: Date | null = null;
+              let dateMax: Date | null = null;
+
+              if (
+                typeof fieldConfig.min === "number" &&
+                fieldConfig.min !== -1
+              ) {
+                dateMin = new Date(aujourdHui);
+                dateMin.setDate(aujourdHui.getDate() - fieldConfig.min);
+              }
+              if (
+                typeof fieldConfig.max === "number" &&
+                fieldConfig.max !== -1
+              ) {
+                dateMax = new Date(aujourdHui);
+                dateMax.setDate(aujourdHui.getDate() + fieldConfig.max);
+              }
+
+              if (dateMin && valeurDate < dateMin) {
+                newErrors[fieldName] = `${
+                  fieldConfig.label || fieldName
+                } doit être postérieur au ${dateMin.toLocaleDateString()}`;
+              }
+              if (dateMax && valeurDate > dateMax) {
+                newErrors[fieldName] = `${
+                  fieldConfig.label || fieldName
+                } doit être antérieur au ${dateMax.toLocaleDateString()}`;
+              }
+            }
+          }
+          // Validate number
+          if (fieldConfig.type === "number") {
+            if (formData[fieldName] < fieldConfig.min) {
+              newErrors[fieldName] = `${
+                fieldConfig.label || fieldName
+              } doit être supérieur à ${fieldConfig.min}`;
+            }
+            if (formData[fieldName] > fieldConfig.max) {
+              newErrors[fieldName] = `${
+                fieldConfig.label || fieldName
+              } doit être inférieur à ${fieldConfig.max}`;
+            }
+          }
+
+          // Validate date
+          if (
+            formData[fieldName].type === "date" &&
+            formData[fieldName].min &&
+            formData[fieldName].max
+          ) {
+            // On vérifie les dates en utilisant des objets Date, car min et max sont des chaînes ISO
+            const valueDate = new Date(formData[fieldName].value);
+            const minDate = new Date(formData[fieldName].min);
+            const maxDate = new Date(formData[fieldName].max);
+
+            if (valueDate < minDate) {
+              newErrors[fieldName] = `${
+                fieldConfig.label || fieldName
+              } doit être postérieur au ${formData[fieldName].min}`;
+            }
+            if (valueDate > maxDate) {
+              newErrors[fieldName] = `${
+                fieldConfig.label || fieldName
+              } doit être antérieur au ${formData[fieldName].max}`;
+            }
+          }
           // Validate activity_breakdown
           if (fieldConfig.type === "activity_breakdown") {
             const activities = formData[fieldName] as Array<{

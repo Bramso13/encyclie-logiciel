@@ -78,13 +78,6 @@ interface FieldDraft {
   options?: Array<{ label: string; value: string; defaillant?: boolean }>;
 }
 
-interface DateConstraint {
-  type: 'relative' | 'absolute';
-  value?: string; // Pour les dates absolues
-  period?: number; // Pour les périodes relatives
-  unit?: 'days' | 'weeks' | 'months' | 'years'; // Pour les périodes relatives
-  direction?: 'before' | 'after'; // Pour les périodes relatives
-}
 
 interface ProductConfigTabProps {
   products: any[];
@@ -332,19 +325,6 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
     defaillant: false,
   });
 
-  const [newDateConstraint, setNewDateConstraint] = useState<DateConstraint>({
-    type: 'relative',
-    period: 1,
-    unit: 'months',
-    direction: 'before'
-  });
-
-  const [editDateConstraint, setEditDateConstraint] = useState<DateConstraint>({
-    type: 'relative',
-    period: 1,
-    unit: 'months',
-    direction: 'before'
-  });
 
   // États pour le test en direct de calculPrimeRCD
   const [testParams, setTestParams] = useState({
@@ -440,6 +420,8 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
 
   const handleSaveFormFields = async () => {
     if (!selectedProduct) return;
+
+    console.log("formFields", formFields);
     
     try {
       const response = await fetch(`/api/products/${selectedProduct}`, {
@@ -1382,113 +1364,36 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
                   </div>
                 )}
 
-                {/* Contraintes de date */}
+                {/* Contraintes de date simplifiées */}
                 {newField.type === "date" && (
-                  <div className="space-y-4">
-                    <div className="text-sm font-medium text-gray-700">Contraintes de date</div>
-                    
-                    {/* Contrainte min */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Date minimum</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={newDateConstraint.type}
-                          onChange={(e) => setNewDateConstraint(prev => ({ ...prev, type: e.target.value as 'relative' | 'absolute' }))}
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                        >
-                          <option value="relative">Période relative</option>
-                          <option value="absolute">Date fixe</option>
-                        </select>
-                        
-                        {newDateConstraint.type === 'relative' ? (
-                          <>
-                            <input
-                              type="number"
-                              min="1"
-                              value={newDateConstraint.period || 1}
-                              onChange={(e) => setNewDateConstraint(prev => ({ ...prev, period: Number(e.target.value) }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm w-20"
-                            />
-                            <select
-                              value={newDateConstraint.unit}
-                              onChange={(e) => setNewDateConstraint(prev => ({ ...prev, unit: e.target.value as 'days' | 'weeks' | 'months' | 'years' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="days">Jours</option>
-                              <option value="weeks">Semaines</option>
-                              <option value="months">Mois</option>
-                              <option value="years">Années</option>
-                            </select>
-                            <select
-                              value={newDateConstraint.direction}
-                              onChange={(e) => setNewDateConstraint(prev => ({ ...prev, direction: e.target.value as 'before' | 'after' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="before">Avant</option>
-                              <option value="after">Après</option>
-                            </select>
-                          </>
-                        ) : (
-                          <input
-                            type="date"
-                            value={newDateConstraint.value || ""}
-                            onChange={(e) => setNewDateConstraint(prev => ({ ...prev, value: e.target.value }))}
-                            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                          />
-                        )}
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Jours avant aujourd'hui (min)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newField.min || ""}
+                        onChange={(e) => setNewField(prev => ({
+                          ...prev,
+                          min: e.target.value ? Number(e.target.value) : undefined
+                        }))}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        placeholder="ex: 30 pour 30 jours avant"
+                      />
                     </div>
-
-                    {/* Contrainte max */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Date maximum</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={newDateConstraint.type}
-                          onChange={(e) => setNewDateConstraint(prev => ({ ...prev, type: e.target.value as 'relative' | 'absolute' }))}
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                        >
-                          <option value="relative">Période relative</option>
-                          <option value="absolute">Date fixe</option>
-                        </select>
-                        
-                        {newDateConstraint.type === 'relative' ? (
-                          <>
-                            <input
-                              type="number"
-                              min="1"
-                              value={newDateConstraint.period || 1}
-                              onChange={(e) => setNewDateConstraint(prev => ({ ...prev, period: Number(e.target.value) }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm w-20"
-                            />
-                            <select
-                              value={newDateConstraint.unit}
-                              onChange={(e) => setNewDateConstraint(prev => ({ ...prev, unit: e.target.value as 'days' | 'weeks' | 'months' | 'years' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="days">Jours</option>
-                              <option value="weeks">Semaines</option>
-                              <option value="months">Mois</option>
-                              <option value="years">Années</option>
-                            </select>
-                            <select
-                              value={newDateConstraint.direction}
-                              onChange={(e) => setNewDateConstraint(prev => ({ ...prev, direction: e.target.value as 'before' | 'after' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="before">Avant</option>
-                              <option value="after">Après</option>
-                            </select>
-                          </>
-                        ) : (
-                          <input
-                            type="date"
-                            value={newDateConstraint.value || ""}
-                            onChange={(e) => setNewDateConstraint(prev => ({ ...prev, value: e.target.value }))}
-                            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                          />
-                        )}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Jours après aujourd'hui (max)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newField.max || ""}
+                        onChange={(e) => setNewField(prev => ({
+                          ...prev,
+                          max: e.target.value ? Number(e.target.value) : undefined
+                        }))}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        placeholder="ex: 365 pour 1 an après"
+                      />
                     </div>
                   </div>
                 )}
@@ -1743,113 +1648,36 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
                   </div>
                 )}
 
-                {/* Contraintes de date */}
+                {/* Contraintes de date simplifiées */}
                 {editingFieldData.type === "date" && (
-                  <div className="space-y-4">
-                    <div className="text-sm font-medium text-gray-700">Contraintes de date</div>
-                    
-                    {/* Contrainte min */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Date minimum</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={editDateConstraint.type}
-                          onChange={(e) => setEditDateConstraint(prev => ({ ...prev, type: e.target.value as 'relative' | 'absolute' }))}
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                        >
-                          <option value="relative">Période relative</option>
-                          <option value="absolute">Date fixe</option>
-                        </select>
-                        
-                        {editDateConstraint.type === 'relative' ? (
-                          <>
-                            <input
-                              type="number"
-                              min="1"
-                              value={editDateConstraint.period || 1}
-                              onChange={(e) => setEditDateConstraint(prev => ({ ...prev, period: Number(e.target.value) }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm w-20"
-                            />
-                            <select
-                              value={editDateConstraint.unit}
-                              onChange={(e) => setEditDateConstraint(prev => ({ ...prev, unit: e.target.value as 'days' | 'weeks' | 'months' | 'years' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="days">Jours</option>
-                              <option value="weeks">Semaines</option>
-                              <option value="months">Mois</option>
-                              <option value="years">Années</option>
-                            </select>
-                            <select
-                              value={editDateConstraint.direction}
-                              onChange={(e) => setEditDateConstraint(prev => ({ ...prev, direction: e.target.value as 'before' | 'after' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="before">Avant</option>
-                              <option value="after">Après</option>
-                            </select>
-                          </>
-                        ) : (
-                          <input
-                            type="date"
-                            value={editDateConstraint.value || ""}
-                            onChange={(e) => setEditDateConstraint(prev => ({ ...prev, value: e.target.value }))}
-                            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                          />
-                        )}
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Jours avant aujourd'hui (min)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editingFieldData.min || ""}
+                        onChange={(e) => setEditingFieldData(prev => ({
+                          ...prev,
+                          min: e.target.value ? Number(e.target.value) : undefined
+                        }))}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        placeholder="ex: 30 pour 30 jours avant"
+                      />
                     </div>
-
-                    {/* Contrainte max */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Date maximum</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={editDateConstraint.type}
-                          onChange={(e) => setEditDateConstraint(prev => ({ ...prev, type: e.target.value as 'relative' | 'absolute' }))}
-                          className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                        >
-                          <option value="relative">Période relative</option>
-                          <option value="absolute">Date fixe</option>
-                        </select>
-                        
-                        {editDateConstraint.type === 'relative' ? (
-                          <>
-                            <input
-                              type="number"
-                              min="1"
-                              value={editDateConstraint.period || 1}
-                              onChange={(e) => setEditDateConstraint(prev => ({ ...prev, period: Number(e.target.value) }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm w-20"
-                            />
-                            <select
-                              value={editDateConstraint.unit}
-                              onChange={(e) => setEditDateConstraint(prev => ({ ...prev, unit: e.target.value as 'days' | 'weeks' | 'months' | 'years' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="days">Jours</option>
-                              <option value="weeks">Semaines</option>
-                              <option value="months">Mois</option>
-                              <option value="years">Années</option>
-                            </select>
-                            <select
-                              value={editDateConstraint.direction}
-                              onChange={(e) => setEditDateConstraint(prev => ({ ...prev, direction: e.target.value as 'before' | 'after' }))}
-                              className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                            >
-                              <option value="before">Avant</option>
-                              <option value="after">Après</option>
-                            </select>
-                          </>
-                        ) : (
-                          <input
-                            type="date"
-                            value={editDateConstraint.value || ""}
-                            onChange={(e) => setEditDateConstraint(prev => ({ ...prev, value: e.target.value }))}
-                            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                          />
-                        )}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Jours après aujourd'hui (max)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editingFieldData.max || ""}
+                        onChange={(e) => setEditingFieldData(prev => ({
+                          ...prev,
+                          max: e.target.value ? Number(e.target.value) : undefined
+                        }))}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        placeholder="ex: 365 pour 1 an après"
+                      />
                     </div>
                   </div>
                 )}
