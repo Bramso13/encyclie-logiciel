@@ -115,7 +115,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate unique reference
-      const reference = generateReference(product.code === "RC_DECENNALE" ? "RCD" : "RCP");
+      const reference = generateReference(
+        product.code === "RC_DECENNALE" ? "RCD" : "RCP"
+      );
 
       // Create quote
       const quote = await prisma.quote.create({
@@ -136,7 +138,7 @@ export async function POST(request: NextRequest) {
           },
         },
       });
-
+      // Test
       return createApiResponse(
         quote,
         "Demande de devis créée avec succès",
