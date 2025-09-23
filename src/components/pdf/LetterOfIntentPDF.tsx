@@ -168,8 +168,7 @@ interface LetterOfIntentPDFProps {
 }
 
 const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculationResult }) => {
-  const currentDate = new Date().toLocaleDateString('fr-FR');
-  const currentTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  
 
   // Fonction pour déterminer quelle case d'expérience cocher
   const getExperienceCheckbox = (experienceValue: string) => {
@@ -210,6 +209,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({ quote, calculatio
   };
 
   function financial(x: number) {
+    if (x === undefined || x === null) return "";
     return x.toFixed(2);
   }
 

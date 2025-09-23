@@ -1661,7 +1661,7 @@ export function calculPrimeRCD(params: {
     dateEffet,
     sansActiviteDepuisPlusDe12MoisSansFermeture,
     absenceDeSinistreSurLes5DernieresAnnees,
-    protectionJuridique,
+
     fractionnementPrime,
     protectionJuridique1an = 106.0,
     txFraisGestion = 0.1,

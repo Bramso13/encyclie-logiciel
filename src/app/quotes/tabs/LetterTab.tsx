@@ -448,10 +448,10 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                         <div className="space-y-6">
                     {/* Échéancier détaillé */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                        <h3 className="text-base font-semibold text-gray-900 flex items-center">
                           <svg
-                            className="w-5 h-5 mr-2 text-emerald-600"
+                            className="w-4 h-4 mr-2 text-emerald-600"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -466,40 +466,39 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                           Échéancier de paiement détaillé
                         </h3>
                       </div>
-                      <div className="p-6">
+                      <div className="p-3">
                         <div className="overflow-x-auto">
-                          <table className="w-full">
+                          <table className="w-full text-xs">
                             <thead>
                               <tr className="bg-gray-50">
-                                
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-left font-medium text-gray-500">
                                   Début période
                                 </th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-left font-medium text-gray-500">
                                   Fin période
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   RCD HT
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   PJ HT
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   Frais HT
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   Frais Gestion HT
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   Reprise HT
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   Total HT
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   Taxe
                                 </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                <th className="px-2 py-1 text-right font-medium text-gray-500">
                                   Total TTC
                                 </th>
                               </tr>
@@ -513,57 +512,35 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                 )
                                 .map((echeance: any, index: number) => (
                                   <tr key={index} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                    <td className="px-2 py-1 font-medium text-gray-900">
                                       {echeance.date}
                                     </td>
-                                    
-                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                    <td className="px-2 py-1 text-gray-600">
                                       {echeance.finPeriode}
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.rcd?.toLocaleString("fr-FR") ||
-                                        "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 text-gray-600 text-right">
+                                      {echeance.rcd?.toLocaleString("fr-FR") || "0"} €
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.pj?.toLocaleString("fr-FR") ||
-                                        "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 text-gray-600 text-right">
+                                      {echeance.pj?.toLocaleString("fr-FR") || "0"} €
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.frais?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 text-gray-600 text-right">
+                                      {echeance.frais?.toLocaleString("fr-FR") || "0"} €
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.fraisGestion?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 text-gray-600 text-right">
+                                      {echeance.fraisGestion?.toLocaleString("fr-FR") || "0"} €
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.reprise?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 text-gray-600 text-right">
+                                      {echeance.reprise?.toLocaleString("fr-FR") || "0"} €
                                     </td>
-                                    <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                                      {echeance.totalHT?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 font-medium text-gray-900 text-right">
+                                      {echeance.totalHT?.toLocaleString("fr-FR") || "0"} €
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-orange-600 text-right">
-                                      {echeance.taxe?.toLocaleString("fr-FR") ||
-                                        "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 text-orange-600 text-right">
+                                      {echeance.taxe?.toLocaleString("fr-FR") || "0"} €
                                     </td>
-                                    <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
-                                      {echeance.totalTTC?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
+                                    <td className="px-2 py-1 font-bold text-indigo-600 text-right">
+                                      {echeance.totalTTC?.toLocaleString("fr-FR") || "0"} €
                                     </td>
                                   </tr>
                                 ))}
@@ -572,12 +549,12 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                             <tfoot>
                               <tr className="bg-gray-100 font-semibold">
                                 <td
-                                  className="px-4 py-3 text-sm font-medium text-gray-900"
+                                  className="px-2 py-1 font-medium text-gray-900"
                                   colSpan={2}
                                 >
                                   TOTAUX
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                <td className="px-2 py-1 text-gray-900 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -589,10 +566,9 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.rcd || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                <td className="px-2 py-1 text-gray-900 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -604,10 +580,9 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.pj || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                <td className="px-2 py-1 text-gray-900 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -619,10 +594,9 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.frais || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                <td className="px-2 py-1 text-gray-900 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -634,10 +608,9 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.fraisGestion || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                <td className="px-2 py-1 text-gray-900 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -649,10 +622,9 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.reprise || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                                <td className="px-2 py-1 text-gray-900 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -664,10 +636,9 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.totalHT || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-orange-600 text-right">
+                                <td className="px-2 py-1 text-orange-600 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -679,10 +650,9 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.taxe || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
-                                <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
+                                <td className="px-2 py-1 font-bold text-indigo-600 text-right">
                                   {calculationResult.echeancier.echeances
                                     .filter(
                                       (echeance: any) =>
@@ -694,8 +664,7 @@ export default function LetterTab({ quote, calculationResult, session }: { quote
                                         sum + (echeance.totalTTC || 0),
                                       0
                                     )
-                                    .toLocaleString("fr-FR")}{" "}
-                                  €
+                                    .toLocaleString("fr-FR")} €
                                 </td>
                               </tr>
                             </tfoot>

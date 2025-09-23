@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { pdf } from '@react-pdf/renderer';
-import React from 'react';
-import LetterOfIntentPDF from '@/components/pdf/LetterOfIntentPDF';
-import PremiumCallPDF from '@/components/pdf/PremiumCallPDF';
+import { NextRequest, NextResponse } from "next/server";
+import { pdf } from "@react-pdf/renderer";
+import React from "react";
+import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
+import PremiumCallPDF from "@/components/pdf/PremiumCallPDF";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     if (!type || !quote) {
       return NextResponse.json(
-        { success: false, error: 'Type et quote requis' },
+        { success: false, error: "Type et quote requis" },
         { status: 400 }
       );
     }
@@ -19,17 +19,23 @@ export async function POST(request: NextRequest) {
     let filename: string;
 
     switch (type) {
-      case 'letter-of-intent':
-        pdfDocument = React.createElement(LetterOfIntentPDF, { quote, calculationResult });
-        filename = `lettre-intention-${quote.reference || 'devis'}.pdf`;
+      case "letter-of-intent":
+        pdfDocument = React.createElement(LetterOfIntentPDF, {
+          quote,
+          calculationResult,
+        });
+        filename = `lettre-intention-${quote.reference || "devis"}.pdf`;
         break;
-      case 'premium-call':
-        pdfDocument = React.createElement(PremiumCallPDF, { quote, calculationResult });
-        filename = `appel-prime-${quote.reference || 'devis'}.pdf`;
+      case "premium-call":
+        pdfDocument = React.createElement(PremiumCallPDF, {
+          quote,
+          calculationResult,
+        });
+        filename = `appel-prime-${quote.reference || "devis"}.pdf`;
         break;
       default:
         return NextResponse.json(
-          { success: false, error: 'Type de document non supporté' },
+          { success: false, error: "Type de document non supporté" },
           { status: 400 }
         );
     }
@@ -42,15 +48,15 @@ export async function POST(request: NextRequest) {
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': pdfBuffer.length.toString(),
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Length": pdfBuffer.length.toString(),
       },
     });
   } catch (error) {
-    console.error('Erreur génération PDF:', error);
+    console.error("Erreur génération PDF:", error);
     return NextResponse.json(
-      { success: false, error: 'Erreur lors de la génération du PDF' },
+      { success: false, error: "Erreur lors de la génération du PDF" },
       { status: 500 }
     );
   }

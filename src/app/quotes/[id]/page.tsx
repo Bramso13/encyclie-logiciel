@@ -20,10 +20,14 @@ import FormDataTab from "../tabs/FormDataTab";
 import { CalculationResult, Quote } from "@/lib/types";
 import CalculationTab from "../tabs/CalculationTab";
 import LetterTab from "../tabs/LetterTab";
-import PremiumCallTab from "../tabs/PremiumCallTab";
+
 import ModificationForm from "../components/forms/ModificationForm";
-import { MessageCircle } from "lucide-react";
+import { Calendar, MessageCircle } from "lucide-react";
 import ChatTab from "../tabs/ChatTab";
+
+import PaymentTrackingTab from "../tabs/PremiumCallTab";
+import PieceJointeTab from "../tabs/PieceJointeTab";
+import { calculateWithMapping } from "@/lib/utils";
 
 
 export default function QuoteDetailPage() {
@@ -170,27 +174,15 @@ export default function QuoteDetailPage() {
       ),
     },
     {
-      id: "premium-call",
-      label: "Appel de prime",
+      id: "echeancier",
+      label: "Echeancier",
       icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-          />
-        </svg>
+        <Calendar className="w-5 h-5" />
       ),
     },
     {
-      id: "edit",
-      label: "Édition",
+      id: "piece-jointe",
+      label: "Pièce jointe",
       icon: (
         <svg
           className="w-5 h-5"
@@ -239,203 +231,7 @@ export default function QuoteDetailPage() {
     }
   };
 
-  // Fonction de calcul dynamique basée sur le mapping
-  const calculateWithMapping = (quoteData: any) => {
-    try {
-      console.log("=== CALCUL DYNAMIQUE AVEC MAPPING ===");
-      console.log("FormData:", quoteData.formData);
-      console.log("CompanyData:", quoteData.companyData);
-      console.log("ParameterMapping:", parameterMapping);
-      console.log("FormFields:", formFields);
-
-      // Construire les paramètres à partir du mapping
-      const mappedParams: any = {};
-
-      Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
-        console.log("paramKeyyyy", paramKey);
-        if (
-          fieldKey &&
-          (formFields[fieldKey] || quoteData.formData[paramKey])
-        ) {
-          console.log("paramKeyyyyy", paramKey);
-
-          const field = formFields[fieldKey];
-          const value = quoteData.formData[fieldKey] || field.default;
-
-          // Conversion selon le type de champ et le paramètre
-          switch (paramKey) {
-            case "nonFournitureBilanN_1":
-              console.log("value", value, "paramKey", paramKey);
-              mappedParams[paramKey] = Boolean(value);
-
-              break;
-            case "territory":
-              if (field.type === "select") {
-                mappedParams[paramKey] = value || "";
-              }
-              mappedParams.taxeAssurance = getTaxeByRegion(value);
-              break;
-            case "directorName":
-              if (field.type === "text" || field.type === "select") {
-                mappedParams[paramKey] = value || "";
-              }
-              break;
-            case "reprisePasse":
-              if (field.type === "checkbox") {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-            case "enCreation":
-              if (field.type === "checkbox") {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-            case "caDeclared":
-            case "etp":
-            case "anneeExperience":
-            case "nombreAnneeAssuranceContinue":
-            case "partSoutraitance":
-            case "partNegoce":
-              if (field.type === "number") {
-                mappedParams[paramKey] = Number(value) || 0;
-              }
-              break;
-
-            case "dateCreation":
-            case "dateEffet":
-              if (field.type === "date") {
-                mappedParams[paramKey] = value ? new Date(value) : new Date();
-              }
-              break;
-
-            case "tempsSansActivite":
-            case "sansActiviteDepuisPlusDe12MoisSansFermeture":
-            case "absenceDeSinistreSurLes5DernieresAnnees":
-            case "fractionnementPrime":
-              mappedParams[paramKey] = value;
-              break;
-
-            case "qualif":
-            case "assureurDefaillant":
-            case "protectionJuridique":
-
-            case "reprisePasse":
-              if (field.type === "checkbox") {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-
-            case "nomDeLAsurreur":
-              if (field.type === "text" || field.type === "select") {
-                mappedParams[paramKey] = value || "";
-              }
-              break;
-
-            case "dateFinCouverturePrecedente":
-              if (field.type === "date") {
-                mappedParams[paramKey] = value ? new Date(value) : new Date();
-              }
-              break;
-
-            case "activites":
-              // Pour les activités, utiliser les données du formulaire
-              if (
-                quoteData.formData.activities &&
-                Array.isArray(quoteData.formData.activities)
-              ) {
-                mappedParams[paramKey] = quoteData.formData.activities.map(
-                  (a: any) => ({
-                    code: parseInt(a.code),
-                    caSharePercent: Number(a.caSharePercent),
-                  })
-                );
-              } else {
-                mappedParams[paramKey] = [];
-              }
-              break;
-
-            case "sinistresPrecedents":
-              // Pour les sinistres, utiliser les données du formulaire
-              mappedParams[paramKey] = quoteData.formData.lossHistory || [];
-              break;
-            case "assureurDefaillant":
-              if (field.type === "checkbox") {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-            case "qualif":
-              if (field.type === "checkbox") {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-          }
-        }
-      });
-
-      // Vérifier que tous les paramètres obligatoires sont présents
-      const requiredParams = ["caDeclared", "etp", "activites"];
-      const missingParams = requiredParams.filter(
-        (param) => !mappedParams[param]
-      );
-
-      if (missingParams.length > 0) {
-        throw new Error(
-          `Paramètres obligatoires manquants : ${missingParams.join(", ")}`
-        );
-      }
-
-      console.log("Paramètres mappés:", mappedParams);
-
-      // Utiliser les valeurs par défaut pour les paramètres non mappés
-      const finalParams = {
-        // Valeurs par défaut
-        caDeclared: 500000,
-        etp: 3,
-        activites: [],
-        dateCreation: new Date(),
-        tempsSansActivite: "NON" as any,
-        anneeExperience: 5,
-        assureurDefaillant: false,
-        nombreAnneeAssuranceContinue: 3,
-        qualif: false,
-        nomDeLAsurreur: "AXA",
-        dateEffet: new Date(),
-        sinistresPrecedents: [],
-        sansActiviteDepuisPlusDe12MoisSansFermeture: "NON" as
-          | "OUI"
-          | "NON"
-          | "CREATION",
-        absenceDeSinistreSurLes5DernieresAnnees: "OUI" as
-          | "OUI"
-          | "NON"
-          | "CREATION"
-          | "ASSUREUR_DEFAILLANT"
-          | "A_DEFINIR",
-        protectionJuridique: true,
-        fractionnementPrime: "annuel" as
-          | "annuel"
-          | "mensuel"
-          | "trimestriel"
-          | "semestriel",
-        partSoutraitance: 0,
-        partNegoce: 0,
-        nonFournitureBilanN_1: false,
-        reprisePasse: false,
-        taxeAssurance: getTaxeByRegion(quoteData.formData.territory),
-        // Remplacer par les valeurs mappées
-        ...mappedParams,
-      };
-
-      console.log("Paramètres finaux:", finalParams);
-
-      const result = calculPrimeRCD(finalParams);
-      console.log("Résultat calcul:", result);
-      return result;
-    } catch (error) {
-      console.error("Erreur calcul dynamique:", error);
-      throw error;
-    }
-  };
+  
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -470,7 +266,7 @@ export default function QuoteDetailPage() {
                 return;
               }
 
-              const result = calculateWithMapping(data);
+              const result = calculateWithMapping(data, parameterMapping, formFields);
               setCalculationResult(result);
               setCalculationError(null);
             } catch (error) {
@@ -537,7 +333,7 @@ export default function QuoteDetailPage() {
 
         // Si pas de calculatedPremium en DB, faire le calcul
         console.log("Calcul");
-        const result = calculateWithMapping(quote);
+        const result = calculateWithMapping(quote, parameterMapping, formFields);
         setCalculationResult(result);
         setCalculationError(null);
       } catch (error) {
@@ -560,7 +356,7 @@ export default function QuoteDetailPage() {
 
     try {
       console.log("Recalcul côté client");
-      const result = calculateWithMapping(quote);
+      const result = calculateWithMapping(quote, parameterMapping, formFields);
       setCalculationResult(result);
     } catch (error) {
       console.error("Erreur recalcul:", error);
@@ -589,7 +385,7 @@ export default function QuoteDetailPage() {
           },
         };
         try {
-          const result = calculateWithMapping(modifiedQuote);
+          const result = calculateWithMapping(modifiedQuote, parameterMapping, formFields);
           setCalculationResult(result);
         } catch (error) {
           console.error("Erreur recalcul automatique:", error);
@@ -613,7 +409,7 @@ export default function QuoteDetailPage() {
         };
         console.log("modifiedQuote", modifiedQuote);
         try {
-          const result = calculateWithMapping(modifiedQuote);
+          const result = calculateWithMapping(modifiedQuote, parameterMapping, formFields);
           setCalculationResult(result);
         } catch (error) {
           console.error("Erreur recalcul automatique:", error);
@@ -847,12 +643,15 @@ export default function QuoteDetailPage() {
           <LetterTab quote={quote} calculationResult={calculationResult} session={session} />
         )}
 
-        {activeTab === "premium-call" && (
-          <PremiumCallTab quote={quote} calculationResult={calculationResult} />
+        {activeTab === "echeancier" && (
+          <PaymentTrackingTab quote={quote} calculationResult={calculationResult} />
         )}
 
         {activeTab === "chat" && (
           <ChatTab quote={quote} />
+        )}
+        {activeTab === "piece-jointe" && (
+          <PieceJointeTab quote={quote} />
         )}
           
       </div>

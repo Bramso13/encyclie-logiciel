@@ -59,6 +59,13 @@ model User {
   stepMessages  StepMessage[]
   stepTemplates StepTemplate[]
 
+  // Payment validation relations
+  validatedPayments PaymentInstallment[] @relation("PaymentValidator")
+  validatedTransactions PaymentTransaction[] @relation("TransactionValidator")
+
+  // Document request relations
+  requestedDocuments DocumentRequest[] @relation("RequestedDocuments")
+
   @@map("users")
 }
 
@@ -351,12 +358,16 @@ model Quote {
   documents QuoteDocument[]
   contract  InsuranceContract?
   workflowSteps WorkflowStep[]
+  paymentSchedule PaymentSchedule?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Chat messages for this quote
   quoteMessages QuoteMessage[]
+
+  // Additional document requests from admin
+  documentRequests DocumentRequest[]
 
   @@map("quotes")
 }
@@ -473,6 +484,9 @@ model QuoteDocument {
 
   uploadedAt DateTime @default(now())
 
+  // Document request relations
+  fulfillsRequests DocumentRequest[] @relation("FulfillsRequest")
+
   @@map("quote_documents")
 }
 
@@ -492,6 +506,37 @@ model ContractDocument {
   uploadedAt DateTime @default(now())
 
   @@map("contract_documents")
+}
+
+// Document requests for additional documents beyond product requirements
+model DocumentRequest {
+  id          String @id @default(cuid())
+  quoteId     String @map("quote_id")
+  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  // Document request details
+  documentType String // Type de document demandé
+  description  String? // Description optionnelle de ce qui est attendu
+  isRequired   Boolean @default(true)
+
+  // Who requested it
+  requestedById String @map("requested_by_id")
+  requestedBy   User   @relation("RequestedDocuments", fields: [requestedById], references: [id])
+  requestedAt   DateTime @default(now())
+
+  // Status
+  isFulfilled Boolean @default(false)
+  fulfilledAt DateTime?
+
+  // Which document fulfilled this request (optional)
+  fulfilledByDocumentId String? @map("fulfilled_by_document_id")
+  fulfilledByDocument   QuoteDocument? @relation("FulfillsRequest", fields: [fulfilledByDocumentId], references: [id])
+
+  // Notes
+  adminNotes   String? // Notes de l'admin
+  brokerNotes  String? // Réponse du broker
+
+  @@map("document_requests")
 }
 
 // Commission tracking
@@ -739,4 +784,136 @@ model StepTemplate {
   updatedAt   DateTime @updatedAt
   
   @@map("step_templates")
+}
+
+// Payment Schedule System Models
+
+enum PaymentScheduleStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  PARTIALLY_PAID
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  BANK_TRANSFER
+  CARD
+  SEPA_DEBIT
+  OTHER
+}
+
+// Échéancier principal d'un devis
+model PaymentSchedule {
+  id        String @id @default(cuid())
+  quoteId   String @unique @map("quote_id")
+  quote     Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  // Informations générales de l'échéancier
+  totalAmountHT  Float
+  totalTaxAmount Float
+  totalAmountTTC Float
+
+  // Période couverte
+  startDate DateTime
+  endDate   DateTime
+
+  // Statut global
+  status PaymentScheduleStatus @default(PENDING)
+
+  // Relations
+  payments PaymentInstallment[]
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_schedules")
+}
+
+// Échéances individuelles
+model PaymentInstallment {
+  id         String @id @default(cuid())
+  scheduleId String @map("schedule_id")
+  schedule   PaymentSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // Informations de l'échéance
+  installmentNumber Int // Numéro d'ordre (1, 2, 3...)
+  dueDate          DateTime
+
+  // Montants
+  amountHT  Float
+  taxAmount Float
+  amountTTC Float
+
+  // Détail des primes (comme dans calculationResult.echeancier.echeances)
+  rcdAmount     Float? // RC Décennale
+  pjAmount      Float? // Protection Juridique
+  feesAmount    Float? // Frais
+  resumeAmount  Float? // Reprise
+
+  // Période de validité des attestations
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Statut de paiement
+  status PaymentScheduleStatus @default(PENDING)
+
+  // Informations de paiement
+  paidAt     DateTime?
+  paidAmount Float?    @default(0)
+  paymentMethod PaymentMethod?
+  paymentReference String? // Référence du paiement (numéro de chèque, virement, etc.)
+
+  // Notes administratives
+  adminNotes String?
+  brokerNotes String?
+
+  // Qui a validé le paiement
+  validatedById String? @map("validated_by_id")
+  validatedBy   User?   @relation("PaymentValidator", fields: [validatedById], references: [id])
+  validatedAt   DateTime?
+
+  // Notifications
+  lastReminderSent DateTime?
+  reminderCount    Int @default(0)
+
+  // Relations
+  transactions PaymentTransaction[]
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_installments")
+}
+
+// Transactions de paiement (historique des paiements partiels ou multiples)
+model PaymentTransaction {
+  id            String @id @default(cuid())
+  installmentId String @map("installment_id")
+  installment   PaymentInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+
+  // Détails de la transaction
+  amount    Float
+  method    PaymentMethod
+  reference String? // Numéro de chèque, référence virement, etc.
+
+  // Validation
+  validatedById String? @map("validated_by_id")
+  validatedBy   User?   @relation("TransactionValidator", fields: [validatedById], references: [id])
+  validatedAt   DateTime?
+
+  // Notes
+  notes String?
+
+  // Documents justificatifs
+  proofDocumentPath String? // Chemin vers le justificatif de paiement
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_transactions")
 }

@@ -1,7 +1,10 @@
 "use client";
 
-import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
+import { useSession } from "@/lib/auth-client";
+import { pdf } from "@react-pdf/renderer";
 import { useState, useEffect } from "react";
+import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
+import { calculateWithMapping } from "@/lib/utils";
 
 interface QuoteSuccessPageProps {
   quote: {
@@ -32,13 +35,84 @@ export default function QuoteSuccessPage({
   const [calculatedPremium, setCalculatedPremium] = useState<number | null>(
     null
   );
+
   const [premiumDetails, setPremiumDetails] = useState<any>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
-  
+
   // États pour le mapping dynamique (identique à page.tsx)
-  const [parameterMapping, setParameterMapping] = useState<Record<string, string>>({});
+  const [parameterMapping, setParameterMapping] = useState<
+    Record<string, string>
+  >({});
   const [formFields, setFormFields] = useState<Record<string, any>>({});
   const [calculationResult, setCalculationResult] = useState<any>(null);
+  const { data: session } = useSession();
+  // Fonction pour envoyer automatiquement la lettre d'intention au courtier
+  const sendLetterOfIntentToBroker = async (
+    quote: any,
+    calculationResult?: any
+  ) => {
+    try {
+      if (!quote?.formData?.directorName || !session?.user?.email) {
+        console.log(
+          "Informations manquantes pour l'envoi de la lettre d'intention"
+        );
+        return;
+      }
+
+      const pdfLetter = (
+        <LetterOfIntentPDF
+          quote={quote}
+          calculationResult={calculationResult || null}
+        />
+      );
+      console.log("pdfLetter", pdfLetter);
+      if (pdfLetter) {
+        // Générer le PDF de la lettre d'intention
+        const pdfBlob = await pdf(pdfLetter).toBlob();
+
+        // Préparer les données pour l'API
+        const formData = new FormData();
+        formData.append("quoteId", quote.id);
+        formData.append("directorName", quote.formData.directorName);
+        formData.append(
+          "companyName",
+          quote.formData.companyName || quote.companyData.companyName
+        );
+        formData.append("clientEmail", session.user.email);
+        formData.append(
+          "pdf",
+          pdfBlob,
+          `lettre-intention-${quote.reference}.pdf`
+        );
+
+        const response = await fetch("/api/email/send-letter-intent", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          console.log("Lettre d'intention envoyée automatiquement au courtier");
+          // Optionnel : Afficher une notification discrète
+          // toast.success("Lettre d'intention envoyée par email");
+        } else {
+          console.error(
+            "Erreur lors de l'envoi automatique de la lettre d'intention"
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'envoi automatique de la lettre d'intention:",
+        error
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (quote && calculationResult) {
+      sendLetterOfIntentToBroker(quote, calculationResult);
+    }
+  }, [quote, calculationResult]);
 
   // Fonction pour charger le mapping et les formFields du produit (identique à page.tsx)
   const loadProductMapping = async (productId: string) => {
@@ -53,158 +127,7 @@ export default function QuoteSuccessPage({
         }
       }
     } catch (error) {
-      console.error('Erreur lors du chargement du mapping:', error);
-    }
-  };
-
-  // Fonction de calcul dynamique basée sur le mapping (identique à page.tsx)
-  const calculateWithMapping = (quoteData: any) => {
-    try {
-      console.log("=== CALCUL DYNAMIQUE AVEC MAPPING SUCCESS PAGE ===");
-      console.log("FormData:", quoteData.formData);
-      console.log("CompanyData:", quoteData.companyData);
-      console.log("ParameterMapping:", parameterMapping);
-      console.log("FormFields:", formFields);
-
-      // Construire les paramètres à partir du mapping
-      const mappedParams: any = {};
-      
-      Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
-        if (fieldKey && formFields[fieldKey]) {
-          const field = formFields[fieldKey];
-          const value = quoteData.formData[fieldKey] || field.default;
-          
-          // Conversion selon le type de champ et le paramètre
-          switch (paramKey) {
-            case 'directorName':
-              if (field.type === 'text' || field.type === 'select') {
-                mappedParams[paramKey] = value || "";
-              }
-              break;
-            case 'reprisePasse':
-              if (field.type === 'checkbox') {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-            case 'enCreation':
-              if (field.type === 'checkbox') {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-            case 'caDeclared':
-            case 'etp':
-            case 'anneeExperience':
-            case 'nombreAnneeAssuranceContinue':
-            case 'partSoutraitance':
-            case 'partNegoce':
-              if (field.type === 'number') {
-                mappedParams[paramKey] = Number(value) || 0;
-              }
-              break;
-              
-            case 'dateCreation':
-            case 'dateEffet':
-              if (field.type === 'date') {
-                mappedParams[paramKey] = value ? new Date(value) : new Date();
-              }
-              break;
-              
-            case 'tempsSansActivite':
-            case 'sansActiviteDepuisPlusDe12MoisSansFermeture':
-            case 'absenceDeSinistreSurLes5DernieresAnnees':
-            case 'fractionnementPrime':
-              mappedParams[paramKey] = value;
-              break;
-              
-            case 'qualif':
-            case 'assureurDefaillant':
-            case 'protectionJuridique':
-            case 'nonFournitureBilanN_1':
-            case 'reprisePasse':
-              if (field.type === 'checkbox') {
-                mappedParams[paramKey] = Boolean(value);
-              }
-              break;
-              
-            case 'nomDeLAsurreur':
-              if (field.type === 'text' || field.type === 'select') {
-                mappedParams[paramKey] = value || "";
-              }
-              break;
-              
-            case 'activites':
-              // Pour les activités, utiliser les données du formulaire
-              if (quoteData.formData.activities && Array.isArray(quoteData.formData.activities)) {
-                mappedParams[paramKey] = quoteData.formData.activities.map((a: any) => ({
-                  code: parseInt(a.code),
-                  caSharePercent: Number(a.caSharePercent)
-                }));
-              } else {
-                mappedParams[paramKey] = [];
-              }
-              break;
-
-            case 'dateFinCouverturePrecedente':
-              if (field.type === 'date') {
-                mappedParams[paramKey] = value ? new Date(value) : new Date();
-              }
-              break;
-
-            
-              
-            case 'sinistresPrecedents':
-              // Pour les sinistres, utiliser les données du formulaire
-              mappedParams[paramKey] = quoteData.formData.lossHistory || [];
-              break;
-          }
-        }
-      });
-      
-      // Vérifier que tous les paramètres obligatoires sont présents
-      const requiredParams = ['caDeclared', 'etp', 'activites'];
-      const missingParams = requiredParams.filter(param => !mappedParams[param]);
-      
-      if (missingParams.length > 0) {
-        throw new Error(`Paramètres obligatoires manquants : ${missingParams.join(', ')}`);
-      }
-
-      console.log("Paramètres mappés:", mappedParams);
-      
-      // Utiliser les valeurs par défaut pour les paramètres non mappés
-      const finalParams = {
-        // Valeurs par défaut
-        caDeclared: 500000,
-        etp: 3,
-        activites: [],
-        dateCreation: new Date(),
-        tempsSansActivite: "NON" as any,
-        anneeExperience: 5,
-        assureurDefaillant: false,
-        nombreAnneeAssuranceContinue: 3,
-        qualif: false,
-        nomDeLAsurreur: "AXA",
-        dateEffet: new Date(),
-        sinistresPrecedents: [],
-        sansActiviteDepuisPlusDe12MoisSansFermeture: "NON" as "OUI" | "NON" | "CREATION",
-        absenceDeSinistreSurLes5DernieresAnnees: "OUI" as "OUI" | "NON" | "CREATION" | "ASSUREUR_DEFAILLANT" | "A_DEFINIR",
-        protectionJuridique: true,
-        fractionnementPrime: "annuel" as "annuel" | "mensuel" | "trimestriel" | "semestriel",
-        partSoutraitance: 0,
-        partNegoce: 0,
-        nonFournitureBilanN_1: false,
-        reprisePasse: false,
-        // Remplacer par les valeurs mappées
-        ...mappedParams
-      };
-
-      console.log("Paramètres finaux:", finalParams);
-      
-      const result = calculPrimeRCD(finalParams);
-      console.log("Résultat calcul:", result);
-      return result;
-    } catch (error) {
-      console.error("Erreur calcul dynamique:", error);
-      throw error;
+      console.error("Erreur lors du chargement du mapping:", error);
     }
   };
 
@@ -234,7 +157,11 @@ export default function QuoteSuccessPage({
               return;
             }
 
-            const result = calculateWithMapping(quote);
+            const result = calculateWithMapping(
+              quote,
+              parameterMapping,
+              formFields
+            );
             setCalculationResult(result);
             setCalculationError(null);
 
@@ -288,7 +215,11 @@ export default function QuoteSuccessPage({
     if (quote && Object.keys(parameterMapping).length > 0 && quote.formData) {
       try {
         console.log("Recalcul avec mapping chargé SUCCESS PAGE");
-        const result = calculateWithMapping(quote);
+        const result = calculateWithMapping(
+          quote,
+          parameterMapping,
+          formFields
+        );
         setCalculationResult(result);
         setCalculationError(null);
 
@@ -305,7 +236,9 @@ export default function QuoteSuccessPage({
         }
       } catch (error) {
         console.error("Erreur recalcul SUCCESS PAGE:", error);
-        setCalculationError(error instanceof Error ? error.message : "Erreur de calcul");
+        setCalculationError(
+          error instanceof Error ? error.message : "Erreur de calcul"
+        );
       }
     }
   }, [parameterMapping, quote]);
@@ -407,22 +340,23 @@ export default function QuoteSuccessPage({
       </div>
 
       {/* Estimation */}
-      <div className={`border rounded-lg p-6 ${
-        premiumDetails?.refus 
-          ? "bg-red-50 border-red-200" 
-          : "bg-indigo-50 border-indigo-200"
-      }`}>
-        <h2 className={`text-xl font-semibold mb-4 ${
-          premiumDetails?.refus 
-            ? "text-red-900" 
-            : "text-indigo-900"
-        }`}>
-          {premiumDetails?.refus 
-            ? "Demande non acceptée" 
-            : premiumDetails 
-              ? "Calcul de prime RCD" 
-              : "Estimation préliminaire"
-          }
+      <div
+        className={`border rounded-lg p-6 ${
+          premiumDetails?.refus
+            ? "bg-red-50 border-red-200"
+            : "bg-indigo-50 border-indigo-200"
+        }`}
+      >
+        <h2
+          className={`text-xl font-semibold mb-4 ${
+            premiumDetails?.refus ? "text-red-900" : "text-indigo-900"
+          }`}
+        >
+          {premiumDetails?.refus
+            ? "Demande non acceptée"
+            : premiumDetails
+            ? "Calcul de prime RCD"
+            : "Estimation préliminaire"}
         </h2>
 
         {calculationError && (
@@ -436,24 +370,37 @@ export default function QuoteSuccessPage({
         {premiumDetails?.refus ? (
           <div className="text-center">
             <div className="mb-4">
-              <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              <svg
+                className="mx-auto h-12 w-12 text-red-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
               </svg>
             </div>
             <p className="text-lg font-medium text-red-900 mb-2">
               Demande non acceptée
             </p>
             <p className="text-red-700">
-              {premiumDetails.refusReason || "Votre demande ne peut pas être acceptée dans les conditions actuelles."}
+              {premiumDetails.refusReason ||
+                "Votre demande ne peut pas être acceptée dans les conditions actuelles."}
             </p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className={`text-sm mb-1 ${
-                  premiumDetails ? "text-indigo-700" : "text-indigo-700"
-                }`}>
+                <p
+                  className={`text-sm mb-1 ${
+                    premiumDetails ? "text-indigo-700" : "text-indigo-700"
+                  }`}
+                >
                   Prime d'assurance {premiumDetails ? "calculée" : "estimée"}{" "}
                   (annuelle TTC)
                 </p>
@@ -483,23 +430,43 @@ export default function QuoteSuccessPage({
             {/* Détails du calcul si disponible */}
             {premiumDetails && !premiumDetails.refus && (
               <div className="mb-4 p-4 bg-white rounded-lg border border-indigo-200">
-                <h3 className="text-sm font-medium text-indigo-900 mb-3">Détails du calcul :</h3>
+                <h3 className="text-sm font-medium text-indigo-900 mb-3">
+                  Détails du calcul :
+                </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">CA calculé :</span>
-                    <span className="ml-2 font-medium">{premiumDetails.caCalculee?.toLocaleString("fr-FR") || "0"} €</span>
+                    <span className="ml-2 font-medium">
+                      {premiumDetails.caCalculee?.toLocaleString("fr-FR") ||
+                        "0"}{" "}
+                      €
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">Prime HT :</span>
-                    <span className="ml-2 font-medium">{premiumDetails.primeTotal?.toLocaleString("fr-FR") || "0"} €</span>
+                    <span className="ml-2 font-medium">
+                      {premiumDetails.primeTotal?.toLocaleString("fr-FR") ||
+                        "0"}{" "}
+                      €
+                    </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Protection Juridique :</span>
-                    <span className="ml-2 font-medium">{premiumDetails.protectionJuridique?.toLocaleString("fr-FR") || "0"} €</span>
+                    <span className="text-gray-600">
+                      Protection Juridique :
+                    </span>
+                    <span className="ml-2 font-medium">
+                      {premiumDetails.protectionJuridique?.toLocaleString(
+                        "fr-FR"
+                      ) || "0"}{" "}
+                      €
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">Total TTC :</span>
-                    <span className="ml-2 font-bold text-indigo-600">{premiumDetails.totalTTC?.toLocaleString("fr-FR") || "0"} €</span>
+                    <span className="ml-2 font-bold text-indigo-600">
+                      {premiumDetails.totalTTC?.toLocaleString("fr-FR") || "0"}{" "}
+                      €
+                    </span>
                   </div>
                 </div>
               </div>

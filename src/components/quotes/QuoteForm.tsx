@@ -6,6 +6,9 @@ import useProductsStore from "@/lib/stores/products-store";
 import MultiSelect from "./MultiSelect";
 import ActivityBreakdownField from "./ActivityBreakdown";
 import LossHistoryField from "./LossHistoryField";
+import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
+import { pdf } from "@react-pdf/renderer";
+import { useSession } from "@/lib/auth-client";
 
 interface QuoteFormProps {
   onSuccess?: (quote: any) => void;
@@ -15,6 +18,7 @@ interface QuoteFormProps {
 export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
   const { createQuote, saveDraft, loading } = useQuotesStore();
   const { activeProducts, fetchActiveProducts } = useProductsStore();
+  const { data: session } = useSession();
 
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -439,6 +443,9 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
       });
 
       if (quote) {
+        // Envoyer automatiquement la lettre d'intention au courtier
+        // Note: calculationResult pourrait être récupéré via une API call si nécessaire
+
         onSuccess?.(quote);
       }
     } catch (error) {
