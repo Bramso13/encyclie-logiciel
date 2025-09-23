@@ -9,6 +9,8 @@ import MessageComposer from "@/components/messages/MessageComposer";
 import AddBrokerModal from "@/components/modals/AddBrokerModal";
 import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
 import ProductConfigTab from "@/components/admin/ProductConfigTab";
+import QuoteForm from "@/components/quotes/QuoteForm";
+import QuoteSuccessPage from "@/components/quotes/QuoteSuccessPage";
 
 // Types exacts de la fonction calculPrimeRCD
 interface SimulatorParams {
@@ -124,6 +126,9 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   const [showMessageComposer, setShowMessageComposer] = useState(false);
   const [showAddBrokerModal, setShowAddBrokerModal] = useState(false);
   const [quotesSearchTerm, setQuotesSearchTerm] = useState("");
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [showSuccessPage, setShowSuccessPage] = useState(false);
+  const [createdQuote, setCreatedQuote] = useState<any>(null);
 
   // États pour le simulateur de tarif
   const [simulatorData, setSimulatorData] = useState<SimulatorParams>({
@@ -258,6 +263,27 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     fetchReceivedMessages,
     fetchUnreadCount,
   ]);
+
+  // Function to handle new quote
+  const handleNewQuote = () => {
+    setShowQuoteForm(true);
+    setShowSuccessPage(false);
+    setCreatedQuote(null);
+    setActiveTab("quotes");
+  };
+
+  const handleQuoteCreated = (quote: any) => {
+    setShowQuoteForm(false);
+    setCreatedQuote(quote);
+    setShowSuccessPage(true);
+  };
+
+  const handleBackToDashboard = () => {
+    setShowSuccessPage(false);
+    setCreatedQuote(null);
+    // Refresh quotes to show the new one
+    fetchQuotes();
+  };
 
   // Function to create a new broker
   const handleCreateBroker = async (brokerData: any) => {
@@ -430,6 +456,57 @@ export default function AdminScreen({ user }: AdminScreenProps) {
       (q) => q.status === "SUBMITTED" || q.status === "IN_PROGRESS"
     ).length,
   };
+
+  // Show success page after quote creation
+  if (showSuccessPage && createdQuote) {
+    return (
+      <div className="space-y-6">
+        <QuoteSuccessPage
+          quote={createdQuote}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      </div>
+    );
+  }
+
+  // Show quote form
+  if (showQuoteForm) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Nouvelle demande de devis
+            </h1>
+            <button
+              onClick={() => setShowQuoteForm(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="bg-white shadow rounded-lg p-6">
+          <QuoteForm
+            onSuccess={handleQuoteCreated}
+            onCancel={() => setShowQuoteForm(false)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -925,6 +1002,25 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                 <h3 className="text-lg font-medium text-gray-900">
                   Gestion des Demandes de Devis
                 </h3>
+                <button
+                  onClick={handleNewQuote}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Nouvelle demande de devis
+                </button>
               </div>
               
               {/* Barre de recherche */}
