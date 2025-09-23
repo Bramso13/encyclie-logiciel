@@ -6,7 +6,10 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // GET /api/quotes/[id]/messages - Récupérer les messages d'un devis
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     const session = await auth.api.getSession({
@@ -82,7 +85,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 }
 
 // POST /api/quotes/[id]/messages - Envoyer un nouveau message
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   try {
     const session = await auth.api.getSession({
@@ -125,6 +131,58 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         { success: false, error: "Accès refusé" },
         { status: 403 }
       );
+    }
+
+    if (receiverId === "admin") {
+      // Récupérer tous les utilisateurs admins
+      const admins = await prisma.user.findMany({
+        where: { role: "ADMIN" },
+      });
+
+      if (!admins || admins.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Aucun administrateur trouvé" },
+          { status: 404 }
+        );
+      }
+
+      // Créer un message pour chaque admin
+      const messages = await Promise.all(
+        admins.map(async (admin) => {
+          return prisma.quoteMessage.create({
+            data: {
+              content: content.trim(),
+              quoteId,
+              senderId: session.user.id,
+              receiverId: admin.id,
+            },
+            include: {
+              sender: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                },
+              },
+              receiver: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                },
+              },
+              attachments: true,
+            },
+          });
+        })
+      );
+
+      return NextResponse.json({
+        success: true,
+        data: messages,
+      });
     }
 
     // Vérifier que le destinataire existe

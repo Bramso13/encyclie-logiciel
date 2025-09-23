@@ -1609,6 +1609,7 @@ export function getTaxeByRegion(region: string) {
 export function calculPrimeRCD(params: {
   enCreation: boolean;
   caDeclared: number;
+  honoraireGestion: number;
   etp: number;
   activites: { code: number; caSharePercent: number }[];
   dateCreation: Date;
@@ -1646,6 +1647,7 @@ export function calculPrimeRCD(params: {
   const {
     enCreation,
     caDeclared,
+    honoraireGestion,
     etp,
     activites: activitesRaw,
     dateCreation,
@@ -1735,6 +1737,7 @@ export function calculPrimeRCD(params: {
 
   type returnValue = {
     caCalculee: number;
+    honoraireGestion: number;
     refus: boolean;
     refusReason: string;
     returnTab: returnTab[];
@@ -1766,6 +1769,7 @@ export function calculPrimeRCD(params: {
 
   const returnValue: returnValue = {
     caCalculee: caCalculee,
+    honoraireGestion: honoraireGestion,
     refus:
       refus.experienceDirigeant ||
       refus.sansAssuranceDepuisPlusDe12Mois ||
@@ -1878,7 +1882,8 @@ export function calculPrimeRCD(params: {
   returnValue.autres.taxeAssurance =
     returnValue.primeTotal * taxeAssurance +
     returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance;
-  returnValue.autres.protectionJuridiqueTTC = protectionJuridique1an * (1 + taxeAssurance);
+  returnValue.autres.protectionJuridiqueTTC =
+    protectionJuridique1an * (1 + taxeAssurance);
   returnValue.autres.total =
     returnValue.autres.taxeAssurance +
     returnValue.autres.protectionJuridiqueTTC +
@@ -1887,7 +1892,8 @@ export function calculPrimeRCD(params: {
   returnValue.totalTTC =
     returnValue.primeTotal +
     returnValue.autres.total +
-    returnValue.fraisGestion;
+    returnValue.fraisGestion +
+    returnValue.honoraireGestion;
   returnValue.returnTab = returnTab;
   returnValue.echeancier = genererEcheancier({
     dateDebut: dateEffet ?? new Date(),

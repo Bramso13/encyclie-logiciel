@@ -89,7 +89,9 @@ const useQuoteChatStore = create<QuoteChatState>()(
       markAsRead: (messageId) =>
         set((state) => ({
           messages: state.messages.map((m) =>
-            m.id === messageId ? { ...m, isRead: true, readAt: new Date().toISOString() } : m
+            m.id === messageId
+              ? { ...m, isRead: true, readAt: new Date().toISOString() }
+              : m
           ),
           unreadCount: Math.max(0, state.unreadCount - 1),
         })),
@@ -97,7 +99,8 @@ const useQuoteChatStore = create<QuoteChatState>()(
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
       setCurrentQuoteId: (quoteId) => set({ currentQuoteId: quoteId }),
-      setCurrentReceiverId: (receiverId) => set({ currentReceiverId: receiverId }),
+      setCurrentReceiverId: (receiverId) =>
+        set({ currentReceiverId: receiverId }),
       clearMessages: () => set({ messages: [], unreadCount: 0 }),
 
       // API calls
@@ -152,7 +155,12 @@ const useQuoteChatStore = create<QuoteChatState>()(
             );
           }
 
-          addMessage(result.data);
+          if (Array.isArray(result.data)) {
+            result.data[0] && addMessage(result.data[0]);
+          } else if (result.data) {
+            result.data && addMessage(result.data);
+          }
+
           return result.data;
         } catch (error) {
           setError(error instanceof Error ? error.message : "Erreur inconnue");
@@ -166,16 +174,17 @@ const useQuoteChatStore = create<QuoteChatState>()(
         const { setError, markAsRead } = get();
 
         try {
-          const response = await fetch(`/api/quote-messages/${messageId}/read`, {
-            method: "PUT",
-          });
+          const response = await fetch(
+            `/api/quote-messages/${messageId}/read`,
+            {
+              method: "PUT",
+            }
+          );
 
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(
-              result.error || "Erreur lors du marquage comme lu"
-            );
+            throw new Error(result.error || "Erreur lors du marquage comme lu");
           }
 
           markAsRead(messageId);
@@ -188,7 +197,9 @@ const useQuoteChatStore = create<QuoteChatState>()(
         const { setError, setUnreadCount } = get();
 
         try {
-          const response = await fetch(`/api/quotes/${quoteId}/messages/unread-count`);
+          const response = await fetch(
+            `/api/quotes/${quoteId}/messages/unread-count`
+          );
           const result = await response.json();
 
           if (!result.success) {
