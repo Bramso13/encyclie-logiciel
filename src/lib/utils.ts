@@ -1,4 +1,9 @@
-import { calculPrimeRCD, getTaxeByRegion } from "./tarificateurs/rcd";
+import { prisma } from "./prisma";
+import {
+  calculPrimeRCD,
+  getTaxeByRegion,
+  getTaxeProtectionJuridiqueByRegion,
+} from "./tarificateurs/rcd";
 
 // Fonction de calcul dynamique basée sur le mapping
 export const calculateWithMapping = (
@@ -17,10 +22,7 @@ export const calculateWithMapping = (
     const mappedParams: any = {};
 
     Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
-      console.log("paramKeyyyy", paramKey);
       if (fieldKey && (formFields[fieldKey] || quoteData.formData[paramKey])) {
-        console.log("paramKeyyyyy", paramKey);
-
         const field = formFields[fieldKey];
         const value = quoteData.formData[fieldKey] || field.default;
 
@@ -42,6 +44,8 @@ export const calculateWithMapping = (
               mappedParams[paramKey] = value || "";
             }
             mappedParams.taxeAssurance = getTaxeByRegion(value);
+            mappedParams.taxeProtectionJuridique =
+              getTaxeProtectionJuridiqueByRegion(value);
             break;
           case "directorName":
             if (field.type === "text" || field.type === "select") {
@@ -54,6 +58,7 @@ export const calculateWithMapping = (
             }
             break;
           case "enCreation":
+            console.log("value", value, "paramKey", paramKey);
             if (field.type === "checkbox") {
               mappedParams[paramKey] = Boolean(value);
             }
@@ -190,6 +195,9 @@ export const calculateWithMapping = (
       nonFournitureBilanN_1: false,
       reprisePasse: false,
       taxeAssurance: getTaxeByRegion(quoteData.formData.territory),
+      taxeProtectionJuridique: getTaxeProtectionJuridiqueByRegion(
+        quoteData.formData.territory
+      ),
       // Remplacer par les valeurs mappées
       ...mappedParams,
     };
@@ -203,4 +211,10 @@ export const calculateWithMapping = (
     console.error("Erreur calcul dynamique:", error);
     throw error;
   }
+};
+
+export const getBrokerCode = async (userId: string) => {
+  const response = await fetch(`/api/brokers/code`);
+  const data = await response.json();
+  return data.code;
 };

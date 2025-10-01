@@ -4,7 +4,7 @@ import { useSession } from "@/lib/auth-client";
 import { pdf } from "@react-pdf/renderer";
 import { useState, useEffect } from "react";
 import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
-import { calculateWithMapping } from "@/lib/utils";
+import { calculateWithMapping, getBrokerCode } from "@/lib/utils";
 
 interface QuoteSuccessPageProps {
   quote: {
@@ -58,11 +58,13 @@ export default function QuoteSuccessPage({
         );
         return;
       }
+      const brokerCode = await getBrokerCode(session?.user?.id);
 
       const pdfLetter = (
         <LetterOfIntentPDF
           quote={quote}
           calculationResult={calculationResult || null}
+          user={{ ...session?.user, brokerCode }}
         />
       );
       console.log("pdfLetter", pdfLetter);

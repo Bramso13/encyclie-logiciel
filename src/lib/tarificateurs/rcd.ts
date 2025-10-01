@@ -1599,8 +1599,22 @@ export function getTaxeByRegion(region: string) {
     martinique: 0.09,
     guadeloupe: 0.09,
     reunion: 0.09,
-    guyane: 0.09,
+    guyane: 0.045,
     mayotte: 0.045,
+    "st-martin": 0.05,
+    "st-barth": 0.0,
+  };
+  return taxeByRegion[regionRea];
+}
+export function getTaxeProtectionJuridiqueByRegion(region: string) {
+  const regionRea = region.toLowerCase().replace(" ", "-");
+  console.log("regionRea", regionRea);
+  const taxeByRegion: { [key: string]: number } = {
+    martinique: 0.134,
+    guadeloupe: 0.134,
+    reunion: 0.134,
+    guyane: 0.067,
+    mayotte: 0.067,
     "st-martin": 0.05,
     "st-barth": 0.0,
   };
@@ -1631,6 +1645,7 @@ export function calculPrimeRCD(params: {
   fraisFractionnementPrime: number;
   protectionJuridique1an: number;
   taxeAssurance: number;
+  taxeProtectionJuridique: number;
   partSoutraitance: number;
   partNegoce: number;
   nonFournitureBilanN_1: boolean;
@@ -1668,6 +1683,7 @@ export function calculPrimeRCD(params: {
     protectionJuridique1an = 106.0,
     txFraisGestion = 0.1,
     taxeAssurance,
+    taxeProtectionJuridique,
     fraisFractionnementPrime = 40,
     partSoutraitance,
     partNegoce,
@@ -1793,7 +1809,7 @@ export function calculPrimeRCD(params: {
     primeTotal: 0,
     majorations: majorations,
     reprisePasseResult: undefined,
-    protectionJuridique: protectionJuridique1an * (1 + taxeAssurance),
+    protectionJuridique: protectionJuridique1an * (1 + taxeProtectionJuridique),
     fraisGestion: 0,
     totalTTC: 0,
     nbEcheances: {
@@ -1878,12 +1894,14 @@ export function calculPrimeRCD(params: {
     returnValue.PrimeHTSansMajorations * totalMajorations;
   returnValue.fraisGestion = returnValue.primeTotal * txFraisGestion;
   returnValue.autres.fraisFractionnementPrimeHT =
-    returnValue.nbEcheances * fraisFractionnementPrime;
+    returnValue.nbEcheances > 1
+      ? returnValue.nbEcheances * fraisFractionnementPrime
+      : 0;
   returnValue.autres.taxeAssurance =
     returnValue.primeTotal * taxeAssurance +
     returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance;
   returnValue.autres.protectionJuridiqueTTC =
-    protectionJuridique1an * (1 + taxeAssurance);
+    protectionJuridique1an * (1 + taxeProtectionJuridique);
   returnValue.autres.total =
     returnValue.autres.taxeAssurance +
     returnValue.autres.protectionJuridiqueTTC +
@@ -1892,8 +1910,7 @@ export function calculPrimeRCD(params: {
   returnValue.totalTTC =
     returnValue.primeTotal +
     returnValue.autres.total +
-    returnValue.fraisGestion +
-    returnValue.honoraireGestion;
+    returnValue.fraisGestion;
   returnValue.returnTab = returnTab;
   returnValue.echeancier = genererEcheancier({
     dateDebut: dateEffet ?? new Date(),
@@ -2092,7 +2109,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
     console.log("nbAnneeAEcheance :", nbAnneeAEcheance);
 
     const iFn = () => {
-      for (let k = 0; k < nbEcheances; k++) {
+      for (let k = 0; k <= nbEcheances; k++) {
         if (k * nbEcheancesNbJours > nbJoursDepuisDateDebut) {
           console.log("iFn retourne :", k);
           return k;
@@ -2130,7 +2147,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       );
 
       if (
-        dateEcheanceIPLus1D.getFullYear() === year + 1 &&
+        dateEcheanceIPLus1D.getFullYear() >= year + 1 &&
         j % nbEcheances === 0
       ) {
         premierPaiementDeLAnnee = true;

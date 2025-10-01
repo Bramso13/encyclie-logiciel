@@ -9,6 +9,7 @@ import LossHistoryField from "./LossHistoryField";
 import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
 import { pdf } from "@react-pdf/renderer";
 import { useSession } from "@/lib/auth-client";
+import { fetchCompanyBySiret } from "@/lib/api/pappers";
 
 interface QuoteFormProps {
   onSuccess?: (quote: any) => void;
@@ -32,8 +33,12 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     legalForm: "",
     creationDate: "",
     directorName: "",
+    city: "",
+    postalCode: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isFetchingPappers, setIsFetchingPappers] = useState(false);
+  const [pappersError, setPappersError] = useState<string>("");
 
   useEffect(() => {
     fetchActiveProducts();
@@ -52,6 +57,53 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
       setCompletedSteps(new Set());
     }
   }, [selectedProductId, activeProducts]);
+
+  // Recherche Pappers via clic bouton
+  const handleFetchPappers = async () => {
+    const siret = companyData.siret.replace(/\D/g, "");
+    if (siret.length !== 14) {
+      setPappersError("Le SIRET doit contenir 14 chiffres");
+      return;
+    }
+    try {
+      setIsFetchingPappers(true);
+      setPappersError("");
+      const data = await fetchCompanyBySiret(siret);
+      console.log("data fetchPappers", data);
+      setCompanyData((prev) => ({
+        ...prev,
+        companyName: data.companyName || prev.companyName,
+        address: data.address || prev.address,
+        legalForm: data.legalForm || prev.legalForm,
+        creationDate: (data.creationDate || prev.creationDate || "").slice(
+          0,
+          10
+        ),
+        directorName: data.directorName || prev.directorName,
+        city: (data as any).city || prev.city,
+        postalCode: (data as any).postalCode || prev.postalCode,
+      }));
+      setFormData((prev) => ({
+        ...prev,
+        companyName: data.companyName || prev.companyName,
+        address: data.address || prev.address,
+        legalForm: data.legalForm || prev.legalForm,
+        creationDate: (data.creationDate || prev.creationDate || "").slice(
+          0,
+          10
+        ),
+        directorName: data.directorName || prev.directorName,
+        city: (data as any).city || prev.city,
+        postalCode: (data as any).postalCode || prev.postalCode,
+        enCreation: false,
+        nombreAnneeAssuranceContinue: 0,
+      }));
+    } catch (e: any) {
+      setPappersError(e?.message || "Entreprise non trouvée");
+    } finally {
+      setIsFetchingPappers(false);
+    }
+  };
 
   const handleCompanyDataChange = (field: string, value: string) => {
     setCompanyData((prev) => ({ ...prev, [field]: value }));
@@ -238,6 +290,17 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
               ] = `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
             }
           }
+          if (
+            fieldName === "sansActiviteDepuisPlusDe12MoisSansFermeture" ||
+            fieldName === "absenceDeSinistreSurLes5DernieresAnnees" ||
+            fieldName === "tempsSansActivite" ||
+            fieldName === "nombreAnneeAssuranceContinue"
+          ) {
+            if (formData.enCreation) {
+              newErrors[fieldName] =
+                "Ce champ doit etre rempli par 'création' car entreprise en création";
+            }
+          }
           if (fieldConfig.type === "date") {
             // Ici, on vérifie que la date saisie est bien comprise entre aujourd'hui - min jours et aujourd'hui + max jours.
             // Si min ou max vaut -1, on ne prend pas la contrainte en compte.
@@ -384,6 +447,21 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
       }
       if (!companyData.address.trim()) {
         newErrors.address = "Adresse requise";
+      }
+      if (!companyData.postalCode.trim()) {
+        newErrors.postalCode = "Code postal requis";
+      }
+      if (!companyData.city.trim()) {
+        newErrors.city = "Ville requise";
+      }
+      if (!companyData.legalForm.trim()) {
+        newErrors.legalForm = "Forme juridique requise";
+      }
+      if (!companyData.creationDate.trim()) {
+        newErrors.creationDate = "Date de création requise";
+      }
+      if (!companyData.directorName.trim()) {
+        newErrors.directorName = "Nom du dirigeant requise";
       }
     }
 
@@ -755,77 +833,51 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label
-            htmlFor="companyName"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Raison sociale *
-          </label>
-          <input
-            type="text"
-            id="companyName"
-            value={companyData.companyName}
-            onChange={(e) => {
-              handleCompanyDataChange("companyName", e.target.value);
-              handleFormDataChange("companyName", e.target.value);
-            }}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-              errors.companyName ? "border-red-300" : "border-gray-300"
-            }`}
-          />
-          {errors.companyName && (
-            <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="companyName"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Nom du dirigeant *
-          </label>
-          <input
-            type="text"
-            id="directorName"
-            value={companyData.directorName}
-            onChange={(e) => {
-              handleCompanyDataChange("directorName", e.target.value);
-              handleFormDataChange("directorName", e.target.value);
-            }}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-              errors.directorName ? "border-red-300" : "border-gray-300"
-            }`}
-          />
-          {errors.directorName && (
-            <p className="mt-1 text-sm text-red-600">{errors.directorName}</p>
-          )}
-        </div>
-
-        <div>
-          <label
             htmlFor="siret"
             className="block text-sm font-medium text-gray-700"
           >
             SIRET *
           </label>
-          <input
-            type="text"
-            id="siret"
-            value={companyData.siret}
-            onChange={(e) => {
-              handleCompanyDataChange(
-                "siret",
-                e.target.value.replace(/\D/g, "")
-              );
-              handleFormDataChange("siret", e.target.value.replace(/\D/g, ""));
-            }}
-            maxLength={14}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-              errors.siret ? "border-red-300" : "border-gray-300"
-            }`}
-          />
+          <div className="mt-1 flex gap-2">
+            <input
+              type="text"
+              id="siret"
+              value={companyData.siret}
+              onChange={(e) => {
+                handleCompanyDataChange(
+                  "siret",
+                  e.target.value.replace(/\D/g, "")
+                );
+                handleFormDataChange(
+                  "siret",
+                  e.target.value.replace(/\D/g, "")
+                );
+              }}
+              maxLength={14}
+              className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                errors.siret ? "border-red-300" : "border-gray-300"
+              }`}
+            />
+            <button
+              type="button"
+              onClick={handleFetchPappers}
+              disabled={
+                isFetchingPappers ||
+                companyData.siret.replace(/\D/g, "").length !== 14
+              }
+              className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isFetchingPappers ? "Recherche…" : "Rechercher"}
+            </button>
+          </div>
+          {isFetchingPappers && (
+            <p className="mt-1 text-sm text-gray-500">Recherche Pappers…</p>
+          )}
           {errors.siret && (
             <p className="mt-1 text-sm text-red-600">{errors.siret}</p>
+          )}
+          {pappersError && (
+            <p className="mt-1 text-sm text-red-600">{pappersError}</p>
           )}
         </div>
 
@@ -840,10 +892,8 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="text"
             id="address"
             value={companyData.address}
-            onChange={(e) => {
-              handleCompanyDataChange("address", e.target.value);
-              handleFormDataChange("address", e.target.value);
-            }}
+            disabled
+            readOnly
             className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
               errors.address ? "border-red-300" : "border-gray-300"
             }`}
@@ -855,29 +905,54 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
 
         <div>
           <label
+            htmlFor="postalCode"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Code postal
+          </label>
+          <input
+            type="text"
+            id="postalCode"
+            value={companyData.postalCode}
+            disabled
+            readOnly
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="city"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Ville
+          </label>
+          <input
+            type="text"
+            id="city"
+            value={companyData.city}
+            disabled
+            readOnly
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+        </div>
+
+        <div>
+          <label
             htmlFor="legalForm"
             className="block text-sm font-medium text-gray-700"
           >
-            Forme juridique
+            Forme juridique *
           </label>
-          <select
+          <input
+            type="text"
             id="legalForm"
             value={companyData.legalForm}
-            onChange={(e) => {
-              handleCompanyDataChange("legalForm", e.target.value);
-              handleFormDataChange("legalForm", e.target.value);
-            }}
+            disabled
+            readOnly
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Sélectionnez...</option>
-            <option value="SARL">SARL</option>
-            <option value="SAS">SAS</option>
-            <option value="SA">SA</option>
-            <option value="EURL">EURL</option>
-            <option value="SNC">SNC</option>
-            <option value="AUTO_ENTREPRENEUR">Auto-entrepreneur</option>
-            <option value="EXPL_INDIVIDUELLE">Exploitation individuelle</option>
-          </select>
+            required
+          />
         </div>
 
         <div>
@@ -885,18 +960,64 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             htmlFor="creationDate"
             className="block text-sm font-medium text-gray-700"
           >
-            Date de création
+            Date de création *
           </label>
           <input
             type="date"
             id="creationDate"
             value={companyData.creationDate}
-            onChange={(e) => {
-              handleCompanyDataChange("creationDate", e.target.value);
-              handleFormDataChange("creationDate", e.target.value);
-            }}
+            disabled
+            readOnly
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            required
           />
+          {errors.creationDate && (
+            <p className="mt-1 text-sm text-red-600">{errors.creationDate}</p>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="directorName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Nom du dirigeant
+          </label>
+          <input
+            type="text"
+            id="directorName"
+            value={companyData.directorName}
+            disabled
+            readOnly
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.directorName ? "border-red-300" : "border-gray-300"
+            }`}
+          />
+          {errors.directorName && (
+            <p className="mt-1 text-sm text-red-600">{errors.directorName}</p>
+          )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="companyName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Raison sociale
+          </label>
+          <input
+            type="text"
+            id="companyName"
+            value={companyData.companyName}
+            disabled
+            readOnly
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.companyName ? "border-red-300" : "border-gray-300"
+            }`}
+          />
+          {errors.companyName && (
+            <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>
+          )}
         </div>
       </div>
     </div>

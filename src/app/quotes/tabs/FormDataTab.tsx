@@ -4,6 +4,7 @@ import { Quote } from "@/lib/types";
 import { useState } from "react";
 import { Pencil, Check, X, Save } from "lucide-react";
 import ActivityBreakdownField from "@/components/quotes/ActivityBreakdown";
+import { tableauTax } from "@/lib/tarificateurs/rcd";
 
 function formatFieldValue(value: any, fieldType: string): string {
   if (value === null || value === undefined) return "Non renseigné";
@@ -14,20 +15,55 @@ function formatFieldValue(value: any, fieldType: string): string {
     case "date":
       return new Date(value).toLocaleDateString("fr-FR");
     case "number":
-      return typeof value === "number" ? value.toLocaleString("fr-FR") : String(value);
+      return typeof value === "number"
+        ? value.toLocaleString("fr-FR")
+        : String(value);
     case "activity_breakdown":
-      if (typeof value === "object" && value !== null) {
-        return Object.entries(value).map(([code, percent]) => `Code ${code}: ${percent}%`).join(", ");
-      }
-      return String(value);
+      const activities: string[] = [];
+      value.forEach((activity: { code: string; caSharePercent: number }) => {
+        activities.push(
+          `${
+            tableauTax.find((tax) => tax.code.toString() === activity.code)
+              ?.title || "—"
+          }: ${activity.caSharePercent}%`
+        );
+      });
+
+      return String(activities.join(", "));
     case "loss_history":
       if (Array.isArray(value)) {
-        return value.map(entry => `${entry.year}: ${entry.numClaims} sinistre(s), ${entry.totalCost}€`).join(" | ");
+        return value
+          .map(
+            (entry) =>
+              `${entry.year}: ${entry.numClaims} sinistre(s), ${entry.totalCost}€`
+          )
+          .join(" | ");
       }
       return String(value);
     default:
       return String(value);
   }
+}
+
+// Libellés français par défaut pour les champs connus (notamment companyData)
+const FRENCH_LABELS: Record<string, string> = {
+  companyName: "Raison sociale",
+  siret: "SIRET",
+  address: "Adresse",
+  legalForm: "Forme juridique",
+  creationDate: "Date de création",
+  directorName: "Nom du dirigeant",
+  city: "Ville",
+  postalCode: "Code postal",
+};
+
+function prettifyKeyFr(key: string): string {
+  // Transforme camelCase/snake_case en libellé lisible, capitalisé
+  const withSpaces = key
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase();
+  return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 }
 
 export default function FormDataTab({ quote }: { quote: Quote }) {
@@ -56,7 +92,7 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
     // Mettre à jour le formData temporaire
     setTempFormData({
       ...tempFormData,
-      [fieldKey]: editValue
+      [fieldKey]: editValue,
     });
     setHasChanges(true);
     setEditingField(null);
@@ -67,9 +103,9 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
     setIsSaving(true);
     try {
       const response = await fetch(`/api/quotes/${quote.id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           formData: tempFormData,
@@ -79,13 +115,13 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
 
       if (response.ok) {
         setHasChanges(false);
-        alert('Devis mis à jour !');
+        alert("Devis mis à jour !");
       } else {
-        alert('Erreur lors de la sauvegarde');
+        alert("Erreur lors de la sauvegarde");
       }
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur réseau');
+      console.error("Erreur:", error);
+      alert("Erreur réseau");
     } finally {
       setIsSaving(false);
     }
@@ -99,7 +135,8 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
     }
 
     // Utiliser tempFormData pour l'affichage
-    const displayValue = tempFormData[key] !== undefined ? tempFormData[key] : value;
+    const displayValue =
+      tempFormData[key] !== undefined ? tempFormData[key] : value;
 
     return (
       <div className="flex items-center justify-between">
@@ -239,10 +276,23 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
   const getStepFields = (step: any) => {
     const fields: { [key: string]: any } = {};
 
-    // Ajouter les informations d'entreprise si includeCompanyInfo est true
-    if (step.includeCompanyInfo && quote.companyData) {
-      Object.entries(quote.companyData).forEach(([key, value]) => {
-        fields[key] = value;
+    // Ajouter les informations d'entreprise si includeCompanyInfo est true (ordre explicite)
+    if (step.includeCompanyInfo && quote.formData) {
+      const company = quote.formData as any;
+      console.log("company", company);
+      const orderedKeys = [
+        "siret",
+        "companyName",
+        "address",
+        "postalCode",
+        "city",
+        "legalForm",
+        "creationDate",
+        "directorName",
+      ];
+
+      orderedKeys.forEach((k) => {
+        if (company[k] !== undefined) fields[k] = company[k];
       });
     }
 
@@ -262,7 +312,7 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
-            Formulaire de souscription
+              Formulaire de souscription
             </h2>
             <p className="text-sm text-gray-600 mt-1">
               Informations saisies lors de la création du devis
@@ -307,19 +357,21 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
       {/* Contenu des onglets */}
       <div className="p-6">
         {stepConfig.steps.map((step: any, index: number) => (
-          <div
-            key={index}
-            className={activeTab === index ? "block" : "hidden"}
-          >
+          <div key={index} className={activeTab === index ? "block" : "hidden"}>
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900">{step.title}</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                {step.title}
+              </h3>
               <p className="text-sm text-gray-600 mt-1">{step.description}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Object.entries(getStepFields(step)).map(([key, value]) => {
                 const fieldConfig = formFieldsConfig[key];
-                const label = fieldConfig?.label || key;
+                const label =
+                  FRENCH_LABELS[key] ||
+                  fieldConfig?.label ||
+                  prettifyKeyFr(key);
 
                 return (
                   <div key={key} className="bg-gray-50 rounded-lg p-4">

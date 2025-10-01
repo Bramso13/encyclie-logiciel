@@ -1,159 +1,160 @@
 export interface CompanyData {
-    siret: string;
-    address: string;
-    legalForm: string;
-    companyName: string;
-    creationDate: string;
-    directorName: string;
-  }
-  // Interface simplifiée pour éviter les conflits de types
+  siret: string;
+  address: string;
+  legalForm: string;
+  companyName: string;
+  creationDate: string;
+  directorName: string;
+  city: string;
+  postalCode: string;
+}
+// Interface simplifiée pour éviter les conflits de types
 export type CalculationResult = any;
-  
-  export interface ActivityShare {
+
+export interface ActivityShare {
+  code: string;
+  caSharePercent: number;
+}
+
+export interface FormData {
+  honoraireCourtier: string;
+  city: string;
+  postalCode: string;
+  directorName: string;
+  siret: string;
+  address: string;
+  includePJ: boolean;
+  legalForm: string;
+  territory: string;
+  activities: ActivityShare[];
+  companyName: string;
+  periodicity: string;
+  nombreSalaries: string;
+  tradingPercent: string;
+  chiffreAffaires: string;
+  experienceMetier: string;
+  hasQualification: boolean;
+  previousRcdStatus: string;
+  dateDeffet: string;
+  companyCreationDate: string;
+  subContractingPercent: string;
+  previousResiliationDate?: string;
+  lossHistory?: Array<{ year: number; numClaims: number; totalCost: number }>;
+}
+
+export interface Quote {
+  id: string;
+  reference: string;
+  status: string;
+  companyData: CompanyData;
+  formData: FormData;
+  product: {
+    name: string;
     code: string;
-    caSharePercent: number;
-  }
-  
-  export interface FormData {
-    VILLE: string;
-    CODE_POSTAL: string;
-    directorName: string;
-    siret: string;
-    address: string;
-    includePJ: boolean;
-    legalForm: string;
-    territory: string;
-    activities: ActivityShare[];
-    companyName: string;
-    periodicity: string;
-    nombreSalaries: string;
-    tradingPercent: string;
-    chiffreAffaires: string;
-    experienceMetier: string;
-    hasQualification: boolean;
-    previousRcdStatus: string;
-    dateDeffet: string;
-    companyCreationDate: string;
-    subContractingPercent: string;
-    previousResiliationDate?: string;
-    lossHistory?: Array<{ year: number; numClaims: number; totalCost: number }>;
-  }
-
-  
-  
-  export interface Quote {
+    stepConfig?: any;
+    formFields?: any;
+    requiredDocs?: any;
+  };
+  broker?: {
     id: string;
-    reference: string;
-    status: string;
-    companyData: CompanyData;
-    formData: FormData;
-    product: {
-      name: string;
-      code: string;
-      stepConfig?: any;
-      formFields?: any;
-      requiredDocs?: any;
-    };
-    broker?: {
-      id: string;
-      name: string;
-      email: string;
-      role: string;
-    };
-    createdAt: string;
-    updatedAt: string;
-  }
-
-  // Types pour le système de suivi des paiements
-  export interface User {
-    id: string;
-    name?: string;
+    name: string;
     email: string;
-    role: 'BROKER' | 'ADMIN' | 'UNDERWRITER';
-  }
+    role: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
 
-  export interface PaymentInstallment {
-    id: string;
-    installmentNumber: number;
-    dueDate: string;
-    amountHT: number;
-    taxAmount: number;
-    amountTTC: number;
-    rcdAmount?: number;
-    pjAmount?: number;
-    feesAmount?: number;
-    resumeAmount?: number;
-    periodStart: string;
-    periodEnd: string;
-    status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED' | 'PARTIALLY_PAID';
-    paidAt?: string;
-    paidAmount?: number;
-    paymentMethod?: string;
-    paymentReference?: string;
-    adminNotes?: string;
-    brokerNotes?: string;
-    validatedBy?: User;
-    validatedAt?: string;
-  }
+// Types pour le système de suivi des paiements
+export interface User {
+  id: string;
+  name?: string;
+  email: string;
+  role: "BROKER" | "ADMIN" | "UNDERWRITER";
+}
 
-  export interface PaymentSchedule {
-    id: string;
-    totalAmountHT: number;
-    totalTaxAmount: number;
-    totalAmountTTC: number;
-    startDate: string;
-    endDate: string;
-    status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED' | 'PARTIALLY_PAID';
-    payments: PaymentInstallment[];
-  }
+export interface PaymentInstallment {
+  id: string;
+  installmentNumber: number;
+  dueDate: string;
+  amountHT: number;
+  taxAmount: number;
+  amountTTC: number;
+  rcdAmount?: number;
+  pjAmount?: number;
+  feesAmount?: number;
+  resumeAmount?: number;
+  periodStart: string;
+  periodEnd: string;
+  status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED" | "PARTIALLY_PAID";
+  paidAt?: string;
+  paidAmount?: number;
+  paymentMethod?: string;
+  paymentReference?: string;
+  adminNotes?: string;
+  brokerNotes?: string;
+  validatedBy?: User;
+  validatedAt?: string;
+}
 
-  export interface PaymentForm {
-    amount: string;
-    method: string;
-    reference: string;
-    notes: string;
-  }
+export interface PaymentSchedule {
+  id: string;
+  totalAmountHT: number;
+  totalTaxAmount: number;
+  totalAmountTTC: number;
+  startDate: string;
+  endDate: string;
+  status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED" | "PARTIALLY_PAID";
+  payments: PaymentInstallment[];
+}
 
-  // Types pour les documents de devis
-  export interface QuoteDocument {
-    id: string;
+export interface PaymentForm {
+  amount: string;
+  method: string;
+  reference: string;
+  notes: string;
+}
+
+// Types pour les documents de devis
+export interface QuoteDocument {
+  id: string;
+  fileName: string;
+  originalName: string;
+  filePath: string;
+  fileType: string;
+  fileSize: number;
+  documentType: string;
+  isVerified: boolean;
+  validationNotes?: string;
+  validatedAt?: string;
+  validatedBy?: User;
+  uploadedAt: string;
+}
+
+export interface DocumentUploadResponse {
+  success: boolean;
+  data?: {
     fileName: string;
     originalName: string;
     filePath: string;
-    fileType: string;
     fileSize: number;
-    documentType: string;
-    isVerified: boolean;
-    validationNotes?: string;
-    validatedAt?: string;
-    validatedBy?: User;
-    uploadedAt: string;
-  }
+    fileType: string;
+    publicUrl: string;
+  };
+  error?: string;
+}
 
-  export interface DocumentUploadResponse {
-    success: boolean;
-    data?: {
-      fileName: string;
-      originalName: string;
-      filePath: string;
-      fileSize: number;
-      fileType: string;
-      publicUrl: string;
-    };
-    error?: string;
-  }
-
-  // Document requests for additional documents
-  export interface DocumentRequest {
-    id: string;
-    documentType: string;
-    description?: string;
-    isRequired: boolean;
-    requestedBy: User;
-    requestedAt: string;
-    isFulfilled: boolean;
-    fulfilledAt?: string;
-    fulfilledByDocument?: QuoteDocument;
-    adminNotes?: string;
-    brokerNotes?: string;
-  }
+// Document requests for additional documents
+export interface DocumentRequest {
+  id: string;
+  documentType: string;
+  description?: string;
+  isRequired: boolean;
+  requestedBy: User;
+  requestedAt: string;
+  isFulfilled: boolean;
+  fulfilledAt?: string;
+  fulfilledByDocument?: QuoteDocument;
+  adminNotes?: string;
+  brokerNotes?: string;
+}
