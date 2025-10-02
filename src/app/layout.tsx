@@ -14,9 +14,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Encyclie Construction",
+  title: {
+    template: "%s | Encyclie Construction",
+    default: "Encyclie Construction - CRM Logiciel d'Assurance",
+  },
   description:
-    "Plateforme de gestion d'assurances pour les courtiers et les clients.",
+    "Plateforme CRM pour la gestion des devis et contrats d'assurance construction. Solution moderne pour les courtiers et leurs clients.",
+  keywords: [
+    "assurance construction",
+    "CRM assurance",
+    "devis assurance",
+    "courtier assurance",
+    "RCD",
+    "responsabilité civile décennale",
+    "gestion contrats",
+  ],
 };
 
 export default function RootLayout({
