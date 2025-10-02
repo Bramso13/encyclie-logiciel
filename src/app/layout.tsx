@@ -14,9 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Encyclie Construction",
+  title: {
+    default: "Encyclie Construction - CRM Assurance",
+    template: "%s | Encyclie Construction",
+  },
   description:
-    "Plateforme de gestion d'assurances pour les courtiers et les clients.",
+    "Plateforme CRM de gestion d'assurances construction pour les courtiers et les clients. Simplifiez vos démarches d'assurance avec nos outils modernes de gestion de devis et contrats.",
+  keywords: ["assurance", "construction", "CRM", "courtier", "devis", "contrat", "RCD"],
 };
 
 export default function RootLayout({
@@ -25,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
