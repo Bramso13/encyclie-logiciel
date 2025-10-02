@@ -164,6 +164,32 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
 
           // Validate specific field types
           if (formData[fieldName]) {
+            if (fieldName === "territory") {
+              if ((formData[fieldName] as string).toLowerCase() === "mayotte") {
+                newErrors[
+                  fieldName
+                ] = `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
+              }
+            }
+            if (
+              fieldName === "sansActiviteDepuisPlusDe12MoisSansFermeture" ||
+              fieldName === "absenceDeSinistreSurLes5DernieresAnnees" ||
+              fieldName === "tempsSansActivite"
+            ) {
+              if (
+                formData.enCreation &&
+                formData[fieldName].toLowerCase() !== "creation"
+              ) {
+                newErrors[fieldName] =
+                  "Ce champ doit etre rempli par 'création' car entreprise en création";
+              }
+            }
+            if (fieldName === "nombreAnneeAssuranceContinue") {
+              if (formData.enCreation && Number(formData[fieldName]) !== 0) {
+                newErrors[fieldName] =
+                  "Ce champ doit etre rempli par '0' car entreprise en création";
+              }
+            }
             if (
               fieldConfig.type === "number" &&
               isNaN(Number(formData[fieldName]))
