@@ -1581,7 +1581,7 @@ const calculDeg = (params: {
         degressivity: degMax,
       });
     }
-    if (caDeclared > 70_000 && caDeclared <= 250_000) {
+    if (caDeclared >= 70_000 && caDeclared <= 250_000) {
       resultValue.push({
         code: deg.code,
         title: deg.title,
@@ -1743,6 +1743,7 @@ export function calculPrimeRCD(params: {
     nomActivite: string;
     partCA: number;
     tauxBase: number;
+    tauxApplique: number;
     PrimeMiniAct: number;
     DegMax: number;
     Deg400k: number;
@@ -1761,6 +1762,7 @@ export function calculPrimeRCD(params: {
     PrimeHTSansMajorations: number;
     totalMajorations: number;
     primeMini: number;
+    primeMiniAvecMajorations: number;
     primeAuDela: number;
     primeTotal: number;
     majorations: typeof majorations;
@@ -1805,6 +1807,7 @@ export function calculPrimeRCD(params: {
     primeMini: 0,
     PrimeHTSansMajorations: 0,
     totalMajorations: 0,
+    primeMiniAvecMajorations: 0,
     primeAuDela: 0,
     primeTotal: 0,
     majorations: majorations,
@@ -1842,39 +1845,8 @@ export function calculPrimeRCD(params: {
     caDeclared: caCalculee,
     tableauDeg: tableauDegAvant,
   });
+
   console.log("tableauDeg", tableauDeg);
-
-  activites.forEach((activite) => {
-    const rate = tableauTax.find((tax) => tax.code === activite.code)?.rate;
-    const tauxBase = rate ? rate : 0;
-    const primeMiniAct = tauxBase * plafond;
-    const degMax = tableauDeg.find(
-      (deg) => deg.code === activite.code
-    )?.degressivity;
-    const deg400k = tableauDeg.find(
-      (deg) => deg.code === activite.code && deg.type === "CA"
-    )?.degressivity;
-    const primeRefAct =
-      deg400k && caCalculee > 250000 ? primeMiniAct * deg400k : primeMiniAct;
-    const prime100Ref =
-      deg400k && caCalculee > 250000
-        ? tauxBase * deg400k * caCalculee - primeRefAct
-        : tauxBase * caCalculee - primeRefAct;
-    const prime100Min = prime100Ref * activite.caSharePercent;
-
-    returnTab.push({
-      nomActivite:
-        tableauTax.find((tax) => tax.code === activite.code)?.title ?? "",
-      partCA: activite.caSharePercent,
-      tauxBase,
-      PrimeMiniAct: primeMiniAct,
-      DegMax: degMax ?? 0,
-      Deg400k: deg400k ?? 0,
-      PrimeRefAct: primeRefAct,
-      Prime100Ref: prime100Ref,
-      Prime100Min: prime100Min,
-    });
-  });
 
   const totalMajorations = Object.entries(returnValue.majorations)
     .filter(([key]) => key !== "nonFournitureBilanN_1")
@@ -1883,13 +1855,49 @@ export function calculPrimeRCD(params: {
       1
     );
 
-  returnValue.PminiHT =
-    plafond * calculSommeTauxActPartCa(activites, tableauTax);
+  activites.forEach((activite) => {
+    const degMax = tableauDeg.find(
+      (deg) => deg.code === activite.code
+    )?.degressivity;
+    const deg400k = tableauDeg.find(
+      (deg) => deg.code === activite.code && deg.type === "CA"
+    )?.degressivity;
+    const rate = tableauTax.find((tax) => tax.code === activite.code)?.rate;
+    const tauxBase =
+      deg400k && caCalculee > 250000 ? (rate ?? 0) * deg400k : rate ?? 0;
+    const primeMiniAct = tauxBase * plafond * activite.caSharePercent;
+
+    const prime100Min =
+      tauxBase * (caCalculee - plafond) * activite.caSharePercent;
+
+    returnTab.push({
+      nomActivite:
+        tableauTax.find((tax) => tax.code === activite.code)?.title ?? "",
+      partCA: activite.caSharePercent,
+      tauxBase,
+      tauxApplique: tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1),
+      PrimeMiniAct: primeMiniAct,
+      DegMax: degMax ?? 0,
+      Deg400k: deg400k ?? 0,
+      PrimeRefAct: -1,
+      Prime100Ref: -1,
+      Prime100Min: prime100Min,
+    });
+  });
+
+  returnValue.PminiHT = returnTab.reduce(
+    (acc, activite) => acc + activite.PrimeMiniAct,
+    0
+  );
+  returnValue.primeMini = returnTab.reduce(
+    (acc, activite) => acc + activite.Prime100Min,
+    0
+  );
+  returnValue.primeMiniAvecMajorations = returnValue.PminiHT * totalMajorations;
   returnValue.PrimeHTSansMajorations =
-    returnValue.PminiHT +
-    returnTab.reduce((acc, activite) => acc + activite.Prime100Min, 0);
+    returnValue.PminiHT + returnValue.primeMini;
   returnValue.totalMajorations = totalMajorations;
-  returnValue.primeMini = returnValue.PminiHT * totalMajorations;
+
   returnValue.primeTotal =
     returnValue.PrimeHTSansMajorations * totalMajorations;
   returnValue.fraisGestion = returnValue.primeTotal * txFraisGestion;
@@ -1906,7 +1914,8 @@ export function calculPrimeRCD(params: {
     returnValue.autres.taxeAssurance +
     returnValue.autres.protectionJuridiqueTTC +
     returnValue.autres.fraisFractionnementPrimeHT;
-  returnValue.primeAuDela = returnValue.primeTotal - returnValue.primeMini;
+  returnValue.primeAuDela =
+    returnValue.primeTotal - returnValue.primeMiniAvecMajorations;
   returnValue.totalTTC =
     returnValue.primeTotal +
     returnValue.autres.total +
