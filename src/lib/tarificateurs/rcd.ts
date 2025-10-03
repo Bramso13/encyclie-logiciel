@@ -1315,8 +1315,10 @@ function calculateMajorations(params: {
     if (anneeExperience >= 5) return -0.05;
   };
   const calculMajNAAC = (NAAC: number) => {
-    if (NAAC <= 1) return 0.1;
-    if (NAAC > 1 && NAAC <= 2) return 0.05;
+    if (!enCreation && !assureurDefaillant) {
+      if (NAAC <= 1) return 0.1;
+      if (NAAC > 1 && NAAC <= 2) return 0.05;
+    }
     return 0;
   };
   const majorations = {
