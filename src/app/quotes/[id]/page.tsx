@@ -2,18 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  calculPrimeRCD,
-
-  getTaxeByRegion,
-} from "@/lib/tarificateurs/rcd";
+import { calculPrimeRCD, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import { authClient } from "@/lib/auth-client";
 
 import useProductsStore, {
   InsuranceProduct,
 } from "@/lib/stores/products-store";
-
-
 
 import ResumeTab from "../tabs/ResumeTab";
 import FormDataTab from "../tabs/FormDataTab";
@@ -27,8 +21,8 @@ import ChatTab from "../tabs/ChatTab";
 
 import PaymentTrackingTab from "../tabs/PremiumCallTab";
 import PieceJointeTab from "../tabs/PieceJointeTab";
+import BrokerCommissionsTab from "../tabs/BrokerCommissionsTab";
 import { calculateWithMapping } from "@/lib/utils";
-
 
 export default function QuoteDetailPage() {
   const params = useParams();
@@ -42,8 +36,8 @@ export default function QuoteDetailPage() {
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
 
-  
-  const [selectedProduct, setSelectedProduct] = useState<InsuranceProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<InsuranceProduct | null>(null);
   const [originalCalculationResult, setOriginalCalculationResult] =
     useState<CalculationResult | null>(null);
   const [editingSections, setEditingSections] = useState<{
@@ -61,15 +55,12 @@ export default function QuoteDetailPage() {
   // États pour l'édition
 
   const { activeProducts, fetchActiveProducts } = useProductsStore();
-  
 
   // États pour le mapping dynamique
   const [parameterMapping, setParameterMapping] = useState<
     Record<string, string>
   >({});
   const [formFields, setFormFields] = useState<Record<string, any>>({});
-
-  
 
   // États pour les notifications
   const [notification, setNotification] = useState<{
@@ -89,12 +80,9 @@ export default function QuoteDetailPage() {
   const [nonFournitureBilanEnabled, setNonFournitureBilanEnabled] =
     useState(false);
 
-  
-
   // Détection des rôles utilisateur
   const userRole = session?.user?.role;
   const isAdmin = userRole === "ADMIN";
-  
 
   const tabs = [
     {
@@ -176,9 +164,7 @@ export default function QuoteDetailPage() {
     {
       id: "echeancier",
       label: "Echeancier",
-      icon: (
-        <Calendar className="w-5 h-5" />
-      ),
+      icon: <Calendar className="w-5 h-5" />,
     },
     {
       id: "piece-jointe",
@@ -202,13 +188,28 @@ export default function QuoteDetailPage() {
     {
       id: "chat",
       label: "Chat",
+      icon: <MessageCircle />,
+    },
+    {
+      id: "broker-commissions",
+      label: "Commissions",
       icon: (
-        <MessageCircle />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
       ),
-    }
+    },
   ];
-
-  
 
   useEffect(() => {
     fetchActiveProducts();
@@ -231,8 +232,6 @@ export default function QuoteDetailPage() {
     }
   };
 
-  
-
   useEffect(() => {
     const fetchQuote = async () => {
       try {
@@ -242,8 +241,6 @@ export default function QuoteDetailPage() {
           const data = dataA.data;
           setQuote(data);
           console.log("quote", data);
-
-          
 
           // Trouver le produit sélectionné
           const product = activeProducts.find((p) => p.id === data.productId);
@@ -266,7 +263,11 @@ export default function QuoteDetailPage() {
                 return;
               }
 
-              const result = calculateWithMapping(data, parameterMapping, formFields);
+              const result = calculateWithMapping(
+                data,
+                parameterMapping,
+                formFields
+              );
               setCalculationResult(result);
               setCalculationError(null);
             } catch (error) {
@@ -333,7 +334,11 @@ export default function QuoteDetailPage() {
 
         // Si pas de calculatedPremium en DB, faire le calcul
         console.log("Calcul");
-        const result = calculateWithMapping(quote, parameterMapping, formFields);
+        const result = calculateWithMapping(
+          quote,
+          parameterMapping,
+          formFields
+        );
         setCalculationResult(result);
         setCalculationError(null);
       } catch (error) {
@@ -368,8 +373,6 @@ export default function QuoteDetailPage() {
     }
   };
 
-  
-
   // Fonctions pour gérer les switches
   const handleReprisePasseChange = (enabled: boolean) => {
     setReprisePasseEnabled(enabled);
@@ -385,7 +388,11 @@ export default function QuoteDetailPage() {
           },
         };
         try {
-          const result = calculateWithMapping(modifiedQuote, parameterMapping, formFields);
+          const result = calculateWithMapping(
+            modifiedQuote,
+            parameterMapping,
+            formFields
+          );
           setCalculationResult(result);
         } catch (error) {
           console.error("Erreur recalcul automatique:", error);
@@ -409,7 +416,11 @@ export default function QuoteDetailPage() {
         };
         console.log("modifiedQuote", modifiedQuote);
         try {
-          const result = calculateWithMapping(modifiedQuote, parameterMapping, formFields);
+          const result = calculateWithMapping(
+            modifiedQuote,
+            parameterMapping,
+            formFields
+          );
           setCalculationResult(result);
         } catch (error) {
           console.error("Erreur recalcul automatique:", error);
@@ -440,13 +451,6 @@ export default function QuoteDetailPage() {
       setRecalculating(false);
     }
   };
-
-  
-  
-
-  
-
-  
 
   if (loading) {
     return (
@@ -568,42 +572,41 @@ export default function QuoteDetailPage() {
                   </div>
                 </div>
               </div>
-
-              
             </div>
           </div>
         </div>
       </div>
-
-      
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
             {tabs.map((tab) => {
-              return (!(tab.id === "calculation") || (session?.user?.role === "ADMIN")) && (
-                <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <div
-                  className={`mr-2 transition-colors ${
-                    activeTab === tab.id
-                      ? "text-indigo-500"
-                      : "text-gray-400 group-hover:text-gray-500"
-                  }`}
-                >
-                  {tab.icon}
-                </div>
-                {tab.label}
-              </button>
-              )
+              return (
+                (!(tab.id === "calculation") ||
+                  session?.user?.role === "ADMIN") && (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === tab.id
+                        ? "border-indigo-500 text-indigo-600"
+                        : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <div
+                      className={`mr-2 transition-colors ${
+                        activeTab === tab.id
+                          ? "text-indigo-500"
+                          : "text-gray-400 group-hover:text-gray-500"
+                      }`}
+                    >
+                      {tab.icon}
+                    </div>
+                    {tab.label}
+                  </button>
+                )
+              );
             })}
           </nav>
         </div>
@@ -640,20 +643,25 @@ export default function QuoteDetailPage() {
         )}
 
         {activeTab === "letter" && (
-          <LetterTab quote={quote} calculationResult={calculationResult} session={session} />
+          <LetterTab
+            quote={quote}
+            calculationResult={calculationResult}
+            session={session}
+          />
         )}
 
         {activeTab === "echeancier" && (
-          <PaymentTrackingTab quote={quote} calculationResult={calculationResult} />
+          <PaymentTrackingTab
+            quote={quote}
+            calculationResult={calculationResult}
+          />
         )}
 
-        {activeTab === "chat" && (
-          <ChatTab quote={quote} />
+        {activeTab === "chat" && <ChatTab quote={quote} />}
+        {activeTab === "piece-jointe" && <PieceJointeTab quote={quote} />}
+        {activeTab === "broker-commissions" && calculationResult && (
+          <BrokerCommissionsTab calculationResult={calculationResult} />
         )}
-        {activeTab === "piece-jointe" && (
-          <PieceJointeTab quote={quote} />
-        )}
-          
       </div>
 
       {/* Notification Toast */}

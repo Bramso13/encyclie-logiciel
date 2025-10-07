@@ -1,19 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail, sendEmailWithAttachment } from '@/lib/nodemailer';
+import { NextRequest, NextResponse } from "next/server";
+import { sendEmail, sendEmailWithAttachment } from "@/lib/nodemailer";
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    
-    const quoteId = formData.get('quoteId') as string;
-    const directorName = formData.get('directorName') as string;
-    const companyName = formData.get('companyName') as string;
-    const clientEmail = formData.get('clientEmail') as string;
-    const pdfFile = formData.get('pdf') as File;
+
+    const quoteId = formData.get("quoteId") as string;
+    const directorName = formData.get("directorName") as string;
+    const companyName = formData.get("companyName") as string;
+    const clientEmail = formData.get("clientEmail") as string;
+    const pdfFile = formData.get("pdf") as File;
 
     if (!quoteId || !directorName || !companyName || !clientEmail || !pdfFile) {
       return NextResponse.json(
-        { error: 'Données manquantes' },
+        { error: "Données manquantes" },
         { status: 400 }
       );
     }
@@ -32,18 +32,18 @@ export async function POST(request: NextRequest) {
       emailTemplate.text,
       [
         {
-          filename: `lettre-intention-${companyName.replace(/\s+/g, '-')}.pdf`,
+          filename: `lettre-intention-${companyName.replace(/\s+/g, "-")}.pdf`,
           content: pdfBuffer,
-          contentType: 'application/pdf'
-        }
+          contentType: "application/pdf",
+        },
       ]
     );
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Erreur envoi email lettre d\'intention:', error);
+    console.error("Erreur envoi email lettre d'intention:", error);
     return NextResponse.json(
-      { error: 'Erreur lors de l\'envoi de l\'email' },
+      { error: "Erreur lors de l'envoi de l'email" },
       { status: 500 }
     );
   }
@@ -150,8 +150,8 @@ const getLetterIntentTemplate = (directorName: string, companyName: string) => {
           
           <div class="footer">
             <p>📧 Email : contact@encyclie-construction.fr</p>
-            <p>📞 Téléphone : 01 XX XX XX XX</p>
-            <p>🏢 42 Rue Notre-Dame des Victoires, 75002 PARIS</p>
+            <p>Téléphone : 01 85 09 42 06</p>
+            <p>📍 42 Rue Notre-Dame des Victoires, 75002 PARIS, metro Bourse</p>
             <p>© ${new Date().getFullYear()} Encyclie Construction. Tous droits réservés.</p>
           </div>
         </body>
@@ -187,9 +187,7 @@ Encyclie Construction
 
 Email : contact@encyclie-construction.fr
 Téléphone : 01 85 09 42 06
-42 Rue Notre-Dame des Victoires, 75002 PARIS
-    `
+42 Rue Notre-Dame des Victoires, 75002 PARIS, metro Bourse
+    `,
   };
 };
-
-
