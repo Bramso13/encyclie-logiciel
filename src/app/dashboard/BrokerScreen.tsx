@@ -17,12 +17,25 @@ interface BrokerScreenProps {
   };
 }
 
+interface TutorialVideo {
+  title: string;
+  url: string;
+}
+
+// Liste des vidéos explicatives
+const TUTORIAL_VIDEOS: TutorialVideo[] = [
+  // { title: "Comment créer un devis", url: "https://example.com/video1" },
+  // { title: "Gestion des contrats", url: "https://example.com/video2" },
+  // { title: "Suivi des commissions", url: "https://example.com/video3" },
+];
+
 export default function BrokerScreen({ user }: BrokerScreenProps) {
   const [activeTab, setActiveTab] = useState("quotes");
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showSuccessPage, setShowSuccessPage] = useState(false);
   const [createdQuote, setCreatedQuote] = useState<any>(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
   const router = useRouter();
 
   const {
@@ -620,6 +633,123 @@ export default function BrokerScreen({ user }: BrokerScreenProps) {
           )}
         </div>
       </div>
+
+      {/* Bouton flottant pour les vidéos explicatives */}
+      <button
+        onClick={() => setShowTutorialModal(true)}
+        className="fixed bottom-8 right-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 z-50 animate-pulse hover:animate-none group"
+        title="Vidéos explicatives"
+        style={{
+          boxShadow:
+            "0 10px 40px rgba(99, 102, 241, 0.5), 0 0 20px rgba(99, 102, 241, 0.3)",
+        }}
+      >
+        <div className="flex items-center gap-3 px-6 py-4">
+          <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+          </svg>
+          <span className="font-semibold text-base whitespace-nowrap">
+            Vidéos d'aide
+          </span>
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1 animate-bounce">
+            AIDE
+          </span>
+        </div>
+      </button>
+
+      {/* Modal des vidéos explicatives */}
+      {showTutorialModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Vidéos explicatives
+              </h2>
+              <button
+                onClick={() => setShowTutorialModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+              {TUTORIAL_VIDEOS.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <p className="mt-4 text-gray-600 text-lg">
+                    Les vidéos explicatives sont en cours de création.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {TUTORIAL_VIDEOS.map((video, index) => (
+                    <a
+                      key={index}
+                      href={video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all duration-200"
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-5 h-5 text-indigo-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4 flex-1">
+                        <h3 className="text-sm font-medium text-gray-900">
+                          {video.title}
+                        </h3>
+                      </div>
+                      <svg
+                        className="w-5 h-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
