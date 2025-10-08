@@ -301,7 +301,7 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
         <h2 className="text-xl font-semibold mb-4">Gestion des documents</h2>
 
         {/* Interface Courtier - Upload de documents */}
-        {isBroker && (
+        {(isBroker || isAdmin) && (
           <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
             <h3 className="font-medium mb-3">Ajouter un document</h3>
             <div className="space-y-3">
