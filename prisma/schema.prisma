@@ -345,6 +345,9 @@ model Quote {
   calculatedPremium Json?
   validUntil        DateTime?
 
+  // Offer data
+  offerData Json? // Offer details including required documents
+
   // Workflow
   submittedAt  DateTime?
   offerReadyAt DateTime?
