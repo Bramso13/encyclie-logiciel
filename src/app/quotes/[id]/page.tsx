@@ -22,6 +22,7 @@ import ChatTab from "../tabs/ChatTab";
 import PaymentTrackingTab from "../tabs/PremiumCallTab";
 import PieceJointeTab from "../tabs/PieceJointeTab";
 import BrokerCommissionsTab from "../tabs/BrokerCommissionsTab";
+import OffreTab from "../tabs/OffreTab";
 import { calculateWithMapping } from "@/lib/utils";
 
 export default function QuoteDetailPage() {
@@ -205,6 +206,25 @@ export default function QuoteDetailPage() {
             strokeLinejoin="round"
             strokeWidth={2}
             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "offre",
+      label: "Offre",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
       ),
@@ -583,7 +603,7 @@ export default function QuoteDetailPage() {
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
             {tabs.map((tab) => {
               return (
-                (!(tab.id === "calculation") ||
+                (!(tab.id === "calculation" || tab.id === "offre") ||
                   session?.user?.role === "ADMIN") && (
                   <button
                     key={tab.id}
@@ -661,6 +681,9 @@ export default function QuoteDetailPage() {
         {activeTab === "piece-jointe" && <PieceJointeTab quote={quote} />}
         {activeTab === "broker-commissions" && calculationResult && (
           <BrokerCommissionsTab calculationResult={calculationResult} />
+        )}
+        {activeTab === "offre" && (
+          <OffreTab quote={quote} calculationResult={calculationResult} />
         )}
       </div>
 
