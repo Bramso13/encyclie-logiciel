@@ -16,7 +16,10 @@ export async function GET(
   try {
     return await withAuth(async (userId, userRole) => {
       if (userRole !== "ADMIN") {
-        throw new ApiError(403, "Seuls les administrateurs peuvent accéder aux offres");
+        throw new ApiError(
+          403,
+          "Seuls les administrateurs peuvent accéder aux offres"
+        );
       }
 
       const quote = await prisma.quote.findUnique({
@@ -33,7 +36,9 @@ export async function GET(
       }
 
       return createApiResponse({
-        requiredDocuments: quote.offerData ? (quote.offerData as any).requiredDocuments : [],
+        requiredDocuments: quote.offerData
+          ? (quote.offerData as any).requiredDocuments
+          : [],
         sent: !!quote.offerSentAt,
         sentAt: quote.offerSentAt,
       });
@@ -52,11 +57,15 @@ export async function POST(
   try {
     return await withAuth(async (userId, userRole) => {
       if (userRole !== "ADMIN") {
-        throw new ApiError(403, "Seuls les administrateurs peuvent envoyer des offres");
+        throw new ApiError(
+          403,
+          "Seuls les administrateurs peuvent envoyer des offres"
+        );
       }
 
       const body = await request.json();
-      const { requiredDocuments, calculationResult, formData, companyData } = body;
+      const { requiredDocuments, calculationResult, formData, companyData } =
+        body;
 
       if (!requiredDocuments || requiredDocuments.length === 0) {
         throw new ApiError(400, "Au moins un document doit être sélectionné");
@@ -121,11 +130,15 @@ export async function POST(
         },
       });
 
-      return createApiResponse({
-        requiredDocuments,
-        sent: true,
-        sentAt: updatedQuote.offerSentAt,
-      }, "Offre envoyée avec succès", 201);
+      return createApiResponse(
+        {
+          requiredDocuments,
+          sent: true,
+          sentAt: updatedQuote.offerSentAt,
+        },
+        "Offre envoyée avec succès",
+        201
+      );
     });
   } catch (error) {
     return handleApiError(error);
@@ -141,7 +154,10 @@ export async function PUT(
   try {
     return await withAuth(async (userId, userRole) => {
       if (userRole !== "ADMIN") {
-        throw new ApiError(403, "Seuls les administrateurs peuvent modifier les offres");
+        throw new ApiError(
+          403,
+          "Seuls les administrateurs peuvent modifier les offres"
+        );
       }
 
       const body = await request.json();
@@ -160,7 +176,7 @@ export async function PUT(
       }
 
       // Mettre à jour uniquement les documents requis
-      const currentOfferData = quote.offerData as any || {};
+      const currentOfferData = (quote.offerData as any) || {};
       const updatedQuote = await prisma.quote.update({
         where: { id: params.id },
         data: {
@@ -173,12 +189,14 @@ export async function PUT(
         },
       });
 
-      return createApiResponse({
-        requiredDocuments,
-      }, "Sélection sauvegardée");
+      return createApiResponse(
+        {
+          requiredDocuments,
+        },
+        "Sélection sauvegardée"
+      );
     });
   } catch (error) {
     return handleApiError(error);
   }
 }
-

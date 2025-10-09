@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Quote, CalculationResult } from "@/lib/types";
 import { useSession } from "@/lib/auth-client";
 
+import OfferLetterPreview from "@/components/pdf/OfferLetterPreview";
+
 interface OffreTabProps {
   quote: Quote;
   calculationResult: CalculationResult | null;
@@ -14,51 +16,131 @@ const DOCUMENT_CHECKLIST = {
   general: {
     label: "Documents généraux",
     items: [
-      { id: "rcd_questionnaire", label: "Questionnaire RCD signé par le proposant" },
-      { id: "kbis", label: "Kbis de moins de 3 mois et les statuts de l'entreprise" },
-      { id: "cv_dirigeant", label: "CV du dirigeant justifiant du/des activités demandées" },
-      { id: "rib_mandat", label: "RIB/MANDAT SEPA si paiement par prélèvement automatique choisi" },
+      {
+        id: "rcd_questionnaire",
+        label: "Questionnaire RCD signé par le proposant",
+      },
+      {
+        id: "kbis",
+        label: "Kbis de moins de 3 mois et les statuts de l'entreprise",
+      },
+      {
+        id: "cv_dirigeant",
+        label: "CV du dirigeant justifiant du/des activités demandées",
+      },
+      {
+        id: "rib_mandat",
+        label: "RIB/MANDAT SEPA si paiement par prélèvement automatique choisi",
+      },
       { id: "cni_gerant", label: "CNI du gérant" },
-      { id: "qualification", label: "Qualification QUALIBAT/QUALIFELEC si applicable" },
-      { id: "attestation_honneur", label: "Attestation sur l'honneur et signée précisant que le dirigeant n'a pas connaissance de difficulté ou d'incident susceptibles d'occasionner une déclaration de sinistre" },
-      { id: "verification_coherence", label: "Vérification de la cohérence des déclarations relatives à l'activité" },
-      { id: "diplome_certificat", label: "Diplôme/certificat professionnel justifiant du/des activités demandées" },
-      { id: "organigramme", label: "Organigramme pour les CA supérieur à 500 000€" },
-    ]
+      {
+        id: "qualification",
+        label: "Qualification QUALIBAT/QUALIFELEC si applicable",
+      },
+      {
+        id: "attestation_honneur",
+        label:
+          "Attestation sur l'honneur et signée précisant que le dirigeant n'a pas connaissance de difficulté ou d'incident susceptibles d'occasionner une déclaration de sinistre",
+      },
+      {
+        id: "verification_coherence",
+        label:
+          "Vérification de la cohérence des déclarations relatives à l'activité",
+      },
+      {
+        id: "diplome_certificat",
+        label:
+          "Diplôme/certificat professionnel justifiant du/des activités demandées",
+      },
+      {
+        id: "organigramme",
+        label: "Organigramme pour les CA supérieur à 500 000€",
+      },
+    ],
   },
   newCompany: {
-    label: "Pour les entreprises en création (créées depuis moins de 12 mois) sans activité",
+    label:
+      "Pour les entreprises en création (créées depuis moins de 12 mois) sans activité",
     items: [
-      { id: "ventilation_previsionnelle", label: "Ventilation prévisionnelle des activités du chiffre d'affaires N" },
-      { id: "certificat_travail", label: "Certificat de travail/fiche de paie des anciens employeurs émanant du dirigeant" },
-      { id: "certificat_experience", label: "Certificat de travail/fiche de paie pour couvrir la totalité de la durée d'expérience prise en compte" },
-      { id: "factures_ancienne_entreprise", label: "Factures émises sous son ancienne entreprise pour les travailleurs non-salariés" },
+      {
+        id: "ventilation_previsionnelle",
+        label:
+          "Ventilation prévisionnelle des activités du chiffre d'affaires N",
+      },
+      {
+        id: "certificat_travail",
+        label:
+          "Certificat de travail/fiche de paie des anciens employeurs émanant du dirigeant",
+      },
+      {
+        id: "certificat_experience",
+        label:
+          "Certificat de travail/fiche de paie pour couvrir la totalité de la durée d'expérience prise en compte",
+      },
+      {
+        id: "factures_ancienne_entreprise",
+        label:
+          "Factures émises sous son ancienne entreprise pour les travailleurs non-salariés",
+      },
       { id: "situation_comptable", label: "Situation comptable intermédiaire" },
-      { id: "attestation_emploi", label: "Attestation sur l'honneur certifiant l'emploi dans une société ou organigramme" },
-    ]
+      {
+        id: "attestation_emploi",
+        label:
+          "Attestation sur l'honneur certifiant l'emploi dans une société ou organigramme",
+      },
+    ],
   },
   existingCompany: {
-    label: "Pour les entreprises créées depuis plus de 12 mois et précédemment assurées",
+    label:
+      "Pour les entreprises créées depuis plus de 12 mois et précédemment assurées",
     items: [
-      { id: "ventilation_activites", label: "Ventilation des activités du chiffre d'affaires N-1 et N" },
-      { id: "releve_sinistralite", label: "RI/Relevé de sinistralité de 5 ans ou depuis la création de l'entreprise" },
-      { id: "attestation_assurance", label: "Dernière attestation d'assurance mentionnant les activités assurées" },
-      { id: "bilan_financier", label: "Dernier bilan financier pour les sociétés créées depuis plus de 2 ans" },
-      { id: "factures_chantier", label: "Minimum 4 factures de chantier justifiant l'expérience déclarée" },
-      { id: "attestation_non_reprise", label: "Attestation du gérant pour la non reprise du passé" },
-    ]
-  }
+      {
+        id: "ventilation_activites",
+        label: "Ventilation des activités du chiffre d'affaires N-1 et N",
+      },
+      {
+        id: "releve_sinistralite",
+        label:
+          "RI/Relevé de sinistralité de 5 ans ou depuis la création de l'entreprise",
+      },
+      {
+        id: "attestation_assurance",
+        label:
+          "Dernière attestation d'assurance mentionnant les activités assurées",
+      },
+      {
+        id: "bilan_financier",
+        label:
+          "Dernier bilan financier pour les sociétés créées depuis plus de 2 ans",
+      },
+      {
+        id: "factures_chantier",
+        label:
+          "Minimum 4 factures de chantier justifiant l'expérience déclarée",
+      },
+      {
+        id: "attestation_non_reprise",
+        label: "Attestation du gérant pour la non reprise du passé",
+      },
+    ],
+  },
 };
 
 export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   const { data: session } = useSession();
-  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(
+    new Set()
+  );
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showOfferLetterPreview, setShowOfferLetterPreview] = useState(false);
   const [offerSent, setOfferSent] = useState(false);
   const [offerData, setOfferData] = useState<any>(null);
-  
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
   const isAdmin = session?.user?.role === "ADMIN";
+
+  console.log("quote.formData", quote.formData);
 
   // Charger l'état de l'offre si elle existe
   useEffect(() => {
@@ -95,7 +177,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
   const handleSelectAll = (category: keyof typeof DOCUMENT_CHECKLIST) => {
     const newSelected = new Set(selectedDocuments);
-    DOCUMENT_CHECKLIST[category].items.forEach(item => {
+    DOCUMENT_CHECKLIST[category].items.forEach((item) => {
       newSelected.add(item.id);
     });
     setSelectedDocuments(newSelected);
@@ -103,7 +185,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
   const handleDeselectAll = (category: keyof typeof DOCUMENT_CHECKLIST) => {
     const newSelected = new Set(selectedDocuments);
-    DOCUMENT_CHECKLIST[category].items.forEach(item => {
+    DOCUMENT_CHECKLIST[category].items.forEach((item) => {
       newSelected.delete(item.id);
     });
     setSelectedDocuments(newSelected);
@@ -117,7 +199,57 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
     setSending(true);
     try {
-      const response = await fetch(`/api/quotes/${quote.id}/offer`, {
+      // 1. Générer le PDF via l'API existante
+      const pdfResponse = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "offer-letter",
+          quote: quote,
+          calculationResult: calculationResult,
+          formData: quote.formData,
+        }),
+      });
+
+      if (!pdfResponse.ok) {
+        throw new Error("Erreur lors de la génération du PDF");
+      }
+
+      const pdfBlob = await pdfResponse.blob();
+
+      // 2. Envoyer l'email avec le PDF en pièce jointe
+      const emailFormData = new FormData();
+      emailFormData.append("quoteId", quote.id);
+      emailFormData.append(
+        "directorName",
+        (quote.formData as any)?.directorName || ""
+      );
+      emailFormData.append(
+        "companyName",
+        (quote.formData as any)?.companyName ||
+          (quote.companyData as any)?.companyName ||
+          ""
+      );
+      emailFormData.append("brokerEmail", (quote as any).broker?.email || "");
+      emailFormData.append(
+        "pdf",
+        pdfBlob,
+        `proposition-offre-${quote.reference}.pdf`
+      );
+
+      const emailResponse = await fetch("/api/email/send-offer-letter", {
+        method: "POST",
+        body: emailFormData,
+      });
+
+      if (!emailResponse.ok) {
+        throw new Error("Erreur lors de l'envoi de l'email");
+      }
+
+      // 3. Sauvegarder l'offre dans la base de données
+      const saveResponse = await fetch(`/api/quotes/${quote.id}/offer`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,15 +262,15 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
         }),
       });
 
-      const result = await response.json();
+      const result = await saveResponse.json();
 
-      if (result.success) {
-        setOfferSent(true);
-        setOfferData(result.data);
-        alert("L'offre a été envoyée au courtier avec succès !");
-      } else {
-        throw new Error(result.error || "Erreur lors de l'envoi");
+      if (!result.success) {
+        console.error("Erreur lors de la sauvegarde:", result.error);
       }
+
+      setOfferSent(true);
+      setOfferData(result.data);
+      alert("L'offre a été envoyée au courtier avec succès !");
     } catch (error) {
       console.error("Erreur:", error);
       alert("Erreur lors de l'envoi de l'offre");
@@ -174,9 +306,46 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
     }
   };
 
+  const handleDownloadOfferPdf = async () => {
+    setGeneratingPdf(true);
+    try {
+      const response = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "offer-letter",
+          quote: quote,
+          calculationResult: calculationResult,
+          formData: quote.formData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la génération du PDF");
+      }
+
+      const pdfBlob = await response.blob();
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `lettre-offre-${quote.reference || "devis"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erreur:", error);
+      alert("Erreur lors de la génération du PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   const getDocumentLabel = (documentId: string) => {
     for (const category of Object.values(DOCUMENT_CHECKLIST)) {
-      const item = category.items.find(i => i.id === documentId);
+      const item = category.items.find((i) => i.id === documentId);
       if (item) return item.label;
     }
     return documentId;
@@ -186,12 +355,26 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
         <div className="flex items-center">
-          <svg className="w-6 h-6 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          <svg
+            className="w-6 h-6 text-yellow-600 mr-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
           </svg>
           <div>
-            <h3 className="text-lg font-medium text-yellow-900">Accès réservé aux administrateurs</h3>
-            <p className="text-sm text-yellow-700 mt-1">Seuls les administrateurs peuvent accéder à l'onglet Offre.</p>
+            <h3 className="text-lg font-medium text-yellow-900">
+              Accès réservé aux administrateurs
+            </h3>
+            <p className="text-sm text-yellow-700 mt-1">
+              Seuls les administrateurs peuvent accéder à l'onglet Offre.
+            </p>
           </div>
         </div>
       </div>
@@ -201,100 +384,516 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   return (
     <div className="space-y-6">
       {/* En-tête avec statut */}
-      <div className={`rounded-lg p-4 ${offerSent ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+      <div
+        className={`rounded-lg p-4 ${
+          offerSent
+            ? "bg-green-50 border border-green-200"
+            : "bg-blue-50 border border-blue-200"
+        }`}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             {offerSent ? (
               <>
-                <svg className="w-6 h-6 text-green-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                <svg
+                  className="w-6 h-6 text-green-600 mr-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <div>
-                  <h3 className="text-lg font-semibold text-green-900">Offre envoyée</h3>
+                  <h3 className="text-lg font-semibold text-green-900">
+                    Offre envoyée
+                  </h3>
                   <p className="text-sm text-green-700">
-                    L'offre a été envoyée au courtier le {offerData?.sentAt ? new Date(offerData.sentAt).toLocaleString('fr-FR') : ''}
+                    L'offre a été envoyée au courtier le{" "}
+                    {offerData?.sentAt
+                      ? new Date(offerData.sentAt).toLocaleString("fr-FR")
+                      : ""}
                   </p>
                 </div>
               </>
             ) : (
               <>
-                <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  className="w-6 h-6 text-blue-600 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-900">Préparation de l'offre</h3>
-                  <p className="text-sm text-blue-700">Sélectionnez les documents requis et prévisualisez l'offre avant envoi</p>
+                  <h3 className="text-lg font-semibold text-blue-900">
+                    Préparation de l'offre
+                  </h3>
+                  <p className="text-sm text-blue-700">
+                    Sélectionnez les documents requis et prévisualisez l'offre
+                    avant envoi
+                  </p>
                 </div>
               </>
             )}
           </div>
-          <button
-            onClick={() => setShowPreview(!showPreview)}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {showPreview ? "Masquer" : "Afficher"} la prévisualisation
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {showPreview ? "Masquer" : "Afficher"} la prévisualisation
+            </button>
+            <button
+              onClick={() => setShowOfferLetterPreview(!showOfferLetterPreview)}
+              className="px-4 py-2 bg-blue-600 text-white border border-blue-600 rounded-md text-sm font-medium hover:bg-blue-700"
+            >
+              {showOfferLetterPreview ? "Masquer" : "Afficher"} la lettre
+              d'offre
+            </button>
+            <button
+              onClick={handleDownloadOfferPdf}
+              disabled={generatingPdf}
+              className="px-4 py-2 bg-green-600 text-white border border-green-600 rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              {generatingPdf ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Télécharger le PDF
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Prévisualisation du formulaire (Admin seulement) */}
       {showPreview && (
         <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
-          <h3 className="text-xl font-semibold mb-4 text-gray-900">Prévisualisation de l'offre</h3>
-          
-          <div className="grid grid-cols-2 gap-6">
+          <h3 className="text-xl font-semibold mb-6 text-gray-900">
+            Prévisualisation complète de l'offre
+          </h3>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Informations de l'entreprise */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 border-b pb-2">Informations de l'entreprise</h4>
-              <div>
-                <p className="text-sm text-gray-500">Nom de l'entreprise</p>
-                <p className="font-medium">{quote.companyData?.companyName || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">SIRET</p>
-                <p className="font-medium">{quote.companyData?.siret || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Forme juridique</p>
-                <p className="font-medium">{quote.companyData?.legalForm || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Dirigeant</p>
-                <p className="font-medium">{quote.companyData?.directorName || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Adresse</p>
-                <p className="font-medium">{quote.companyData?.address || 'N/A'}</p>
-                <p className="font-medium">{quote.companyData?.postalCode} {quote.companyData?.city}</p>
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 border-b pb-2 text-lg">
+                Informations de l'entreprise
+              </h4>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <p className="text-sm text-gray-500">Nom de l'entreprise</p>
+                  <p className="font-medium">
+                    {quote.formData?.companyName ||
+                      quote.companyData?.companyName ||
+                      "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">SIRET</p>
+                  <p className="font-medium">
+                    {quote.formData?.siret || quote.companyData?.siret || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Forme juridique</p>
+                  <p className="font-medium">
+                    {quote.formData?.legalForm ||
+                      quote.companyData?.legalForm ||
+                      "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Dirigeant</p>
+                  <p className="font-medium">
+                    {quote.formData?.directorName ||
+                      quote.companyData?.directorName ||
+                      "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Adresse</p>
+                  <p className="font-medium">
+                    {quote.formData?.address ||
+                      quote.companyData?.address ||
+                      "N/A"}
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData?.postalCode ||
+                      quote.companyData?.postalCode}{" "}
+                    {quote.formData?.city || quote.companyData?.city}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Entreprise en création
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData.enCreation ? "Oui" : "Non"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Date de création</p>
+                  <p className="font-medium">
+                    {quote.formData?.companyCreationDate
+                      ? new Date(
+                          quote.formData.companyCreationDate
+                        ).toLocaleDateString("fr-FR")
+                      : quote.formData?.creationDate
+                      ? new Date(
+                          quote.formData.creationDate
+                        ).toLocaleDateString("fr-FR")
+                      : "N/A"}
+                  </p>
+                </div>
+                {quote.formData?.phoneNumber && (
+                  <div>
+                    <p className="text-sm text-gray-500">Téléphone</p>
+                    <p className="font-medium">{quote.formData.phoneNumber}</p>
+                  </div>
+                )}
+                {quote.formData?.mailAddress && (
+                  <div>
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium">{quote.formData.mailAddress}</p>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Informations d'activité */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 border-b pb-2 text-lg">
+                Activité et risques
+              </h4>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <p className="text-sm text-gray-500">Chiffre d'affaires</p>
+                  <p className="font-medium">
+                    {quote.formData?.chiffreAffaires
+                      ? `${parseInt(
+                          quote.formData.chiffreAffaires
+                        ).toLocaleString("fr-FR")} €`
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Nombre de salariés</p>
+                  <p className="font-medium">
+                    {quote.formData?.nombreSalaries || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Territoire d'intervention
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData?.territory || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Expérience métier</p>
+                  <p className="font-medium">
+                    {quote.formData?.experienceMetier || "N/A"} ans
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Pourcentage de négoce</p>
+                  <p className="font-medium">
+                    {quote.formData?.tradingPercent || "N/A"}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Pourcentage de sous-traitance
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData?.subContractingPercent || "N/A"}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Qualification professionnelle
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData?.hasQualification ? "Oui" : "Non"}
+                  </p>
+                </div>
+                {quote.formData?.tempsSansActivite && (
+                  <div>
+                    <p className="text-sm text-gray-500">Temps sans activité</p>
+                    <p className="font-medium">
+                      {quote.formData.tempsSansActivite}
+                    </p>
+                  </div>
+                )}
+                {quote.formData
+                  ?.sansActiviteDepuisPlusDe12MoisSansFermeture && (
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Sans activité +12 mois sans fermeture
+                    </p>
+                    <p className="font-medium">
+                      {
+                        quote.formData
+                          .sansActiviteDepuisPlusDe12MoisSansFermeture
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Activités détaillées */}
+            {quote.formData?.activities &&
+              quote.formData.activities.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900 border-b pb-2 text-lg">
+                    Répartition des activités
+                  </h4>
+                  <div className="space-y-2">
+                    {quote.formData.activities.map((activity, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border"
+                      >
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            {activity.code}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold text-indigo-600">
+                            {activity.caSharePercent}%
+                          </span>
+                          <p className="text-xs text-gray-500">du CA</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                      Total:{" "}
+                      {quote.formData.activities.reduce(
+                        (sum, activity) => sum + activity.caSharePercent,
+                        0
+                      )}
+                      % du chiffre d'affaires
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Informations d'assurance */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 border-b pb-2 text-lg">
+                Informations d'assurance
+              </h4>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Date d'effet souhaitée
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData?.dateDeffet
+                      ? new Date(quote.formData.dateDeffet).toLocaleDateString(
+                          "fr-FR"
+                        )
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Périodicité de paiement
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData?.periodicity || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Honoraires courtier</p>
+                  <p className="font-medium">
+                    {quote.formData?.honoraireCourtier || "N/A"}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Protection juridique incluse
+                  </p>
+                  <p className="font-medium">
+                    {quote.formData?.includePJ ? "Oui" : "Non"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Statut RCD précédent</p>
+                  <p className="font-medium">
+                    {quote.formData?.previousRcdStatus || "N/A"}
+                  </p>
+                </div>
+                {quote.formData?.previousInsurer && (
+                  <div>
+                    <p className="text-sm text-gray-500">Assureur précédent</p>
+                    <p className="font-medium">
+                      {quote.formData.previousInsurer}
+                    </p>
+                  </div>
+                )}
+                {quote.formData?.nombreAnneeAssuranceContinue && (
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Années d'assurance continue
+                    </p>
+                    <p className="font-medium">
+                      {quote.formData.nombreAnneeAssuranceContinue} ans
+                    </p>
+                  </div>
+                )}
+                {quote.formData?.assureurDefaillant !== undefined && (
+                  <div>
+                    <p className="text-sm text-gray-500">Assureur défaillant</p>
+                    <p className="font-medium">
+                      {quote.formData.assureurDefaillant ? "Oui" : "Non"}
+                    </p>
+                  </div>
+                )}
+                {quote.formData?.absenceDeSinistreSurLes5DernieresAnnees && (
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Absence de sinistre sur 5 ans
+                    </p>
+                    <p className="font-medium">
+                      {quote.formData.absenceDeSinistreSurLes5DernieresAnnees}
+                    </p>
+                  </div>
+                )}
+                {quote.formData?.previousResiliationDate && (
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Date de résiliation précédente
+                    </p>
+                    <p className="font-medium">
+                      {new Date(
+                        quote.formData.previousResiliationDate
+                      ).toLocaleDateString("fr-FR")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Historique des sinistres */}
+            {quote.formData?.lossHistory &&
+              quote.formData.lossHistory.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900 border-b pb-2 text-lg">
+                    Historique des sinistres
+                  </h4>
+                  <div className="space-y-2">
+                    {quote.formData.lossHistory.map((loss, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between items-center p-3 bg-red-50 rounded border border-red-200"
+                      >
+                        <div>
+                          <span className="text-sm font-medium">
+                            Année {loss.year}
+                          </span>
+                          <p className="text-xs text-gray-600">
+                            {loss.numClaims} sinistre
+                            {loss.numClaims > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                        <span className="text-sm font-medium text-red-600">
+                          {loss.totalCost.toLocaleString("fr-FR")} €
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             {/* Calcul de la prime */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 border-b pb-2">Calcul de la prime</h4>
+            <div className="space-y-4 lg:col-span-2">
+              <h4 className="font-semibold text-gray-900 border-b pb-2 text-lg">
+                Calcul de la prime
+              </h4>
               {calculationResult ? (
-                <>
-                  <div>
-                    <p className="text-sm text-gray-500">Prime de base</p>
-                    <p className="font-medium">{calculationResult.primeBase?.toFixed(2) || 'N/A'} €</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-gray-600">Prime HT</p>
+                    <p className="text-xl font-bold text-blue-600">
+                      {calculationResult.primeTotal?.toFixed(2) || "N/A"} €
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Prime nette</p>
-                    <p className="font-medium">{calculationResult.primeNette?.toFixed(2) || 'N/A'} €</p>
+
+                  <div className="p-4 bg-indigo-50 rounded-lg border-2 border-indigo-200">
+                    <p className="text-sm text-gray-600">Prime TTC</p>
+                    <p className="text-2xl font-bold text-indigo-600">
+                      {calculationResult.totalTTC?.toFixed(2) || "N/A"} €
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Taxes</p>
-                    <p className="font-medium">{calculationResult.totalTaxes?.toFixed(2) || 'N/A'} €</p>
-                  </div>
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-gray-500">Prime TTC</p>
-                    <p className="text-xl font-bold text-indigo-600">{calculationResult.primeTTC?.toFixed(2) || 'N/A'} €</p>
-                  </div>
-                </>
+                </div>
               ) : (
-                <p className="text-gray-500 text-sm">Aucun calcul disponible</p>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500 text-center">
+                    Aucun calcul disponible
+                  </p>
+                </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prévisualisation de la lettre d'offre (Admin seulement) */}
+      {showOfferLetterPreview && (
+        <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+          <h3 className="text-xl font-semibold mb-6 text-gray-900">
+            Prévisualisation de la Lettre d'Offre
+          </h3>
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
+            <OfferLetterPreview quote={quote} formData={quote.formData} />
           </div>
         </div>
       )}
@@ -302,9 +901,13 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
       {/* Liste des documents à cocher */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-semibold text-gray-900">Pièces justificatives requises</h3>
+          <h3 className="text-xl font-semibold text-gray-900">
+            Pièces justificatives requises
+          </h3>
           <div className="text-sm text-gray-600">
-            {selectedDocuments.size} document{selectedDocuments.size > 1 ? 's' : ''} sélectionné{selectedDocuments.size > 1 ? 's' : ''}
+            {selectedDocuments.size} document
+            {selectedDocuments.size > 1 ? "s" : ""} sélectionné
+            {selectedDocuments.size > 1 ? "s" : ""}
           </div>
         </div>
 
@@ -314,13 +917,21 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
               <h4 className="font-medium text-gray-800">{category.label}</h4>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => handleSelectAll(categoryKey as keyof typeof DOCUMENT_CHECKLIST)}
+                  onClick={() =>
+                    handleSelectAll(
+                      categoryKey as keyof typeof DOCUMENT_CHECKLIST
+                    )
+                  }
                   className="text-xs px-2 py-1 text-indigo-600 hover:bg-indigo-50 rounded"
                 >
                   Tout sélectionner
                 </button>
                 <button
-                  onClick={() => handleDeselectAll(categoryKey as keyof typeof DOCUMENT_CHECKLIST)}
+                  onClick={() =>
+                    handleDeselectAll(
+                      categoryKey as keyof typeof DOCUMENT_CHECKLIST
+                    )
+                  }
                   className="text-xs px-2 py-1 text-gray-600 hover:bg-gray-50 rounded"
                 >
                   Tout désélectionner
@@ -329,7 +940,10 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
             </div>
             <div className="space-y-2 pl-4">
               {category.items.map((item) => (
-                <label key={item.id} className="flex items-start space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                <label
+                  key={item.id}
+                  className="flex items-start space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                >
                   <input
                     type="checkbox"
                     checked={selectedDocuments.has(item.id)}
@@ -337,7 +951,9 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
                     className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                     disabled={offerSent && !isAdmin}
                   />
-                  <span className="text-sm text-gray-700 flex-1">{item.label}</span>
+                  <span className="text-sm text-gray-700 flex-1">
+                    {item.label}
+                  </span>
                 </label>
               ))}
             </div>
@@ -348,12 +964,25 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
       {/* Documents sélectionnés (résumé) */}
       {selectedDocuments.size > 0 && (
         <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-          <h4 className="font-medium text-indigo-900 mb-3">Documents qui seront demandés au courtier</h4>
+          <h4 className="font-medium text-indigo-900 mb-3">
+            Documents qui seront demandés au courtier
+          </h4>
           <ul className="space-y-1">
             {Array.from(selectedDocuments).map((docId) => (
-              <li key={docId} className="text-sm text-indigo-800 flex items-center">
-                <svg className="w-4 h-4 mr-2 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              <li
+                key={docId}
+                className="text-sm text-indigo-800 flex items-center"
+              >
+                <svg
+                  className="w-4 h-4 mr-2 text-indigo-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 {getDocumentLabel(docId)}
               </li>
@@ -371,7 +1000,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
         >
           Sauvegarder la sélection
         </button>
-        
+
         <button
           onClick={handleSendOffer}
           disabled={sending || selectedDocuments.size === 0 || offerSent}
@@ -379,23 +1008,56 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
         >
           {sending ? (
             <>
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Envoi en cours...
             </>
           ) : offerSent ? (
             <>
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
               </svg>
               Offre envoyée
             </>
           ) : (
             <>
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                />
               </svg>
               Envoyer l'offre au courtier
             </>
@@ -405,4 +1067,3 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
     </div>
   );
 }
-

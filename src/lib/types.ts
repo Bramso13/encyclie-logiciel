@@ -17,7 +17,9 @@ export interface ActivityShare {
 }
 
 export interface FormData {
+  // Informations de base
   honoraireCourtier: string;
+  enCreation: boolean;
   city: string;
   postalCode: string;
   directorName: string;
@@ -40,6 +42,33 @@ export interface FormData {
   subContractingPercent: string;
   previousResiliationDate?: string;
   lossHistory?: Array<{ year: number; numClaims: number; totalCost: number }>;
+
+  // Nouveaux champs détectés
+  absenceDeSinistreSurLes5DernieresAnnees?: string;
+  assureurDefaillant?: boolean;
+  creationDate?: string;
+  mailAddress?: string;
+  nombreAnneeAssuranceContinue?: string;
+  phoneNumber?: string;
+  previousInsurer?: string;
+  motifResiliation?: string;
+  sinistre36Mois?: boolean;
+  evenementsResponsabilite?: boolean;
+  procedureCollective?: boolean;
+  negoceMateriaux?: boolean;
+  natureProduitsNegoce?: string;
+  chiffreAffairesNegoce?: string;
+  autoEntrepreneur?: boolean;
+  qualification?: string;
+  protectionJuridique?: boolean;
+  resiliePar?: string;
+  detailsSinistre?: string;
+  detailsEvenementsResponsabilite?: string;
+  detailsProcedureCollective?: string;
+  garantieReprisePasse?: boolean;
+
+  sansActiviteDepuisPlusDe12MoisSansFermeture?: string;
+  tempsSansActivite?: string;
 }
 
 export interface Quote {
