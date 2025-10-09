@@ -1,4 +1,59 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
+
+// Types pour les logs d'email
+type EmailType =
+  | "OFFER_LETTER"
+  | "BROKER_INVITATION"
+  | "PAYMENT_REMINDER"
+  | "DOCUMENT_REQUEST"
+  | "GENERAL";
+
+interface LogEmailParams {
+  to: string;
+  cc?: string;
+  subject: string;
+  type: EmailType;
+  htmlContent?: string;
+  textContent?: string;
+  hasAttachments?: boolean;
+  attachmentNames?: string;
+  relatedQuoteId?: string;
+  relatedUserId?: string;
+  sentById?: string;
+}
+
+// Fonction pour logger un email dans la base de données
+async function logEmail(
+  params: LogEmailParams,
+  messageId?: string,
+  error?: any
+) {
+  try {
+    await prisma.emailLog.create({
+      data: {
+        to: params.to,
+        cc: params.cc || null,
+        subject: params.subject,
+        type: params.type,
+        status: error ? "FAILED" : "SENT",
+        htmlContent: params.htmlContent || null,
+        textContent: params.textContent || null,
+        hasAttachments: params.hasAttachments || false,
+        attachmentNames: params.attachmentNames || null,
+        relatedQuoteId: params.relatedQuoteId || null,
+        relatedUserId: params.relatedUserId || null,
+        messageId: messageId || null,
+        errorMessage: error ? String(error) : null,
+        sentById: params.sentById || null,
+        sentAt: error ? null : new Date(),
+      },
+    });
+  } catch (logError) {
+    console.error("Erreur lors du logging de l'email:", logError);
+    // Ne pas interrompre le processus d'envoi d'email si le logging échoue
+  }
+}
 
 // Configuration du transporteur email
 export const createEmailTransporter = () => {
@@ -23,10 +78,15 @@ export const sendEmailWithAttachment = async (
     filename: string;
     content: Buffer;
     contentType: string;
-  }>
+  }>,
+  options?: {
+    type?: EmailType;
+    relatedQuoteId?: string;
+    relatedUserId?: string;
+    sentById?: string;
+    cc?: string;
+  }
 ) => {
-  
-  
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
@@ -43,16 +103,56 @@ export const sendEmailWithAttachment = async (
         process.env.SMTP_FROM || process.env.SMTP_USER
       }>`,
       to,
+      cc: options?.cc,
       subject,
       html,
       text,
-      attachments
+      attachments,
     });
 
     console.log("Email with attachment sent:", info.messageId);
+
+    // Logger l'email envoyé
+    await logEmail(
+      {
+        to,
+        cc: options?.cc,
+        subject,
+        type: options?.type || "GENERAL",
+        htmlContent: html,
+        textContent: text,
+        hasAttachments: true,
+        attachmentNames: attachments.map((a) => a.filename).join(", "),
+        relatedQuoteId: options?.relatedQuoteId,
+        relatedUserId: options?.relatedUserId,
+        sentById: options?.sentById,
+      },
+      info.messageId
+    );
+
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Email with attachment sending failed:", error);
+
+    // Logger l'échec d'envoi
+    await logEmail(
+      {
+        to,
+        cc: options?.cc,
+        subject,
+        type: options?.type || "GENERAL",
+        htmlContent: html,
+        textContent: text,
+        hasAttachments: true,
+        attachmentNames: attachments.map((a) => a.filename).join(", "),
+        relatedQuoteId: options?.relatedQuoteId,
+        relatedUserId: options?.relatedUserId,
+        sentById: options?.sentById,
+      },
+      undefined,
+      error
+    );
+
     throw error;
   }
 };
@@ -209,7 +309,14 @@ export const sendEmail = async (
   to: string,
   subject: string,
   html: string,
-  text: string
+  text: string,
+  options?: {
+    type?: EmailType;
+    relatedQuoteId?: string;
+    relatedUserId?: string;
+    sentById?: string;
+    cc?: string;
+  }
 ) => {
   const transporter = createEmailTransporter();
 
@@ -219,15 +326,53 @@ export const sendEmail = async (
         process.env.SMTP_FROM || process.env.SMTP_USER
       }>`,
       to,
+      cc: options?.cc,
       subject,
       html,
       text,
     });
 
     console.log("Email sent:", info.messageId);
+
+    // Logger l'email envoyé
+    await logEmail(
+      {
+        to,
+        cc: options?.cc,
+        subject,
+        type: options?.type || "GENERAL",
+        htmlContent: html,
+        textContent: text,
+        hasAttachments: false,
+        relatedQuoteId: options?.relatedQuoteId,
+        relatedUserId: options?.relatedUserId,
+        sentById: options?.sentById,
+      },
+      info.messageId
+    );
+
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Email sending failed:", error);
+
+    // Logger l'échec d'envoi
+    await logEmail(
+      {
+        to,
+        cc: options?.cc,
+        subject,
+        type: options?.type || "GENERAL",
+        htmlContent: html,
+        textContent: text,
+        hasAttachments: false,
+        relatedQuoteId: options?.relatedQuoteId,
+        relatedUserId: options?.relatedUserId,
+        sentById: options?.sentById,
+      },
+      undefined,
+      error
+    );
+
     throw error;
   }
 };

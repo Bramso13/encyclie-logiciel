@@ -11,6 +11,7 @@ import { calculPrimeRCD } from "@/lib/tarificateurs/rcd";
 import ProductConfigTab from "@/components/admin/ProductConfigTab";
 import QuoteForm from "@/components/quotes/QuoteForm";
 import QuoteSuccessPage from "@/components/quotes/QuoteSuccessPage";
+import CorrespondanceTab from "@/components/admin/CorrespondanceTab";
 
 // Types exacts de la fonction calculPrimeRCD
 interface SimulatorParams {
@@ -430,16 +431,19 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   // Filter quotes based on search term
   const filteredQuotes = quotes.filter((quote) => {
     if (!quotesSearchTerm) return true;
-    
+
     const searchLower = quotesSearchTerm.toLowerCase();
     return (
       quote.reference.toLowerCase().includes(searchLower) ||
       quote.product.name.toLowerCase().includes(searchLower) ||
       quote.broker.name.toLowerCase().includes(searchLower) ||
-      (quote.broker.companyName && quote.broker.companyName.toLowerCase().includes(searchLower)) ||
+      (quote.broker.companyName &&
+        quote.broker.companyName.toLowerCase().includes(searchLower)) ||
       quote.formData.directorName.toLowerCase().includes(searchLower) ||
       quote.status.toLowerCase().includes(searchLower) ||
-      new Date(quote.createdAt).toLocaleDateString("fr-FR").includes(searchLower)
+      new Date(quote.createdAt)
+        .toLocaleDateString("fr-FR")
+        .includes(searchLower)
     );
   });
 
@@ -748,6 +752,16 @@ export default function AdminScreen({ user }: AdminScreenProps) {
             >
               Configuration des produits
             </button>
+            <button
+              onClick={() => setActiveTab("correspondance")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "correspondance"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Correspondance
+            </button>
             {/* <button
               onClick={() => setActiveTab("underwriters")}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -1022,7 +1036,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                   Nouvelle demande de devis
                 </button>
               </div>
-              
+
               {/* Barre de recherche */}
               <div className="flex items-center space-x-4">
                 <div className="flex-1 max-w-md">
@@ -1099,10 +1113,9 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           colSpan={6}
                           className="px-6 py-4 text-center text-gray-500"
                         >
-                          {quotesSearchTerm 
+                          {quotesSearchTerm
                             ? "Aucune demande de devis ne correspond à votre recherche"
-                            : "Aucune demande de devis trouvée"
-                          }
+                            : "Aucune demande de devis trouvée"}
                         </td>
                       </tr>
                     ) : (
@@ -1962,6 +1975,8 @@ export default function AdminScreen({ user }: AdminScreenProps) {
               <ProductConfigTab products={products} loading={productsLoading} />
             </div>
           )}
+
+          {activeTab === "correspondance" && <CorrespondanceTab />}
 
           {activeTab === "underwriters" && (
             <div className="space-y-4">

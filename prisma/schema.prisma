@@ -920,3 +920,57 @@ model PaymentTransaction {
 
   @@map("payment_transactions")
 }
+
+// Email Log System Models
+
+enum EmailStatus {
+  SENT
+  FAILED
+  PENDING
+}
+
+enum EmailType {
+  OFFER_LETTER
+  BROKER_INVITATION
+  PAYMENT_REMINDER
+  DOCUMENT_REQUEST
+  GENERAL
+}
+
+// Modèle pour le suivi des emails envoyés
+model EmailLog {
+  id        String @id @default(cuid())
+  
+  // Informations de l'email
+  to          String
+  cc          String?
+  subject     String
+  type        EmailType
+  status      EmailStatus @default(PENDING)
+  
+  // Contenu (stocké pour référence)
+  htmlContent String?
+  textContent String?
+  
+  // Pièces jointes
+  hasAttachments Boolean @default(false)
+  attachmentNames String? // Noms des fichiers séparés par des virgules
+  
+  // Relation avec d'autres entités
+  relatedQuoteId String? @map("related_quote_id")
+  relatedUserId  String? @map("related_user_id")
+  
+  // Métadonnées
+  messageId String? // ID retourné par le serveur SMTP
+  errorMessage String?
+  
+  // Envoyé par (admin qui a déclenché l'envoi)
+  sentById String? @map("sent_by_id")
+  
+  // Audit
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("email_logs")
+}

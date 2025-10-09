@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
       email,
       emailTemplate.subject,
       emailTemplate.html,
-      emailTemplate.text
+      emailTemplate.text,
+      {
+        type: "BROKER_INVITATION",
+      }
     );
 
     return NextResponse.json({

@@ -64,7 +64,11 @@ export async function POST(request: NextRequest) {
           content: pdfBuffer,
           contentType: "application/pdf",
         },
-      ]
+      ],
+      {
+        type: "OFFER_LETTER",
+        relatedQuoteId: quoteId,
+      }
     );
 
     return NextResponse.json(
