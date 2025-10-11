@@ -603,8 +603,7 @@ export default function QuoteDetailPage() {
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
             {tabs.map((tab) => {
               return (
-                (!(tab.id === "calculation" || tab.id === "offre") ||
-                  session?.user?.role === "ADMIN") && (
+                (!(tab.id === "offre") || session?.user?.role === "ADMIN") && (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}

@@ -1138,7 +1138,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {quote.formData.directorName}
+                            {quote.formData.companyName}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span

@@ -2,7 +2,7 @@
   "steps": [
     {
       "title": "Informations société et dirigeant",
-      "fields": ["companyCreationDate", "dateDeffet", "mailAdress", "phoneNumber"],
+      "fields": ["enCreation", "dateDeffet", "mailAdress", "phoneNumber"],
       "description": "Renseignez les informations de base de votre société et du dirigeant",
       "includeCompanyInfo": true
     },
@@ -22,7 +22,9 @@
         "experienceMetier",
         "subContractingPercent",
         "tradingPercent",
-        "hasQualification"
+        "hasQualification",
+        "includePJ",
+        "honoraireCourtier"
       ],
       "description": "Informations sur votre expérience et les coefficients applicables"
     },
@@ -35,8 +37,14 @@
         "resiliationReason",
         "lossHistory",
         "periodicity",
-        "includePJ"
-
+        "reprisePasse",
+        "assureurDefaillant",
+        "tempsSansActivite",
+        "nonFournitureBilanN_1",
+        "nombreAnneeAssuranceContinue",
+        "absenceDeSinistreSurLes5DernieresAnnees",
+        "sansActiviteDepuisPlusDe12MoisSansFermeture",
+        "dateFinCouverturePrecedente"
       ],
       "description": "Votre historique d'assurance et les garanties souhaitées"
     }

@@ -156,10 +156,29 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
           if (fieldConfig.required && !formData[fieldName]) {
             console.log("fieldName", fieldName);
             console.log("fieldConfig.required", fieldConfig.required);
+            console.log("fieldConfig", fieldConfig);
             console.log("formData[fieldName]", formData[fieldName]);
-            newErrors[fieldName] = `${
-              fieldConfig.label || fieldName
-            } est requis`;
+            if (
+              !(
+                formData["enCreation"] &&
+                (fieldConfig.label === "Périodicité de paiement" ||
+                  fieldConfig.label === "Antécédents RC Décennale" ||
+                  fieldConfig.label ===
+                    "L'entreprise existe-t-elle depuis + de 6 mois sans être assurée et sans activité?" ||
+                  fieldConfig.label ===
+                    "Absence de sinistre sur les 5 dernieres années" ||
+                  fieldConfig.label ===
+                    "Sans activité depuis plus de 12 mois sans fermeture ?")
+              )
+            ) {
+              newErrors[fieldName] = `${
+                fieldConfig.label || fieldName
+              } est requis`;
+              formData["sansActiviteDepuisPlusDe12MoisSansFermeture"] =
+                "CREATION";
+              formData["absenceDeSinistreSurLes5DernieresAnnees"] = "CREATION";
+              formData["tempsSansActivite"] = "NON";
+            }
           }
 
           // Validate specific field types
@@ -729,6 +748,9 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
 
     const currentStepConfig = steps[currentStep];
     if (!currentStepConfig) return null;
+    const booleanEnCreation =
+      formData["enCreation"] &&
+      currentStepConfig.title === "Historique et garanties";
 
     return (
       <div className="space-y-6">
@@ -746,8 +768,15 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
         {/* Company info for current step */}
         {currentStepConfig.includeCompanyInfo && renderCompanyInfo()}
 
+        {booleanEnCreation && (
+          <div className="p-6 bg-blue-50 rounded border border-blue-300 text-center text-lg text-blue-700">
+            Vous avez une entreprise en création, cette partie ne vous concerne
+            pas.
+          </div>
+        )}
+
         {/* Fields for current step */}
-        {currentStepConfig.fields && (
+        {currentStepConfig.fields && !booleanEnCreation && (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {currentStepConfig.fields.map((fieldName: string) => {
               const fieldConfig = selectedProduct?.formFields?.[fieldName];

@@ -66,6 +66,9 @@ export const calculateWithMapping = (
           case "caDeclared":
           case "etp":
           case "anneeExperience":
+            console.log("value", value, "paramKeyKeyKey", paramKey);
+            mappedParams[paramKey] = Number(value) || 0;
+            break;
           case "nombreAnneeAssuranceContinue":
           case "partSoutraitance":
           case "partNegoce":

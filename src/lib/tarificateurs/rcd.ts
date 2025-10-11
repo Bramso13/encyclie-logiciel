@@ -112,7 +112,7 @@ function calculateMajorations(params: {
   };
   const calculMajExp = (anneeExperience: number) => {
     if (anneeExperience > 1 && anneeExperience < 3) return 0.05;
-    if (anneeExperience > 3 && anneeExperience < 5) return 0;
+    if (anneeExperience >= 3 && anneeExperience < 5) return 0;
     if (anneeExperience >= 5) return -0.05;
   };
   const calculMajNAAC = (NAAC: number) => {
