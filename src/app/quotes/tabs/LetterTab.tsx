@@ -28,6 +28,15 @@ export default function LetterTab({
     fetchBrokerCode();
   }, [session?.user?.id]);
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      return new Date(dateString).toLocaleDateString("fr-FR");
+    } catch {
+      return dateString;
+    }
+  };
+
   // Fonctions pour la lettre d'intention
   const handleGeneratePDF = async () => {
     try {
@@ -768,7 +777,16 @@ export default function LetterTab({
 
                 <div className="grid grid-cols-4 border-b border-gray-200">
                   <div className="p-2 text-xs">
-                    PRIMES année en cours pour la période du au
+                    PRIMES année en cours pour la période du{" "}
+                    {formatDate(
+                      calculationResult?.echeancier?.echeances?.[0]?.date
+                    )}{" "}
+                    au{" "}
+                    {formatDate(
+                      calculationResult?.echeancier?.echeances?.[
+                        calculationResult?.echeancier?.echeances?.length - 1
+                      ]?.date
+                    )}
                   </div>
                   <div className="p-2 text-xs text-right"></div>
                   <div className="p-2 text-xs text-right"></div>
