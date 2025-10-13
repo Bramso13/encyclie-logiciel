@@ -37,6 +37,18 @@ export default function LetterTab({
     }
   };
 
+  // Fonction qui transforme une date format français (JJ/MM/AAAA) en date anglaise (YYYY-MM-DD)
+  function frenchToEnglishDate(frenchDate: string): string {
+    // gestion des formats JJ/MM/AAAA ou J/M/AAAA
+    const parts = frenchDate.split("/");
+    if (parts.length !== 3) return frenchDate;
+    // Pad month and day if needed
+    const day = parts[0].padStart(2, "0");
+    const month = parts[1].padStart(2, "0");
+    const year = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+    return `${year}-${month}-${day}`;
+  }
+
   // Fonctions pour la lettre d'intention
   const handleGeneratePDF = async () => {
     try {
@@ -553,8 +565,9 @@ export default function LetterTab({
                             {calculationResult.echeancier.echeances
                               .filter(
                                 (echeance: any) =>
-                                  new Date(echeance.date).getFullYear() ===
-                                  new Date().getFullYear()
+                                  new Date(
+                                    frenchToEnglishDate(echeance.date)
+                                  ).getFullYear() === new Date().getFullYear()
                               )
                               .map((echeance: any, index: number) => (
                                 <tr key={index} className="hover:bg-gray-50">
@@ -624,7 +637,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -639,7 +654,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -654,7 +671,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -669,7 +688,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -684,7 +705,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -699,7 +722,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -714,7 +739,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -729,7 +756,9 @@ export default function LetterTab({
                                 {calculationResult.echeancier.echeances
                                   .filter(
                                     (echeance: any) =>
-                                      new Date(echeance.date).getFullYear() ===
+                                      new Date(
+                                        frenchToEnglishDate(echeance.date)
+                                      ).getFullYear() ===
                                       new Date().getFullYear()
                                   )
                                   .reduce(
@@ -779,13 +808,17 @@ export default function LetterTab({
                   <div className="p-2 text-xs">
                     PRIMES année en cours pour la période du{" "}
                     {formatDate(
-                      calculationResult?.echeancier?.echeances?.[0]?.date
+                      frenchToEnglishDate(
+                        calculationResult?.echeancier?.echeances?.[0]?.date
+                      )
                     )}{" "}
                     au{" "}
                     {formatDate(
-                      calculationResult?.echeancier?.echeances?.[
-                        calculationResult?.echeancier?.echeances?.length - 1
-                      ]?.date
+                      frenchToEnglishDate(
+                        calculationResult?.echeancier?.echeances?.[
+                          calculationResult?.echeancier?.echeances?.length - 1
+                        ]?.date
+                      )
                     )}
                   </div>
                   <div className="p-2 text-xs text-right"></div>
@@ -801,8 +834,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -816,8 +850,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -831,8 +866,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -851,8 +887,9 @@ export default function LetterTab({
                       calculationResult?.echeancier?.echeances
                         ?.filter(
                           (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
+                            new Date(
+                              frenchToEnglishDate(echeance.date)
+                            ).getFullYear() === new Date().getFullYear()
                         )
                         .reduce(
                           (sum: number, echeance: any) =>
@@ -868,8 +905,9 @@ export default function LetterTab({
                       calculationResult?.echeancier?.echeances
                         ?.filter(
                           (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
+                            new Date(
+                              frenchToEnglishDate(echeance.date)
+                            ).getFullYear() === new Date().getFullYear()
                         )
                         .reduce(
                           (sum: number, echeance: any) =>
@@ -883,8 +921,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -902,8 +941,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -917,8 +957,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -932,8 +973,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -954,8 +996,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -977,8 +1020,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -996,8 +1040,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -1011,8 +1056,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -1047,8 +1093,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -1068,8 +1115,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>
@@ -1083,8 +1131,9 @@ export default function LetterTab({
                     {calculationResult?.echeancier?.echeances
                       ?.filter(
                         (echeance: any) =>
-                          new Date(echeance.date).getFullYear() ===
-                          new Date().getFullYear()
+                          new Date(
+                            frenchToEnglishDate(echeance.date)
+                          ).getFullYear() === new Date().getFullYear()
                       )
                       .reduce(
                         (sum: number, echeance: any) =>

@@ -361,7 +361,7 @@ const calculDeg = (params: {
     degressivity: number;
   }[] = [];
   tableauDeg.forEach((deg) => {
-    if (caDeclared > 250_000 && caDeclared < 500_000) {
+    if (caDeclared > 250_000 && caDeclared <= 500_000) {
       console.log("caDeclared", caDeclared);
       const degMax =
         1 - ((1 - deg.degressivity1) * (caDeclared - 250_000)) / 250_000;
@@ -372,7 +372,7 @@ const calculDeg = (params: {
         degressivity: degMax,
       });
     }
-    if (caDeclared > 500_000 && caDeclared < 1_000_000) {
+    if (caDeclared > 500_000 && caDeclared <= 1_000_000) {
       const degMax =
         deg.degressivity1 -
         ((deg.degressivity1 - deg.degressivity2) * (caDeclared - 500_000)) /
@@ -668,7 +668,7 @@ export function calculPrimeRCD(params: {
     const rate = tableauTax.find((tax) => tax.code === activite.code)?.rate;
     const tauxBase =
       deg400k && caCalculee > 250000 ? (rate ?? 0) * deg400k : rate ?? 0;
-    const primeMiniAct = tauxBase * plafond * activite.caSharePercent;
+    const primeMiniAct = (rate ?? 0) * plafond * activite.caSharePercent;
 
     const prime100Min =
       tauxBase * (caCalculee - plafond) * activite.caSharePercent;
