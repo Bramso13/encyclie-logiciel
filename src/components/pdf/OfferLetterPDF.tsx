@@ -1629,7 +1629,10 @@ const OfferLetterPDF = ({
                 }}
               >
                 {selectedDocuments.map((document, idx) => (
-                  <Text style={styles.paragraphSmall}> - {document}</Text>
+                  <Text style={styles.paragraphSmall} key={idx}>
+                    {" "}
+                    - {document}
+                  </Text>
                 ))}
               </View>
             ) : (
