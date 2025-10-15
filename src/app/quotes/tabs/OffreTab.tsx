@@ -181,7 +181,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
   const handleSelectAll = (category: keyof typeof DOCUMENT_CHECKLIST) => {
     const newSelected = new Set(selectedDocuments);
-    const docChecklist = isEditMode ? editableDocuments : DOCUMENT_CHECKLIST;
+    const docChecklist = editableDocuments;
     docChecklist[category].items.forEach((item: any) => {
       newSelected.add(item.id);
     });
@@ -190,7 +190,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
   const handleDeselectAll = (category: keyof typeof DOCUMENT_CHECKLIST) => {
     const newSelected = new Set(selectedDocuments);
-    const docChecklist = isEditMode ? editableDocuments : DOCUMENT_CHECKLIST;
+    const docChecklist = editableDocuments;
     docChecklist[category].items.forEach((item: any) => {
       newSelected.delete(item.id);
     });
@@ -356,7 +356,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   };
 
   const getDocumentLabel = (documentId: string) => {
-    const docChecklist = isEditMode ? editableDocuments : DOCUMENT_CHECKLIST;
+    const docChecklist = editableDocuments;
     for (const category of Object.values(docChecklist)) {
       const item = (category as any).items.find(
         (i: any) => i.id === documentId
@@ -373,12 +373,12 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   ) => {
     setEditableDocuments((prev: any) => {
       const updated = { ...prev };
-      const itemIndex = updated[categoryKey].items.findIndex(
-        (item: any) => item.id === itemId
-      );
-      if (itemIndex !== -1) {
-        updated[categoryKey].items[itemIndex].label = newLabel;
-      }
+      updated[categoryKey] = {
+        ...updated[categoryKey],
+        items: updated[categoryKey].items.map((item: any) =>
+          item.id === itemId ? { ...item, label: newLabel } : item
+        ),
+      };
       return updated;
     });
   };
@@ -387,10 +387,16 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
     const newId = `custom_${Date.now()}`;
     setEditableDocuments((prev: any) => {
       const updated = { ...prev };
-      updated[categoryKey].items.push({
-        id: newId,
-        label: "Nouveau document",
-      });
+      updated[categoryKey] = {
+        ...updated[categoryKey],
+        items: [
+          ...updated[categoryKey].items,
+          {
+            id: newId,
+            label: "Nouveau document",
+          },
+        ],
+      };
       return updated;
     });
   };
@@ -398,9 +404,12 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   const handleDeleteDocument = (categoryKey: string, itemId: string) => {
     setEditableDocuments((prev: any) => {
       const updated = { ...prev };
-      updated[categoryKey].items = updated[categoryKey].items.filter(
-        (item: any) => item.id !== itemId
-      );
+      updated[categoryKey] = {
+        ...updated[categoryKey],
+        items: updated[categoryKey].items.filter(
+          (item: any) => item.id !== itemId
+        ),
+      };
       return updated;
     });
     // Retirer aussi de la sélection si c'était sélectionné
@@ -414,7 +423,10 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   const handleUpdateCategoryLabel = (categoryKey: string, newLabel: string) => {
     setEditableDocuments((prev: any) => {
       const updated = { ...prev };
-      updated[categoryKey].label = newLabel;
+      updated[categoryKey] = {
+        ...updated[categoryKey],
+        label: newLabel,
+      };
       return updated;
     });
   };
@@ -1004,128 +1016,130 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
           </div>
         </div>
 
-        {Object.entries(
-          isEditMode ? editableDocuments : DOCUMENT_CHECKLIST
-        ).map(([categoryKey, category]: [string, any]) => (
-          <div key={categoryKey} className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              {isEditMode ? (
-                <input
-                  type="text"
-                  value={category.label}
-                  onChange={(e) =>
-                    handleUpdateCategoryLabel(categoryKey, e.target.value)
-                  }
-                  className="font-medium text-gray-800 bg-yellow-50 border border-yellow-300 rounded px-2 py-1 text-sm"
-                />
-              ) : (
-                <h4 className="font-medium text-gray-800">{category.label}</h4>
-              )}
-              <div className="flex space-x-2">
-                {isEditMode && (
-                  <button
-                    onClick={() => handleAddDocument(categoryKey)}
-                    className="text-xs px-3 py-1 bg-green-600 text-white hover:bg-green-700 rounded flex items-center gap-1"
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Ajouter
-                  </button>
+        {Object.entries(editableDocuments).map(
+          ([categoryKey, category]: [string, any]) => (
+            <div key={categoryKey} className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={category.label}
+                    onChange={(e) =>
+                      handleUpdateCategoryLabel(categoryKey, e.target.value)
+                    }
+                    className="font-medium text-gray-800 bg-yellow-50 border border-yellow-300 rounded px-2 py-1 text-sm"
+                  />
+                ) : (
+                  <h4 className="font-medium text-gray-800">
+                    {category.label}
+                  </h4>
                 )}
-                <button
-                  onClick={() =>
-                    handleSelectAll(
-                      categoryKey as keyof typeof DOCUMENT_CHECKLIST
-                    )
-                  }
-                  className="text-xs px-2 py-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                >
-                  Tout sélectionner
-                </button>
-                <button
-                  onClick={() =>
-                    handleDeselectAll(
-                      categoryKey as keyof typeof DOCUMENT_CHECKLIST
-                    )
-                  }
-                  className="text-xs px-2 py-1 text-gray-600 hover:bg-gray-50 rounded"
-                >
-                  Tout désélectionner
-                </button>
+                <div className="flex space-x-2">
+                  {isEditMode && (
+                    <button
+                      onClick={() => handleAddDocument(categoryKey)}
+                      className="text-xs px-3 py-1 bg-green-600 text-white hover:bg-green-700 rounded flex items-center gap-1"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                      Ajouter
+                    </button>
+                  )}
+                  <button
+                    onClick={() =>
+                      handleSelectAll(
+                        categoryKey as keyof typeof DOCUMENT_CHECKLIST
+                      )
+                    }
+                    className="text-xs px-2 py-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                  >
+                    Tout sélectionner
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleDeselectAll(
+                        categoryKey as keyof typeof DOCUMENT_CHECKLIST
+                      )
+                    }
+                    className="text-xs px-2 py-1 text-gray-600 hover:bg-gray-50 rounded"
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2 pl-4">
+                {category.items.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-start space-x-3 p-2 rounded ${
+                      isEditMode ? "bg-gray-50 border border-gray-200" : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDocuments.has(item.id)}
+                      onChange={() => handleDocumentToggle(item.id)}
+                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      disabled={offerSent && !isAdmin}
+                    />
+                    {isEditMode ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={item.label}
+                          onChange={(e) =>
+                            handleUpdateDocumentLabel(
+                              categoryKey,
+                              item.id,
+                              e.target.value
+                            )
+                          }
+                          className="flex-1 text-sm text-gray-700 bg-white border border-gray-300 rounded px-2 py-1"
+                        />
+                        <button
+                          onClick={() =>
+                            handleDeleteDocument(categoryKey, item.id)
+                          }
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50 rounded p-1"
+                          title="Supprimer"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex-1 text-sm text-gray-700 cursor-pointer">
+                        {item.label}
+                      </label>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="space-y-2 pl-4">
-              {category.items.map((item: any) => (
-                <div
-                  key={item.id}
-                  className={`flex items-start space-x-3 p-2 rounded ${
-                    isEditMode ? "bg-gray-50 border border-gray-200" : ""
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedDocuments.has(item.id)}
-                    onChange={() => handleDocumentToggle(item.id)}
-                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                    disabled={offerSent && !isAdmin}
-                  />
-                  {isEditMode ? (
-                    <div className="flex-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={item.label}
-                        onChange={(e) =>
-                          handleUpdateDocumentLabel(
-                            categoryKey,
-                            item.id,
-                            e.target.value
-                          )
-                        }
-                        className="flex-1 text-sm text-gray-700 bg-white border border-gray-300 rounded px-2 py-1"
-                      />
-                      <button
-                        onClick={() =>
-                          handleDeleteDocument(categoryKey, item.id)
-                        }
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50 rounded p-1"
-                        title="Supprimer"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex-1 text-sm text-gray-700 cursor-pointer">
-                      {item.label}
-                    </label>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          )
+        )}
       </div>
 
       {/* Documents sélectionnés (résumé) */}
