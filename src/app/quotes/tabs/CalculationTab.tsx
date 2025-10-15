@@ -1,34 +1,34 @@
-import { Quote, CalculationResult    } from "@/lib/types";
+import { Quote, CalculationResult } from "@/lib/types";
 
 export const getFieldLabel = (path: string): string => {
-    const labels: Record<string, string> = {
-      'primeTotal': 'Prime HT Total',
-      'totalTTC': 'Total TTC',
-      'caCalculee': 'CA Calculé',
-      'PminiHT': 'Prime Minimum HT',
-      'primeAuDela': 'Prime Au-delà',
-      'PrimeHTSansMajorations': 'Prime HT Sans Majorations',
-      'totalMajorations': 'Total Majorations',
-      'protectionJuridique': 'Protection Juridique',
-      'fraisGestion': 'Frais de Gestion',
-      'autres.taxeAssurance': 'Taxe Assurance',
-      'autres.fraisFractionnementPrimeHT': 'Frais Fractionnement',
-      'primeAggravationBilanN_1NonFourni': 'Prime Aggravation Bilan N-1',
-      'reprisePasseResult.ratioSP': 'Ratio S/P',
-      'reprisePasseResult.frequenceSinistres': 'Fréquence Sinistres',
-      'reprisePasseResult.categorieAnciennete': 'Catégorie Ancienneté',
-      'reprisePasseResult.categorieSinistralite': 'Catégorie Sinistralité',
-      'reprisePasseResult.majoration': 'Majoration Reprise du Passé'
-    };
-  
-    // Gestion des majorations dynamiques
-    if (path.startsWith('majorations.')) {
-      const majKey = path.replace('majorations.', '');
-      return `Majoration ${majKey.charAt(0).toUpperCase() + majKey.slice(1)}`;
-    }
-  
-    return labels[path] || path;
+  const labels: Record<string, string> = {
+    primeTotal: "Prime HT Total",
+    totalTTC: "Total TTC",
+    caCalculee: "CA Calculé",
+    PminiHT: "Prime Minimum HT",
+    primeAuDela: "Prime Au-delà",
+    PrimeHTSansMajorations: "Prime HT Sans Majorations",
+    totalMajorations: "Total Majorations",
+    protectionJuridique: "Protection Juridique",
+    fraisGestion: "Frais de Gestion",
+    "autres.taxeAssurance": "Taxe Assurance",
+    "autres.fraisFractionnementPrimeHT": "Frais Fractionnement",
+    primeAggravationBilanN_1NonFourni: "Prime Aggravation Bilan N-1",
+    "reprisePasseResult.ratioSP": "Ratio S/P",
+    "reprisePasseResult.frequenceSinistres": "Fréquence Sinistres",
+    "reprisePasseResult.categorieAnciennete": "Catégorie Ancienneté",
+    "reprisePasseResult.categorieSinistralite": "Catégorie Sinistralité",
+    "reprisePasseResult.majoration": "Majoration Reprise du Passé",
   };
+
+  // Gestion des majorations dynamiques
+  if (path.startsWith("majorations.")) {
+    const majKey = path.replace("majorations.", "");
+    return `Majoration ${majKey.charAt(0).toUpperCase() + majKey.slice(1)}`;
+  }
+
+  return labels[path] || path;
+};
 
 export default function CalculationTab({
   quote,
@@ -43,17 +43,20 @@ export default function CalculationTab({
   nonFournitureBilanEnabled,
   handleNonFournitureBilanChange,
   saveCalculationToDatabase,
-recalculating,
-handleRecalculate,
-session,
-setCurrentEditingSection,
-setShowModificationPopup,
+  recalculating,
+  handleRecalculate,
+  session,
+  setCurrentEditingSection,
+  setShowModificationPopup,
 }: {
   quote: Quote;
   calculationResult: any;
   calculationError: string | null;
   originalCalculationResult: any | null;
-  setEditingSections: (sections: { majorations: boolean, fraisEtTaxes: boolean }) => void;
+  setEditingSections: (sections: {
+    majorations: boolean;
+    fraisEtTaxes: boolean;
+  }) => void;
   setCalculationResult: (result: CalculationResult) => void;
   setOriginalCalculationResult: (result: CalculationResult | null) => void;
   reprisePasseEnabled: boolean;
@@ -64,14 +67,14 @@ setShowModificationPopup,
   recalculating: boolean;
   handleRecalculate: () => void;
   session: any;
-  setCurrentEditingSection: (section: "majorations" | "fraisEtTaxes" | null) => void;
+  setCurrentEditingSection: (
+    section: "majorations" | "fraisEtTaxes" | null
+  ) => void;
   setShowModificationPopup: (show: boolean) => void;
 }) {
+  // Fonction pour obtenir des labels lisibles pour les champs
 
-    // Fonction pour obtenir des labels lisibles pour les champs
-
-
-    // Fonctions pour la gestion de la modification des calculs
+  // Fonctions pour la gestion de la modification des calculs
   const resetCalculationEditing = () => {
     setEditingSections({ majorations: false, fraisEtTaxes: false });
     if (originalCalculationResult) {
@@ -85,9 +88,12 @@ setShowModificationPopup,
   };
 
   // Fonction pour détecter toutes les différences dans calculationResult
-  const getAllDifferences = (original: CalculationResult | null, current: CalculationResult | null) => {
+  const getAllDifferences = (
+    original: CalculationResult | null,
+    current: CalculationResult | null
+  ) => {
     if (!original || !current) return [];
-    
+
     const differences: Array<{
       path: string;
       label: string;
@@ -96,23 +102,36 @@ setShowModificationPopup,
       isModified: boolean;
     }> = [];
 
-    const compareValues = (origObj: any, currObj: any, path: string = '', parentLabel: string = '') => {
-      if (origObj === null || origObj === undefined || currObj === null || currObj === undefined) {
+    const compareValues = (
+      origObj: any,
+      currObj: any,
+      path: string = "",
+      parentLabel: string = ""
+    ) => {
+      if (
+        origObj === null ||
+        origObj === undefined ||
+        currObj === null ||
+        currObj === undefined
+      ) {
         if (origObj !== currObj) {
           differences.push({
             path,
             label: parentLabel,
             originalValue: origObj,
             currentValue: currObj,
-            isModified: true
+            isModified: true,
           });
         }
         return;
       }
 
-      if (typeof origObj === 'object' && typeof currObj === 'object') {
-        const allKeys = new Set([...Object.keys(origObj), ...Object.keys(currObj)]);
-        allKeys.forEach(key => {
+      if (typeof origObj === "object" && typeof currObj === "object") {
+        const allKeys = new Set([
+          ...Object.keys(origObj),
+          ...Object.keys(currObj),
+        ]);
+        allKeys.forEach((key) => {
           const newPath = path ? `${path}.${key}` : key;
           const label = getFieldLabel(newPath);
           compareValues(origObj[key], currObj[key], newPath, label);
@@ -124,62 +143,98 @@ setShowModificationPopup,
           label: parentLabel,
           originalValue: origObj,
           currentValue: currObj,
-          isModified
+          isModified,
         });
       }
     };
 
     compareValues(original, current);
-    return differences.filter(diff => diff.isModified);
+    return differences.filter((diff) => diff.isModified);
   };
 
-    const getValueWithModificationIndicator = (originalValue: any, currentValue: any, formatFn?: (val: any) => string) => {
-        const isModified = originalCalculationResult && isValueModified(originalValue, currentValue);
-        const displayValue = formatFn ? formatFn(currentValue) : currentValue;
-        
-        return {
-          value: displayValue,
-          isModified,
-          originalValue: formatFn ? formatFn(originalValue) : originalValue
-        };
-      };
-    
-    // Composant pour afficher une valeur modifiable avec indicateur
-    const ModifiableValue = ({ 
-        originalValue, 
-        currentValue, 
-        formatFn = (val) => val?.toLocaleString?.("fr-FR") || "0", 
-        suffix = " €",
-        className = "" 
-      }: {
-        originalValue: any,
-        currentValue: any,
-        formatFn?: (val: any) => string,
-        suffix?: string,
-        className?: string
-      }) => {
-        const { value, isModified, originalValue: formattedOriginal } = getValueWithModificationIndicator(originalValue, currentValue, formatFn);
-        
-        if (!isModified) {
-          return <span className={className}>{value}{suffix}</span>;
-        }
-        
-        return (
-          <div className="relative">
-            <span className={`${className} ${isModified ? 'text-blue-600 font-bold' : ''}`}>
-              {value}{suffix}
+  const getValueWithModificationIndicator = (
+    originalValue: any,
+    currentValue: any,
+    formatFn?: (val: any) => string
+  ) => {
+    const isModified =
+      originalCalculationResult && isValueModified(originalValue, currentValue);
+    const displayValue = formatFn ? formatFn(currentValue) : currentValue;
+
+    return {
+      value: displayValue,
+      isModified,
+      originalValue: formatFn ? formatFn(originalValue) : originalValue,
+    };
+  };
+
+  // Composant pour afficher une valeur modifiable avec indicateur
+  const ModifiableValue = ({
+    originalValue,
+    currentValue,
+    formatFn = (val) => val?.toLocaleString?.("fr-FR") || "0",
+    suffix = " €",
+    className = "",
+  }: {
+    originalValue: any;
+    currentValue: any;
+    formatFn?: (val: any) => string;
+    suffix?: string;
+    className?: string;
+  }) => {
+    const {
+      value,
+      isModified,
+      originalValue: formattedOriginal,
+    } = getValueWithModificationIndicator(
+      originalValue,
+      currentValue,
+      formatFn
+    );
+
+    if (!isModified) {
+      return (
+        <span className={className}>
+          {value}
+          {suffix}
+        </span>
+      );
+    }
+
+    return (
+      <div className="relative">
+        <span
+          className={`${className} ${
+            isModified ? "text-blue-600 font-bold" : ""
+          }`}
+        >
+          {value}
+          {suffix}
+        </span>
+        {isModified && (
+          <div className="flex items-center mt-1 text-xs text-gray-500">
+            <svg
+              className="w-3 h-3 mr-1 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="line-through">
+              Original: {formattedOriginal}
+              {suffix}
             </span>
-            {isModified && (
-              <div className="flex items-center mt-1 text-xs text-gray-500">
-                <svg className="w-3 h-3 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="line-through">Original: {formattedOriginal}{suffix}</span>
-              </div>
-            )}
           </div>
-        );
-      };
+        )}
+      </div>
+    );
+  };
   return (
     <div className="space-y-6">
       {calculationError && (
@@ -1430,6 +1485,12 @@ setShowModificationPopup,
                                   RCD
                                 </th>
                                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                  RCD HT
+                                </th>
+                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                                  Taxe
+                                </th>
+                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
                                   PJ
                                 </th>
                                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
@@ -1461,6 +1522,8 @@ setShowModificationPopup,
                                         acc[annee] = {
                                           annee,
                                           rcd: 0,
+                                          rcdHT: 0,
+                                          taxe: 0,
                                           pj: 0,
                                           frais: 0,
                                           fraisGestion: 0,
@@ -1476,6 +1539,10 @@ setShowModificationPopup,
                                         echeance.fraisGestion || 0;
                                       acc[annee].reprise +=
                                         echeance.reprise || 0;
+                                      acc[annee].taxe += echeance.taxe || 0;
+                                      acc[annee].rcdHT +=
+                                        (echeance.rcd || 0) -
+                                        (echeance.taxe || 0);
                                       acc[annee].totalTTC +=
                                         echeance.totalTTC || 0;
                                       acc[annee].nbEcheances += 1;
@@ -1498,6 +1565,12 @@ setShowModificationPopup,
                                       </td>
                                       <td className="px-4 py-3 text-sm text-gray-600 text-right">
                                         {annee.rcd.toLocaleString("fr-FR")} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                        {annee.rcdHT.toLocaleString("fr-FR")} €
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                        {annee.taxe.toLocaleString("fr-FR")} €
                                       </td>
                                       <td className="px-4 py-3 text-sm text-gray-600 text-right">
                                         {annee.pj.toLocaleString("fr-FR")} €
@@ -1753,7 +1826,7 @@ setShowModificationPopup,
                                     {activity.nomActivite}
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                    {activity.partCA?.toFixed(1) || "0"}%
+                                    {(activity.partCA * 100).toFixed(1) || "0"}%
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-600 text-right">
                                     {(activity.tauxBase * 100)?.toFixed(3) ||

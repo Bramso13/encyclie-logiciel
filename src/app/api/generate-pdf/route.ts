@@ -11,7 +11,10 @@ import OfferLetterPDF from "@/components/pdf/OfferLetterPDF";
 export async function POST(request: NextRequest) {
   return withAuth(async (userId, userRole) => {
     try {
-      const { type, quote, calculationResult, formData } = await request.json();
+      const { type, quote, calculationResult, formData, selectedDocuments } =
+        await request.json();
+
+      console.log("selectedDocuments", selectedDocuments);
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -57,6 +60,7 @@ export async function POST(request: NextRequest) {
             calculationResult,
             formData,
             brokerCode: brokerProfile.code,
+            selectedDocuments,
           });
           filename = `proposition-offre-${quote.reference || "devis"}.pdf`;
           break;

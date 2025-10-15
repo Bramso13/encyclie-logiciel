@@ -907,69 +907,101 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
     nbJoursDepuisDateDebut
   );
 
-  const nbEcheancesNbJours = 365.25 / nbEcheances;
-  console.log("Nombre de jours par échéance :", nbEcheancesNbJours);
+  // Calculer le nombre de mois par période selon la périodicité
+  const moisParPeriode =
+    {
+      1: 12, // annuel
+      2: 6, // semestriel
+      4: 3, // trimestriel
+      12: 1, // mensuel
+    }[nbEcheances] || 1;
+
+  console.log("Mois par période :", moisParPeriode);
 
   let premierPaiementDeLAnnee = true;
   let totalPaiement = 0;
-
-  let nbJoursPaye = nbJoursDepuisDateDebut;
-  console.log("nbJoursPaye initial :", nbJoursPaye);
 
   if (nbJoursDepuisDateDebut > 1) {
     const nbAnneeAEcheance = 2;
     console.log("nbAnneeAEcheance :", nbAnneeAEcheance);
 
-    const iFn = () => {
-      for (let k = 0; k <= nbEcheances; k++) {
-        if (k * nbEcheancesNbJours > nbJoursDepuisDateDebut) {
-          console.log("iFn retourne :", k);
-          return k;
-        }
-      }
-      console.log("iFn retourne 0");
-      return 0;
+    const formatDate = (date: Date) => {
+      const d = date.getDate().toString().padStart(2, "0");
+      const m = (date.getMonth() + 1).toString().padStart(2, "0");
+      const y = date.getFullYear();
+      return `${y}-${m}-${d}`;
     };
-    const i = iFn();
+    const financial = (value: number) => {
+      return parseFloat(value.toFixed(2));
+    };
+
+    // Trouver à quelle échéance correspond la date de début
+    let dateRef = new Date(year, 0, 1);
+    let i = 0;
+    while (dateRef < dateDebut && i < nbEcheances) {
+      dateRef = new Date(year, 0 + moisParPeriode * (i + 1), 1);
+      i++;
+    }
     console.log("Valeur de i :", i);
 
     for (let j = i - 1; j < nbAnneeAEcheance * nbEcheances; j++) {
-      const formatDate = (date: Date) => {
-        const d = date.getDate().toString().padStart(2, "0");
-        const m = (date.getMonth() + 1).toString().padStart(2, "0");
-        const y = date.getFullYear();
-        return `${d}/${m}/${y}`;
-      };
-      const dateEcheanceIPLus1D = new Date(
-        new Date(year, 0, 1).getTime() +
-          nbEcheancesNbJours * (j + 1) * 24 * 60 * 60 * 1000
-      );
-      const dateEcheanceIPLus1 = formatDate(dateEcheanceIPLus1D);
-
-      const dateEcheance = formatDate(
-        j === i - 1
-          ? dateDebut
-          : new Date(
-              new Date(year, 0, 1).getTime() +
-                nbEcheancesNbJours * j * 24 * 60 * 60 * 1000
-            )
-      );
-      console.log(
-        `Échéance ${j}: dateEcheanceI_1 = ${dateEcheanceIPLus1}, dateEcheance = ${dateEcheance}`
-      );
-
-      if (
-        dateEcheanceIPLus1D.getFullYear() >= year + 1 &&
-        j % nbEcheances === 0
-      ) {
-        premierPaiementDeLAnnee = true;
-        console.log("Premier paiement de l'année détecté pour j =", j);
+      // Calculer la date de début de cette période
+      let dateDebutPeriode: Date;
+      if (j === i - 1) {
+        // Première échéance = date de début du contrat
+        dateDebutPeriode = new Date(dateDebut);
+      } else {
+        // Autres échéances = premier jour de la période
+        const moisTotal = moisParPeriode * j;
+        dateDebutPeriode = new Date(year, 0 + moisTotal, 1);
       }
-      const ratio =
-        nbJoursPaye % nbEcheancesNbJours === 0
-          ? 1
-          : (nbEcheancesNbJours * (j + 1) - nbJoursPaye) / nbEcheancesNbJours;
-      console.log(`ratio pour j=${j} :`, ratio);
+
+      // Calculer la date de fin de période (dernier jour du mois de fin)
+      const moisTotalFin = moisParPeriode * (j + 1);
+      const dateFinPeriode = new Date(year, 0 + moisTotalFin, 0); // Jour 0 = dernier jour du mois précédent
+
+      const dateEcheance = formatDate(dateDebutPeriode);
+      const dateEcheanceIPLus1 = formatDate(dateFinPeriode);
+
+      console.log(
+        `Échéance ${j}: dateDebutPeriode = ${dateEcheance}, dateFinPeriode = ${dateEcheanceIPLus1}`
+      );
+
+      // Vérifier si c'est le premier paiement de l'année
+      // C'est le premier paiement de l'année si c'est le premier de l'année courante
+      const anneeCourante = dateFinPeriode.getFullYear();
+      const estPremierPaiementAnnee =
+        j % nbEcheances === 0 && anneeCourante > year;
+
+      if (estPremierPaiementAnnee) {
+        premierPaiementDeLAnnee = true;
+        console.log(
+          "Premier paiement de l'année détecté pour j =",
+          j,
+          "année =",
+          anneeCourante
+        );
+      }
+
+      // Pour les périodes complètes (sauf la première), le ratio est toujours 1
+      let ratio: number;
+      if (j === i - 1) {
+        // Première période : calculer le ratio basé sur les jours réels
+        const joursTheorique = 365.25 / nbEcheances;
+        const joursReel =
+          Math.ceil(
+            (dateFinPeriode.getTime() - dateDebutPeriode.getTime()) /
+              (1000 * 60 * 60 * 24)
+          ) + 1;
+        ratio = Math.min(joursReel / joursTheorique, 1);
+        console.log(
+          `ratio pour j=${j} (première période) : ${ratio} (jours réels: ${joursReel}, théorique: ${joursTheorique})`
+        );
+      } else {
+        // Périodes complètes : ratio = 1
+        ratio = 1;
+        console.log(`ratio pour j=${j} (période complète) : ${ratio}`);
+      }
 
       const taxeEcheance =
         (taxe / nbEcheances) * ratio +
@@ -1007,20 +1039,17 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
 
       echeances.push({
         date: dateEcheance,
-        totalHT: totalHTEcheance,
-        taxe: taxeEcheance,
-        totalTTC: totalTCHEcheance,
-        rcd: rcdEcheance,
-        pj: pjEcheance,
-        frais: fraisEcheance,
-        reprise: repriseEcheance,
-        fraisGestion: fraisGestionEcheance,
+        totalHT: financial(totalHTEcheance),
+        taxe: financial(taxeEcheance),
+        totalTTC: financial(totalTCHEcheance),
+        rcd: financial(rcdEcheance),
+        pj: financial(pjEcheance),
+        frais: financial(fraisEcheance),
+        reprise: financial(repriseEcheance),
+        fraisGestion: financial(fraisGestionEcheance),
         debutPeriode: dateEcheance,
         finPeriode: dateEcheanceIPLus1,
       });
-
-      nbJoursPaye = nbEcheancesNbJours;
-      console.log("nbJoursPaye après incrément :", nbJoursPaye);
 
       premierPaiementDeLAnnee = false;
     }
@@ -1028,18 +1057,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
 
   return {
     echeances,
-    nbEcheances,
-    // caCalculee,
-    // primeHTSansMajorations,
-    // totalMajorations,
-    // primeMini,
-    // primeAuDela,
-    // primeTotal,
-    // majorations,
-    // protectionJuridique,
-    // fraisGestion,
-    // autres,
-    // primeAggravationBilanN_1NonFourni
+    nbEcheances: nbEcheancesParAn,
   };
 }
 

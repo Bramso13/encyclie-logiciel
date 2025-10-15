@@ -137,6 +137,10 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   const [offerSent, setOfferSent] = useState(false);
   const [offerData, setOfferData] = useState<any>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editableDocuments, setEditableDocuments] = useState(
+    JSON.parse(JSON.stringify(DOCUMENT_CHECKLIST))
+  );
 
   const isAdmin = session?.user?.role === "ADMIN";
 
@@ -177,7 +181,8 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
   const handleSelectAll = (category: keyof typeof DOCUMENT_CHECKLIST) => {
     const newSelected = new Set(selectedDocuments);
-    DOCUMENT_CHECKLIST[category].items.forEach((item) => {
+    const docChecklist = isEditMode ? editableDocuments : DOCUMENT_CHECKLIST;
+    docChecklist[category].items.forEach((item: any) => {
       newSelected.add(item.id);
     });
     setSelectedDocuments(newSelected);
@@ -185,7 +190,8 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
   const handleDeselectAll = (category: keyof typeof DOCUMENT_CHECKLIST) => {
     const newSelected = new Set(selectedDocuments);
-    DOCUMENT_CHECKLIST[category].items.forEach((item) => {
+    const docChecklist = isEditMode ? editableDocuments : DOCUMENT_CHECKLIST;
+    docChecklist[category].items.forEach((item: any) => {
       newSelected.delete(item.id);
     });
     setSelectedDocuments(newSelected);
@@ -210,6 +216,9 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
           quote: quote,
           calculationResult: calculationResult,
           formData: quote.formData,
+          selectedDocuments: Array.from(selectedDocuments).map((docId) =>
+            getDocumentLabel(docId)
+          ),
         }),
       });
 
@@ -319,6 +328,9 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
           quote: quote,
           calculationResult: calculationResult,
           formData: quote.formData,
+          selectedDocuments: Array.from(selectedDocuments).map((docId) =>
+            getDocumentLabel(docId)
+          ),
         }),
       });
 
@@ -344,11 +356,72 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   };
 
   const getDocumentLabel = (documentId: string) => {
-    for (const category of Object.values(DOCUMENT_CHECKLIST)) {
-      const item = category.items.find((i) => i.id === documentId);
+    const docChecklist = isEditMode ? editableDocuments : DOCUMENT_CHECKLIST;
+    for (const category of Object.values(docChecklist)) {
+      const item = (category as any).items.find(
+        (i: any) => i.id === documentId
+      );
       if (item) return item.label;
     }
     return documentId;
+  };
+
+  const handleUpdateDocumentLabel = (
+    categoryKey: string,
+    itemId: string,
+    newLabel: string
+  ) => {
+    setEditableDocuments((prev: any) => {
+      const updated = { ...prev };
+      const itemIndex = updated[categoryKey].items.findIndex(
+        (item: any) => item.id === itemId
+      );
+      if (itemIndex !== -1) {
+        updated[categoryKey].items[itemIndex].label = newLabel;
+      }
+      return updated;
+    });
+  };
+
+  const handleAddDocument = (categoryKey: string) => {
+    const newId = `custom_${Date.now()}`;
+    setEditableDocuments((prev: any) => {
+      const updated = { ...prev };
+      updated[categoryKey].items.push({
+        id: newId,
+        label: "Nouveau document",
+      });
+      return updated;
+    });
+  };
+
+  const handleDeleteDocument = (categoryKey: string, itemId: string) => {
+    setEditableDocuments((prev: any) => {
+      const updated = { ...prev };
+      updated[categoryKey].items = updated[categoryKey].items.filter(
+        (item: any) => item.id !== itemId
+      );
+      return updated;
+    });
+    // Retirer aussi de la sélection si c'était sélectionné
+    setSelectedDocuments((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(itemId);
+      return newSet;
+    });
+  };
+
+  const handleUpdateCategoryLabel = (categoryKey: string, newLabel: string) => {
+    setEditableDocuments((prev: any) => {
+      const updated = { ...prev };
+      updated[categoryKey].label = newLabel;
+      return updated;
+    });
+  };
+
+  const handleResetDocuments = () => {
+    setEditableDocuments(JSON.parse(JSON.stringify(DOCUMENT_CHECKLIST)));
+    setIsEditMode(false);
   };
 
   if (!isAdmin) {
@@ -904,18 +977,72 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
           <h3 className="text-xl font-semibold text-gray-900">
             Pièces justificatives requises
           </h3>
-          <div className="text-sm text-gray-600">
-            {selectedDocuments.size} document
-            {selectedDocuments.size > 1 ? "s" : ""} sélectionné
-            {selectedDocuments.size > 1 ? "s" : ""}
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              {selectedDocuments.size} document
+              {selectedDocuments.size > 1 ? "s" : ""} sélectionné
+              {selectedDocuments.size > 1 ? "s" : ""}
+            </div>
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                isEditMode
+                  ? "bg-orange-600 text-white hover:bg-orange-700"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {isEditMode ? "Terminer l'édition" : "Modifier la liste"}
+            </button>
+            {isEditMode && (
+              <button
+                onClick={handleResetDocuments}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-md text-sm font-medium hover:bg-red-200"
+              >
+                Réinitialiser
+              </button>
+            )}
           </div>
         </div>
 
-        {Object.entries(DOCUMENT_CHECKLIST).map(([categoryKey, category]) => (
+        {Object.entries(
+          isEditMode ? editableDocuments : DOCUMENT_CHECKLIST
+        ).map(([categoryKey, category]: [string, any]) => (
           <div key={categoryKey} className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-800">{category.label}</h4>
+              {isEditMode ? (
+                <input
+                  type="text"
+                  value={category.label}
+                  onChange={(e) =>
+                    handleUpdateCategoryLabel(categoryKey, e.target.value)
+                  }
+                  className="font-medium text-gray-800 bg-yellow-50 border border-yellow-300 rounded px-2 py-1 text-sm"
+                />
+              ) : (
+                <h4 className="font-medium text-gray-800">{category.label}</h4>
+              )}
               <div className="flex space-x-2">
+                {isEditMode && (
+                  <button
+                    onClick={() => handleAddDocument(categoryKey)}
+                    className="text-xs px-3 py-1 bg-green-600 text-white hover:bg-green-700 rounded flex items-center gap-1"
+                  >
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Ajouter
+                  </button>
+                )}
                 <button
                   onClick={() =>
                     handleSelectAll(
@@ -939,10 +1066,12 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
               </div>
             </div>
             <div className="space-y-2 pl-4">
-              {category.items.map((item) => (
-                <label
+              {category.items.map((item: any) => (
+                <div
                   key={item.id}
-                  className="flex items-start space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                  className={`flex items-start space-x-3 p-2 rounded ${
+                    isEditMode ? "bg-gray-50 border border-gray-200" : ""
+                  }`}
                 >
                   <input
                     type="checkbox"
@@ -951,10 +1080,48 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
                     className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                     disabled={offerSent && !isAdmin}
                   />
-                  <span className="text-sm text-gray-700 flex-1">
-                    {item.label}
-                  </span>
-                </label>
+                  {isEditMode ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={item.label}
+                        onChange={(e) =>
+                          handleUpdateDocumentLabel(
+                            categoryKey,
+                            item.id,
+                            e.target.value
+                          )
+                        }
+                        className="flex-1 text-sm text-gray-700 bg-white border border-gray-300 rounded px-2 py-1"
+                      />
+                      <button
+                        onClick={() =>
+                          handleDeleteDocument(categoryKey, item.id)
+                        }
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 rounded p-1"
+                        title="Supprimer"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex-1 text-sm text-gray-700 cursor-pointer">
+                      {item.label}
+                    </label>
+                  )}
+                </div>
               ))}
             </div>
           </div>

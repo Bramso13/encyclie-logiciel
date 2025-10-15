@@ -8,6 +8,7 @@ interface OfferLetterPDFProps {
   formData: FormData;
   calculationResult: any;
   brokerCode: string;
+  selectedDocuments: string[];
 }
 
 const styles = StyleSheet.create({
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
     color: "#1f2937",
   },
   section: {
-    marginBottom: 25,
+    marginBottom: 2,
   },
   sectionHeader: {
     fontSize: 14,
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   table: {
-    marginBottom: 12,
+    marginBottom: 2,
     border: "1px solid #9ca3af",
   },
   tableHeader: {
@@ -180,6 +181,7 @@ const OfferLetterPDF = ({
   formData,
   calculationResult,
   brokerCode,
+  selectedDocuments,
 }: OfferLetterPDFProps) => {
   const formatCurrency = (value: string | number | undefined) => {
     if (value === undefined || value === null || value === "") return "N/A";
@@ -1116,9 +1118,12 @@ const OfferLetterPDF = ({
 
         <Text style={[styles.fieldLabel, { marginTop: 15, marginBottom: 6 }]}>
           PRIMES annuelles pour la période du{" "}
-          {formatDate(calculationResult?.echeancier[0]?.debutPeriode)} au{" "}
           {formatDate(
-            calculationResult?.echeancier[
+            calculationResult?.echeancier?.echeances[0]?.debutPeriode
+          )}{" "}
+          au{" "}
+          {formatDate(
+            calculationResult?.echeancier?.echeances[
               calculationResult?.echeancier?.echeances?.length - 1
             ]?.finPeriode
           )}
@@ -1615,9 +1620,28 @@ const OfferLetterPDF = ({
               minHeight: 60,
             }}
           >
-            <Text style={styles.paragraphSmall}>
-              {/* Les pièces justificatives seront listées ici */}
-            </Text>
+            {selectedDocuments && selectedDocuments.length > 0 ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 0,
+                }}
+              >
+                {selectedDocuments.map((document, idx) => (
+                  <Text style={styles.paragraphSmall}> - {document}</Text>
+                ))}
+              </View>
+            ) : (
+              <Text
+                style={[
+                  styles.paragraphSmall,
+                  { color: "#6b7280", fontStyle: "italic", fontSize: 7 },
+                ]}
+              >
+                (Aucune pièce justificative sélectionnée)
+              </Text>
+            )}
           </View>
         </View>
 
