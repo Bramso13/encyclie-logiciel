@@ -725,6 +725,7 @@ export function calculPrimeRCD(params: {
     returnValue.fraisGestion;
   returnValue.returnTab = returnTab;
   returnValue.echeancier = genererEcheancier({
+    tauxTaxe: taxeAssurance,
     dateDebut: dateEffet ?? new Date(),
     totalHT: returnValue.primeTotal,
     taxe: returnValue.autres.taxeAssurance,
@@ -794,6 +795,7 @@ type EcheancierParams = {
   dateDebut: Date; // Date de début du contrat
   totalHT: number; // Total HT
   taxe: number; // Taxe €
+  tauxTaxe: number; // Taux de taxe
   totalTTC: number; // Total TTC
   rcd: number; // RCD
   pj: number; // PJ
@@ -860,6 +862,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
     dateDebut,
     totalHT,
     taxe,
+    tauxTaxe,
     totalTTC,
     rcd,
     pj,
@@ -1005,20 +1008,21 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
 
       const taxeEcheance =
         (taxe / nbEcheances) * ratio +
-        (premierPaiementDeLAnnee ? frais * 0.045 : 0);
+        (premierPaiementDeLAnnee ? frais * tauxTaxe : 0);
 
-      const rcdEcheance = ((rcd + taxe + frais) / nbEcheances) * ratio;
+      const fraisEcheance = frais / nbEcheances;
+
+      const rcdEcheance = ((rcd + frais) / nbEcheances) * ratio;
       console.log(rcd, taxe, frais, "rcdEcheance", rcdEcheance, ratio);
-      const pjEcheance = premierPaiementDeLAnnee ? pj : 0;
-      const fraisEcheance = premierPaiementDeLAnnee ? frais : 0;
+      const pjEcheance = premierPaiementDeLAnnee ? 106.0 : 0;
+
       const repriseEcheance = premierPaiementDeLAnnee ? reprise : 0;
       const fraisGestionEcheance = premierPaiementDeLAnnee ? fraisGestion : 0;
       const totalHTEcheance =
         rcdEcheance +
         fraisGestionEcheance +
         pjEcheance +
-        (repriseEcheance === undefined ? 0 : repriseEcheance) -
-        taxeEcheance;
+        (repriseEcheance === undefined ? 0 : repriseEcheance);
 
       const totalTCHEcheance = totalHTEcheance + taxeEcheance;
 

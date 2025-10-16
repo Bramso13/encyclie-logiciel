@@ -1517,7 +1517,7 @@ export default function CalculationTab({
                                 const echeancesParAnnee =
                                   calculationResult.echeancier.echeances.reduce(
                                     (acc: any, echeance: any) => {
-                                      const annee = echeance.date.split("/")[2];
+                                      const annee = echeance.date.split("/")[0];
                                       if (!acc[annee]) {
                                         acc[annee] = {
                                           annee,
