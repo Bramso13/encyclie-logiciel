@@ -8,11 +8,11 @@ import {
 } from "@/lib/api-utils";
 
 // Fonction pour convertir une date au format français DD/MM/YYYY vers un objet Date
-function parseDateFrancaise(dateFr: string): Date {
-  const [jour, mois, annee] = dateFr.split("/").map(Number);
-  // Mois - 1 car les mois en JavaScript commencent à 0
-  return new Date(annee, mois - 1, jour);
-}
+// function parseDateFrancaise(dateFr: string): Date {
+//   const [jour, mois, annee] = dateFr.split("/").map(Number);
+//   // Mois - 1 car les mois en JavaScript commencent à 0
+//   return new Date(annee, mois - 1, jour);
+// }
 
 // GET /api/quotes/[id]/payment-schedule - Get payment schedule for a quote
 export async function GET(
@@ -137,15 +137,13 @@ export async function POST(
           totalAmountHT,
           totalTaxAmount,
           totalAmountTTC,
-          startDate: parseDateFrancaise(echeances[0].debutPeriode),
-          endDate: parseDateFrancaise(
-            echeances[echeances.length - 1].finPeriode
-          ),
+          startDate: new Date(echeances[0].debutPeriode),
+          endDate: new Date(echeances[echeances.length - 1].finPeriode),
           status: "PENDING",
           payments: {
             create: echeances.map((echeance: any, index: number) => ({
               installmentNumber: index + 1,
-              dueDate: parseDateFrancaise(echeance.date),
+              dueDate: new Date(echeance.date),
               amountHT: echeance.totalHT || 0,
               taxAmount: echeance.taxe || 0,
               amountTTC: echeance.totalTTC || 0,
@@ -153,8 +151,8 @@ export async function POST(
               pjAmount: echeance.pj || 0,
               feesAmount: echeance.frais || 0,
               resumeAmount: echeance.reprise || 0,
-              periodStart: parseDateFrancaise(echeance.debutPeriode),
-              periodEnd: parseDateFrancaise(echeance.finPeriode),
+              periodStart: new Date(echeance.debutPeriode),
+              periodEnd: new Date(echeance.finPeriode),
               status: "PENDING",
             })),
           },

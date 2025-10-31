@@ -4,7 +4,7 @@ import { pdf } from "@react-pdf/renderer";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { getTaxeByRegion, tableauTax } from "@/lib/tarificateurs/rcd";
-import { getBrokerCode } from "@/lib/utils";
+import { getBrokerCode, getBrokerInfo } from "@/lib/utils";
 
 export default function LetterTab({
   quote,
@@ -114,26 +114,26 @@ export default function LetterTab({
         alert("Veuillez saisir un email valide");
         return;
       }
-      const brokerCode = await getBrokerCode(session?.user?.id);
+      const brokerInfo = await getBrokerInfo(session?.user?.id);
 
       // Générer le PDF
       const pdfBlob = await pdf(
         <LetterOfIntentPDF
           quote={quote}
           calculationResult={calculationResult}
-          user={{ ...session?.user, brokerCode }}
+          user={{ ...session?.user, brokerCode: brokerInfo.code }}
         />
       ).toBlob();
 
       // Préparer les données pour l'API
       const formData = new FormData();
       formData.append("quoteId", quote.id);
-      formData.append("directorName", quote.formData.directorName);
+      formData.append("brokerName", brokerInfo.name || "");
       formData.append(
         "companyName",
         quote.formData.companyName || quote.companyData.companyName
       );
-      formData.append("clientEmail", clientEmail);
+      formData.append("clientEmail", brokerInfo.email || "");
       formData.append(
         "pdf",
         pdfBlob,

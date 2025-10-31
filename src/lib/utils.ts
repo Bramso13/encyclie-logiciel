@@ -221,3 +221,9 @@ export const getBrokerCode = async (userId: string) => {
   const data = await response.json();
   return data.code;
 };
+
+export const getBrokerInfo = async (userId: string) => {
+  const response = await fetch(`/api/brokers/info`);
+  const data = await response.json();
+  return data.broker;
+};

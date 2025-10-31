@@ -101,6 +101,7 @@ function calculateMajorations(params: {
       if (nbActivites > 5 && nbActivites <= 8) return 0.1;
     }
     if (etp >= 6 && etp <= 8) return 0;
+    return 0;
   };
   const calculMajAnciennete = (dateCreation: Date) => {
     const today = new Date();
@@ -143,12 +144,15 @@ function calculateMajorations(params: {
     absenceDeSinistreSurLes5DernieresAnnees:
       absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT"
         ? 0.2
+        : absenceDeSinistreSurLes5DernieresAnnees === "OUI"
+        ? -0.1
         : 0,
   };
 
   return majorations;
 }
-export const tableauTax = [
+// Taux pour 2025
+const tableauTax2025 = [
   { code: 1, title: "Voiries Réseaux Divers (VRD)", rate: 0.0382 },
   { code: 2, title: "Maçonnerie et béton armé", rate: 0.0407 },
   { code: 3, title: "Charpente et structure en bois", rate: 0.0439 },
@@ -186,6 +190,21 @@ export const tableauTax = [
   },
   { code: 20, title: "Electricité -Télécommunications", rate: 0.0298 },
 ];
+
+// Taux pour 2026 (2.5% de plus que 2025)
+const tableauTax2026 = tableauTax2025.map((item) => ({
+  ...item,
+  rate: item.rate * 1.025,
+}));
+
+// Export pour compatibilité avec le code existant (par défaut 2025)
+export const tableauTax = tableauTax2025;
+
+// Fonction pour obtenir les taux par année
+export function getTableauTaxByYear(year: number) {
+  if (year >= 2026) return tableauTax2026;
+  return tableauTax2025;
+}
 const tableauDegAvant = [
   {
     code: 1,
@@ -582,6 +601,23 @@ export function calculPrimeRCD(params: {
       total: number;
     };
     primeAggravationBilanN_1NonFourni: number;
+    // Champs pour l'année N+1
+    returnTabN1: returnTab[];
+    PminiHTN1: number;
+    PrimeHTSansMajorationsN1: number;
+    primeMiniN1: number;
+    primeMiniAvecMajorationsN1: number;
+    primeAuDelaN1: number;
+    primeTotalN1: number;
+    fraisGestionN1: number;
+    totalTTCN1: number;
+    autresN1: {
+      taxeAssurance: number;
+      protectionJuridiqueTTC: number;
+      fraisFractionnementPrimeHT: number;
+      total: number;
+    };
+    primeAggravationBilanN_1NonFourniN1: number;
   };
 
   const plafond = 70_000;
@@ -632,6 +668,23 @@ export function calculPrimeRCD(params: {
       total: 0,
     },
     primeAggravationBilanN_1NonFourni: 0,
+    // Champs pour l'année N+1
+    returnTabN1: [],
+    PminiHTN1: 0,
+    primeMiniN1: 0,
+    PrimeHTSansMajorationsN1: 0,
+    primeMiniAvecMajorationsN1: 0,
+    primeAuDelaN1: 0,
+    primeTotalN1: 0,
+    fraisGestionN1: 0,
+    totalTTCN1: 0,
+    autresN1: {
+      taxeAssurance: 0,
+      protectionJuridiqueTTC: 0,
+      fraisFractionnementPrimeHT: 0,
+      total: 0,
+    },
+    primeAggravationBilanN_1NonFourniN1: 0,
   };
 
   const calculSommeTauxActPartCa = (
@@ -724,6 +777,92 @@ export function calculPrimeRCD(params: {
     returnValue.autres.total +
     returnValue.fraisGestion;
   returnValue.returnTab = returnTab;
+
+  // ========== CALCULS POUR L'ANNÉE N+1 (2026) ==========
+  const returnTabN1: returnTab[] = [];
+  const tableauTaxN1 = tableauTax2026;
+
+  activites.forEach((activite) => {
+    const degMax = tableauDeg.find(
+      (deg) => deg.code === activite.code
+    )?.degressivity;
+    const deg400k = tableauDeg.find(
+      (deg) => deg.code === activite.code && deg.type === "CA"
+    )?.degressivity;
+    const rate = tableauTaxN1.find((tax) => tax.code === activite.code)?.rate;
+    const tauxBase =
+      deg400k && caCalculee > 250000 ? (rate ?? 0) * deg400k : rate ?? 0;
+    const primeMiniAct = (rate ?? 0) * plafond * activite.caSharePercent;
+
+    const prime100Min =
+      tauxBase * (caCalculee - plafond) * activite.caSharePercent;
+
+    returnTabN1.push({
+      nomActivite:
+        tableauTaxN1.find((tax) => tax.code === activite.code)?.title ?? "",
+      partCA: activite.caSharePercent,
+      tauxBase,
+      tauxApplique: tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1),
+      PrimeMiniAct: primeMiniAct,
+      DegMax: degMax ?? 0,
+      Deg400k: deg400k ?? 0,
+      PrimeRefAct: -1,
+      Prime100Ref: -1,
+      Prime100Min: prime100Min,
+    });
+  });
+
+  returnValue.PminiHTN1 = returnTabN1.reduce(
+    (acc, activite) => acc + activite.PrimeMiniAct,
+    0
+  );
+  returnValue.primeMiniN1 = returnTabN1.reduce(
+    (acc, activite) => acc + activite.Prime100Min,
+    0
+  );
+  returnValue.primeMiniAvecMajorationsN1 =
+    returnValue.PminiHTN1 * totalMajorations;
+  returnValue.PrimeHTSansMajorationsN1 =
+    returnValue.PminiHTN1 + returnValue.primeMiniN1;
+
+  returnValue.primeTotalN1 =
+    returnValue.PrimeHTSansMajorationsN1 * totalMajorations;
+  returnValue.fraisGestionN1 = returnValue.primeTotalN1 * txFraisGestion;
+  returnValue.autresN1.fraisFractionnementPrimeHT =
+    returnValue.nbEcheances > 1
+      ? returnValue.nbEcheances * fraisFractionnementPrime
+      : 0;
+  returnValue.autresN1.taxeAssurance =
+    returnValue.primeTotalN1 * taxeAssurance +
+    returnValue.autresN1.fraisFractionnementPrimeHT * taxeAssurance;
+  returnValue.autresN1.protectionJuridiqueTTC =
+    protectionJuridique1an * (1 + taxeProtectionJuridique);
+  returnValue.autresN1.total =
+    returnValue.autresN1.taxeAssurance +
+    returnValue.autresN1.protectionJuridiqueTTC +
+    returnValue.autresN1.fraisFractionnementPrimeHT;
+  returnValue.primeAuDelaN1 =
+    returnValue.primeTotalN1 - returnValue.primeMiniAvecMajorationsN1;
+  returnValue.totalTTCN1 =
+    returnValue.primeTotalN1 +
+    returnValue.autresN1.total +
+    returnValue.fraisGestionN1;
+  returnValue.returnTabN1 = returnTabN1;
+
+  returnValue.primeAggravationBilanN_1NonFourni = returnValue.majorations
+    .nonFournitureBilanN_1
+    ? returnValue.primeTotal *
+      returnValue.majorations.nonFournitureBilanN_1 *
+      (1 + txFraisGestion + taxeAssurance)
+    : 0;
+
+  returnValue.primeAggravationBilanN_1NonFourniN1 = returnValue.majorations
+    .nonFournitureBilanN_1
+    ? returnValue.primeTotalN1 *
+      returnValue.majorations.nonFournitureBilanN_1 *
+      (1 + txFraisGestion + taxeAssurance)
+    : 0;
+
   returnValue.echeancier = genererEcheancier({
     tauxTaxe: taxeAssurance,
     dateDebut: dateEffet ?? new Date(),
@@ -736,24 +875,15 @@ export function calculPrimeRCD(params: {
     reprise: 0, // Pas de reprise dans cet exemple
     fraisGestion: returnValue.fraisGestion,
     periodicite: fractionnementPrime,
-    // caCalculee: returnValue.caCalculee,
-    // primeHTSansMajorations: returnValue.PrimeHTSansMajorations,
-    // totalMajorations: returnValue.totalMajorations,
-    // primeMini: returnValue.primeMini,
-    // primeAuDela: returnValue.primeAuDela,
-    // primeTotal: returnValue.primeTotal,
-    // majorations: returnValue.majorations,
-    // protectionJuridique: returnValue.protectionJuridique,
-    // autres: returnValue.autres,
-    // primeAggravationBilanN_1NonFourni: returnValue.primeAggravationBilanN_1NonFourni,
+    // Données pour l'année N+1
+    totalHTN1: returnValue.primeTotalN1,
+    taxeN1: returnValue.autresN1.taxeAssurance,
+    totalTTCN1: returnValue.totalTTCN1,
+    rcdN1: returnValue.primeTotalN1,
+    pjN1: returnValue.autresN1.protectionJuridiqueTTC,
+    fraisN1: returnValue.autresN1.fraisFractionnementPrimeHT,
+    fraisGestionN1: returnValue.fraisGestionN1,
   });
-
-  returnValue.primeAggravationBilanN_1NonFourni = returnValue.majorations
-    .nonFournitureBilanN_1
-    ? returnValue.primeTotal *
-      returnValue.majorations.nonFournitureBilanN_1 *
-      (1 + txFraisGestion + taxeAssurance)
-    : 0;
   console.log("returnValue", returnValue);
   // Calcul de la reprise du passé si activée
   if (
@@ -803,22 +933,14 @@ type EcheancierParams = {
   reprise: number; // Reprise
   fraisGestion: number; // Frais de gestion
   periodicite: "annuel" | "semestriel" | "trimestriel" | "mensuel";
-  // Informations complètes du calcul
-  // caCalculee: number;
-  // primeHTSansMajorations: number;
-  // totalMajorations: number;
-  // primeMini: number;
-  // primeAuDela: number;
-  // primeTotal: number;
-  // majorations: any;
-  // protectionJuridique: number;
-  // autres: {
-  //   taxeAssurance: number;
-  //   protectionJuridiqueTTC: number;
-  //   fraisFractionnementPrimeHT: number;
-  //   total: number;
-  // };
-  // primeAggravationBilanN_1NonFourni: number;
+  // Données pour l'année N+1
+  totalHTN1: number; // Total HT année N+1
+  taxeN1: number; // Taxe € année N+1
+  totalTTCN1: number; // Total TTC année N+1
+  rcdN1: number; // RCD année N+1
+  pjN1: number; // PJ année N+1
+  fraisN1: number; // Frais année N+1
+  fraisGestionN1: number; // Frais de gestion année N+1
 };
 
 type Echeance = {
@@ -870,16 +992,14 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
     reprise,
     fraisGestion,
     periodicite,
-    // caCalculee,
-    // primeHTSansMajorations,
-    // totalMajorations,
-    // primeMini,
-    // primeAuDela,
-    // primeTotal,
-    // majorations,
-    // protectionJuridique,
-    // autres,
-    // primeAggravationBilanN_1NonFourni
+    // Paramètres N+1
+    totalHTN1,
+    taxeN1,
+    totalTTCN1,
+    rcdN1,
+    pjN1,
+    fraisN1,
+    fraisGestionN1,
   } = params;
 
   const echeances: Echeance[] = [];
@@ -1006,18 +1126,40 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
         console.log(`ratio pour j=${j} (période complète) : ${ratio}`);
       }
 
-      const taxeEcheance =
-        (taxe / nbEcheances) * ratio +
-        (premierPaiementDeLAnnee ? frais * tauxTaxe : 0);
+      // Déterminer si on est en année N ou N+1
+      const anneeEcheance = dateFinPeriode.getFullYear();
+      const anneeDebut = dateDebut.getFullYear();
+      const estAnneeN1 = anneeEcheance > anneeDebut;
 
-      const fraisEcheance = frais / nbEcheances;
+      // Utiliser les bonnes valeurs selon l'année
+      const rcdAnnee = estAnneeN1 ? rcdN1 : rcd;
+      const taxeAnnee = estAnneeN1 ? taxeN1 : taxe;
+      const fraisAnnee = estAnneeN1 ? fraisN1 : frais;
+      const fraisGestionAnnee = estAnneeN1 ? fraisGestionN1 : fraisGestion;
 
-      const rcdEcheance = ((rcd + frais) / nbEcheances) * ratio;
-      console.log(rcd, taxe, frais, "rcdEcheance", rcdEcheance, ratio);
+      const fraisEcheance = fraisAnnee / nbEcheances;
+
+      const rcdEcheance = ((rcdAnnee + fraisAnnee) / nbEcheances) * ratio;
+      console.log(
+        rcdAnnee,
+        taxeAnnee,
+        fraisAnnee,
+        "rcdEcheance",
+        rcdEcheance,
+        ratio,
+        "année:",
+        anneeEcheance,
+        "estN+1:",
+        estAnneeN1
+      );
       const pjEcheance = premierPaiementDeLAnnee ? 106.0 : 0;
+      const taxeEcheance =
+        (taxeAnnee / nbEcheances) * ratio + pjEcheance * tauxTaxe;
 
       const repriseEcheance = premierPaiementDeLAnnee ? reprise : 0;
-      const fraisGestionEcheance = premierPaiementDeLAnnee ? fraisGestion : 0;
+      const fraisGestionEcheance = premierPaiementDeLAnnee
+        ? fraisGestionAnnee
+        : 0;
       const totalHTEcheance =
         rcdEcheance +
         fraisGestionEcheance +

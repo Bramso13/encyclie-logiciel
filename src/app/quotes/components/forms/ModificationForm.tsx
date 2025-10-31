@@ -90,6 +90,13 @@ const ModificationForm = React.memo(
             | "semestriel"
             | "trimestriel"
             | "mensuel",
+          totalHTN1: calculationResult.primeTotalN1,
+          taxeN1: calculationResult.autresN1.taxeAssurance,
+          totalTTCN1: calculationResult.totalTTCN1,
+          rcdN1: calculationResult.primeTotalN1,
+          pjN1: calculationResult.autresN1.protectionJuridiqueTTC,
+          fraisN1: calculationResult.autresN1.fraisFractionnementPrimeHT,
+          fraisGestionN1: calculationResult.fraisGestionN1,
         })
       );
     };

@@ -131,6 +131,19 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   const [showSuccessPage, setShowSuccessPage] = useState(false);
   const [createdQuote, setCreatedQuote] = useState<any>(null);
 
+  // States pour l'historique des versions
+  const [selectedQuoteForVersions, setSelectedQuoteForVersions] =
+    useState<string>("");
+  const [versionsData, setVersionsData] = useState<any>(null);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<any>(null);
+  const [showVersionDetails, setShowVersionDetails] = useState(false);
+
+  // States pour les paiements en retard
+  const [overduePayments, setOverduePayments] = useState<any[]>([]);
+  const [loadingOverduePayments, setLoadingOverduePayments] = useState(false);
+  const [overdueCount, setOverdueCount] = useState(0);
+
   // États pour le simulateur de tarif
   const [simulatorData, setSimulatorData] = useState<SimulatorParams>({
     caDeclared: 300000,
@@ -249,6 +262,100 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     deleteMessage,
   } = useMessagesStore();
 
+  // Function to fetch overdue payments
+  const fetchOverduePayments = async () => {
+    setLoadingOverduePayments(true);
+    try {
+      const response = await fetch("/api/payment-installments/overdue");
+      const data = await response.json();
+
+      if (data.success) {
+        setOverduePayments(data.data.payments || []);
+        setOverdueCount(data.data.total || 0);
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des paiements en retard:",
+        error
+      );
+    } finally {
+      setLoadingOverduePayments(false);
+    }
+  };
+
+  // Function to mark payment as paid
+  const markPaymentAsPaid = async (
+    paymentId: string,
+    paymentMethod?: string,
+    paymentReference?: string,
+    adminNotes?: string
+  ) => {
+    try {
+      const response = await fetch(
+        `/api/payment-installments/${paymentId}/mark-paid`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentMethod,
+            paymentReference,
+            adminNotes,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(
+          data.error || "Erreur lors de la mise à jour du paiement"
+        );
+      }
+
+      alert(data.message || "Paiement marqué comme payé avec succès");
+      fetchOverduePayments(); // Refresh list
+    } catch (error) {
+      console.error("Erreur:", error);
+      alert(
+        error instanceof Error ? error.message : "Erreur lors de la mise à jour"
+      );
+    }
+  };
+
+  // Function to send payment reminder
+  const sendPaymentReminder = async (paymentId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir envoyer un rappel de paiement ?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/payment-installments/${paymentId}/send-reminder`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Erreur lors de l'envoi du rappel");
+      }
+
+      alert(data.message || "Rappel de paiement envoyé avec succès");
+      fetchOverduePayments(); // Refresh list
+    } catch (error) {
+      console.error("Erreur:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de l'envoi du rappel"
+      );
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchQuotes();
@@ -256,6 +363,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     fetchUnderwriters();
     fetchReceivedMessages();
     fetchUnreadCount();
+    fetchOverduePayments();
   }, [
     fetchProducts,
     fetchQuotes,
@@ -393,6 +501,70 @@ export default function AdminScreen({ user }: AdminScreenProps) {
         i === index ? { ...act, [field]: value } : act
       ),
     }));
+  };
+
+  // Function to fetch versions for a quote
+  const fetchQuoteVersions = async (quoteId: string) => {
+    if (!quoteId) return;
+
+    setLoadingVersions(true);
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}/versions`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(
+          data.error || "Erreur lors de la récupération des versions"
+        );
+      }
+
+      setVersionsData(data.data);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des versions:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la récupération des versions"
+      );
+    } finally {
+      setLoadingVersions(false);
+    }
+  };
+
+  // Function to view version details
+  const viewVersionDetails = (version: any) => {
+    setSelectedVersion(version);
+    setShowVersionDetails(true);
+  };
+
+  // Function to get action label
+  const getActionLabel = (action: string) => {
+    const labels: Record<string, string> = {
+      STATUS_CHANGE: "Changement de statut",
+      DATA_UPDATE: "Modification des données",
+      PREMIUM_UPDATE: "Mise à jour de la prime",
+      OFFER_UPDATE: "Mise à jour de l'offre",
+      ADMIN_CORRECTION: "Correction admin",
+      BROKER_MODIFICATION: "Modification courtier",
+    };
+    return labels[action] || action;
+  };
+
+  // Function to get status label
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      DRAFT: "Brouillon",
+      INCOMPLETE: "À compléter",
+      SUBMITTED: "Soumis",
+      IN_PROGRESS: "En cours",
+      COMPLEMENT_REQUIRED: "Complément demandé",
+      OFFER_READY: "Offre prête",
+      OFFER_SENT: "Offre envoyée",
+      ACCEPTED: "Acceptée",
+      REJECTED: "Refusée",
+      EXPIRED: "Expirée",
+    };
+    return labels[status] || status;
   };
 
   // Gestion des sinistres précédents (simulateur)
@@ -761,6 +933,31 @@ export default function AdminScreen({ user }: AdminScreenProps) {
               }`}
             >
               Correspondance
+            </button>
+            <button
+              onClick={() => setActiveTab("versions")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "versions"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Historique des versions
+            </button>
+            <button
+              onClick={() => setActiveTab("overduePayments")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm relative ${
+                activeTab === "overduePayments"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Paiements en retard
+              {overdueCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
+                  {overdueCount}
+                </span>
+              )}
             </button>
             {/* <button
               onClick={() => setActiveTab("underwriters")}
@@ -1978,6 +2175,371 @@ export default function AdminScreen({ user }: AdminScreenProps) {
 
           {activeTab === "correspondance" && <CorrespondanceTab />}
 
+          {activeTab === "overduePayments" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Paiements en retard ({overdueCount})
+                </h3>
+                <button
+                  onClick={fetchOverduePayments}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  Actualiser
+                </button>
+              </div>
+
+              {loadingOverduePayments ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : overduePayments.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+                  <svg
+                    className="mx-auto h-12 w-12 text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Aucun paiement en retard ! Tout est à jour 🎉
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Référence Devis
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Entreprise
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Courtier
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Échéance n°
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Montant TTC
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Date d'échéance
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Retard
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Rappels
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {overduePayments.map((payment: any) => (
+                          <tr key={payment.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {payment.schedule.quote.reference}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {payment.schedule.quote.product.name}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {payment.schedule.quote.companyData
+                                ?.companyName || "N/A"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {payment.schedule.quote.broker.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {payment.schedule.quote.broker.email}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                #{payment.installmentNumber}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                              {payment.amountTTC.toFixed(2)}€
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(payment.dueDate).toLocaleDateString(
+                                "fr-FR"
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  payment.daysOverdue > 30
+                                    ? "bg-red-100 text-red-800"
+                                    : payment.daysOverdue > 15
+                                    ? "bg-orange-100 text-orange-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}
+                              >
+                                {payment.daysOverdue} jour
+                                {payment.daysOverdue > 1 ? "s" : ""}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {payment.reminderCount} envoyé
+                                  {payment.reminderCount > 1 ? "s" : ""}
+                                </span>
+                                {payment.lastReminderSent && (
+                                  <span className="text-xs text-gray-500">
+                                    Dernier :{" "}
+                                    {new Date(
+                                      payment.lastReminderSent
+                                    ).toLocaleDateString("fr-FR")}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                              <button
+                                onClick={() => sendPaymentReminder(payment.id)}
+                                className="text-orange-600 hover:text-orange-900"
+                                title="Envoyer un rappel"
+                              >
+                                <svg
+                                  className="w-5 h-5 inline"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => markPaymentAsPaid(payment.id)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Marquer comme payé"
+                              >
+                                <svg
+                                  className="w-5 h-5 inline"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "versions" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Historique des versions des devis
+                </h3>
+              </div>
+
+              {/* Sélecteur de devis */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sélectionner un devis
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedQuoteForVersions}
+                    onChange={(e) => {
+                      setSelectedQuoteForVersions(e.target.value);
+                      if (e.target.value) {
+                        fetchQuoteVersions(e.target.value);
+                      } else {
+                        setVersionsData(null);
+                      }
+                    }}
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">-- Sélectionnez un devis --</option>
+                    {quotes.map((quote) => (
+                      <option key={quote.id} value={quote.id}>
+                        {quote.reference} - {quote.formData.companyName} (
+                        {quote.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Liste des versions */}
+              {loadingVersions ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : versionsData ? (
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      Devis {versionsData.quoteReference} -{" "}
+                      {versionsData.totalVersions} version(s)
+                    </h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Version
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Action
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Statut
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Modifié par
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Raison
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {versionsData.versions.map((version: any) => (
+                          <tr key={version.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                v{version.version}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {getActionLabel(version.action)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  version.status === "DRAFT"
+                                    ? "bg-gray-100 text-gray-800"
+                                    : version.status === "SUBMITTED"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : version.status === "IN_PROGRESS"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : version.status === "OFFER_READY"
+                                    ? "bg-green-100 text-green-800"
+                                    : version.status === "ACCEPTED"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {getStatusLabel(version.status)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {version.changedBy?.name || "Inconnu"}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {version.userRole}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              <div className="max-w-xs truncate">
+                                {version.changeReason || "-"}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(version.createdAt).toLocaleString(
+                                "fr-FR"
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button
+                                onClick={() => viewVersionDetails(version)}
+                                className="text-indigo-600 hover:text-indigo-900"
+                              >
+                                Voir détails
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Sélectionnez un devis pour voir son historique des versions
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "underwriters" && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -2156,6 +2718,204 @@ export default function AdminScreen({ user }: AdminScreenProps) {
         onClose={() => setShowAddBrokerModal(false)}
         onSubmit={handleCreateBroker}
       />
+
+      {/* Version Details Modal */}
+      {showVersionDetails && selectedVersion && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white mb-10">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium leading-6 text-gray-900">
+                  Détails de la version {selectedVersion.version}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowVersionDetails(false);
+                    setSelectedVersion(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Informations générales */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Informations générales
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Action :</span>
+                      <span className="ml-2 font-medium">
+                        {getActionLabel(selectedVersion.action)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Statut :</span>
+                      <span className="ml-2 font-medium">
+                        {getStatusLabel(selectedVersion.status)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Modifié par :</span>
+                      <span className="ml-2 font-medium">
+                        {selectedVersion.changedBy?.name || "Inconnu"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Rôle :</span>
+                      <span className="ml-2 font-medium">
+                        {selectedVersion.userRole}
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Date :</span>
+                      <span className="ml-2 font-medium">
+                        {new Date(selectedVersion.createdAt).toLocaleString(
+                          "fr-FR"
+                        )}
+                      </span>
+                    </div>
+                    {selectedVersion.changeReason && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500">Raison :</span>
+                        <p className="mt-1 text-gray-900">
+                          {selectedVersion.changeReason}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Changements */}
+                {selectedVersion.changes && (
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">
+                      Changements
+                    </h4>
+                    <div className="text-sm space-y-2">
+                      {Object.entries(selectedVersion.changes).map(
+                        ([key, value]: [string, any]) => (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="text-gray-700 font-medium">
+                              {key} :
+                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-1 bg-red-100 text-red-800 rounded">
+                                {value.old}
+                              </span>
+                              <svg
+                                className="w-4 h-4 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
+                                {value.new}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Données de l'entreprise */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Données de l'entreprise
+                  </h4>
+                  <div className="text-sm">
+                    <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto">
+                      {JSON.stringify(selectedVersion.companyData, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Prime calculée */}
+                {selectedVersion.calculatedPremium && (
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">
+                      Prime calculée
+                    </h4>
+                    <div className="text-sm">
+                      <pre className="bg-white p-3 rounded border border-gray-200 overflow-x-auto max-h-60">
+                        {JSON.stringify(
+                          selectedVersion.calculatedPremium,
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* Métadonnées techniques */}
+                {(selectedVersion.ipAddress || selectedVersion.userAgent) && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">
+                      Métadonnées techniques
+                    </h4>
+                    <div className="text-xs space-y-1 text-gray-600">
+                      {selectedVersion.ipAddress && (
+                        <div>
+                          <span className="font-medium">IP :</span>{" "}
+                          {selectedVersion.ipAddress}
+                        </div>
+                      )}
+                      {selectedVersion.userAgent && (
+                        <div>
+                          <span className="font-medium">User Agent :</span>
+                          <div className="mt-1 break-all">
+                            {selectedVersion.userAgent}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowVersionDetails(false);
+                    setSelectedVersion(null);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md hover:bg-gray-400"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

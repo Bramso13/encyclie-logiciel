@@ -974,3 +974,58 @@ model EmailLog {
   
   @@map("email_logs")
 }
+
+// Quote Version System - Historique et versioning des devis
+
+enum VersionAction {
+  STATUS_CHANGE
+  DATA_UPDATE
+  PREMIUM_UPDATE
+  OFFER_UPDATE
+  ADMIN_CORRECTION
+  BROKER_MODIFICATION
+}
+
+// Modèle pour sauvegarder les versions complètes des devis
+model QuoteVersion {
+  id        String   @id @default(cuid())
+  quoteId   String   @map("quote_id")
+  
+  // Numéro de version (1, 2, 3...)
+  version   Int
+  
+  // Snapshot complet du devis à ce moment
+  status            String
+  companyData       Json
+  formData          Json
+  calculatedPremium Json?
+  offerData         Json?
+  validUntil        DateTime?
+  
+  // Timestamps du workflow au moment de la version
+  submittedAt  DateTime?
+  offerReadyAt DateTime?
+  offerSentAt  DateTime?
+  acceptedAt   DateTime?
+  
+  // Qui a fait le changement et pourquoi
+  changedById   String        @map("changed_by_id")
+  changeReason  String?
+  action        VersionAction
+  
+  // Détails des changements par rapport à la version précédente
+  changes       Json?         // { field: { old: ..., new: ... } }
+  
+  // Métadonnées additionnelles
+  userRole      String?       // Rôle de l'utilisateur qui a fait le changement
+  ipAddress     String?
+  userAgent     String?
+  
+  // Audit
+  createdAt     DateTime      @default(now())
+  
+  @@unique([quoteId, version])
+  @@index([quoteId])
+  @@index([createdAt])
+  @@map("quote_versions")
+}

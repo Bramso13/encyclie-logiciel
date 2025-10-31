@@ -2,7 +2,6 @@ import AdminWorkflowManager from "@/components/workflow/AdminWorkflowManager";
 import BrokerWorkflowExecutor from "@/components/workflow/BrokerWorkflowExecutor";
 import { Quote } from "@/lib/types";
 
-
 export default function ResumeTab({
   quote,
   isAdmin,
@@ -10,22 +9,22 @@ export default function ResumeTab({
   quote: Quote;
   isAdmin: boolean;
 }) {
-    const getStatusDotColor = (status: string) => {
-        const colorMap: Record<string, string> = {
-          DRAFT: "bg-gray-500",
-          INCOMPLETE: "bg-yellow-500",
-          SUBMITTED: "bg-blue-500",
-          IN_PROGRESS: "bg-yellow-500",
-          COMPLEMENT_REQUIRED: "bg-orange-500",
-          OFFER_READY: "bg-green-500",
-          OFFER_SENT: "bg-blue-500",
-          ACCEPTED: "bg-green-500",
-          REJECTED: "bg-red-500",
-          EXPIRED: "bg-gray-500",
-        };
-        return colorMap[status] || "bg-gray-500";
-      };
-      // Fonctions utilitaires pour l'onglet Résumé
+  const getStatusDotColor = (status: string) => {
+    const colorMap: Record<string, string> = {
+      DRAFT: "bg-gray-500",
+      INCOMPLETE: "bg-yellow-500",
+      SUBMITTED: "bg-blue-500",
+      IN_PROGRESS: "bg-yellow-500",
+      COMPLEMENT_REQUIRED: "bg-orange-500",
+      OFFER_READY: "bg-green-500",
+      OFFER_SENT: "bg-blue-500",
+      ACCEPTED: "bg-green-500",
+      REJECTED: "bg-red-500",
+      EXPIRED: "bg-gray-500",
+    };
+    return colorMap[status] || "bg-gray-500";
+  };
+  // Fonctions utilitaires pour l'onglet Résumé
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { color: string; text: string }> = {
       DRAFT: { color: "bg-gray-100 text-gray-800", text: "Brouillon" },
@@ -39,7 +38,10 @@ export default function ResumeTab({
         color: "bg-orange-100 text-orange-800",
         text: "Complément demandé",
       },
-      OFFER_READY: { color: "bg-green-100 text-green-800", text: "Offre prête" },
+      OFFER_READY: {
+        color: "bg-green-100 text-green-800",
+        text: "Offre prête",
+      },
       OFFER_SENT: { color: "bg-blue-100 text-blue-800", text: "Offre envoyée" },
       ACCEPTED: { color: "bg-green-100 text-green-800", text: "Acceptée" },
       REJECTED: { color: "bg-red-100 text-red-800", text: "Refusée" },
@@ -56,17 +58,53 @@ export default function ResumeTab({
     );
   };
 
-  const updateQuoteStatusAdmin = async (quoteId: string, newStatus: string, reason: string) => {
-    // TODO: Implement admin status change with audit log
-    console.log('TODO: Implement admin status update', { quoteId, newStatus, reason });
+  const updateQuoteStatusAdmin = async (
+    quoteId: string,
+    newStatus: string,
+    reason: string
+  ) => {
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          reason: reason,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Erreur lors de la mise à jour du statut"
+        );
+      }
+
+      // Success notification
+      alert(data.message || "Statut mis à jour avec succès");
+
+      // Reload the page to show updated status
+      window.location.reload();
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du statut:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la mise à jour du statut"
+      );
+    }
   };
-  
 
   const getTimeSinceUpdate = (updatedAt: string) => {
     const now = new Date();
     const updateDate = new Date(updatedAt);
-    const diffInMinutes = Math.floor((now.getTime() - updateDate.getTime()) / (1000 * 60));
-    
+    const diffInMinutes = Math.floor(
+      (now.getTime() - updateDate.getTime()) / (1000 * 60)
+    );
+
     if (diffInMinutes < 60) {
       return `Il y a ${diffInMinutes} min`;
     } else if (diffInMinutes < 1440) {
@@ -74,7 +112,7 @@ export default function ResumeTab({
       return `Il y a ${hours}h`;
     } else {
       const days = Math.floor(diffInMinutes / 1440);
-      return `Il y a ${days} jour${days > 1 ? 's' : ''}`;
+      return `Il y a ${days} jour${days > 1 ? "s" : ""}`;
     }
   };
   return (
@@ -145,8 +183,8 @@ export default function ResumeTab({
                 <option value="COMPLEMENT_REQUIRED">Complément demandé</option>
                 <option value="OFFER_READY">Offre prête</option>
                 <option value="OFFER_SENT">Offre envoyée</option>
-                <option value="ACCEPTED">Acceptée</option>
-                <option value="REJECTED">Refusée</option>
+                <option value="ACCEPTED">Dossier souscrit</option>
+                <option value="REJECTED">Dossier refusé</option>
               </select>
             </div>
           </div>

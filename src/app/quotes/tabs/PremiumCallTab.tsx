@@ -1,5 +1,12 @@
 import { useSession } from "@/lib/auth-client";
-import { CalculationResult, Quote, PaymentInstallment, PaymentSchedule, PaymentForm, User } from "@/lib/types";
+import {
+  CalculationResult,
+  Quote,
+  PaymentInstallment,
+  PaymentSchedule,
+  PaymentForm,
+  User,
+} from "@/lib/types";
 import { useState, useEffect } from "react";
 
 interface ExtendedPaymentInstallment extends PaymentInstallment {
@@ -21,26 +28,30 @@ interface ExtendedPaymentInstallment extends PaymentInstallment {
   };
 }
 
-export default function PaymentTrackingTab({ quote, calculationResult }: {
-  quote: Quote,
-  calculationResult: CalculationResult,
-
+export default function PaymentTrackingTab({
+  quote,
+  calculationResult,
+}: {
+  quote: Quote;
+  calculationResult: CalculationResult;
 }) {
-  const [allInstallments, setAllInstallments] = useState<ExtendedPaymentInstallment[]>([]);
+  const [allInstallments, setAllInstallments] = useState<
+    ExtendedPaymentInstallment[]
+  >([]);
   const [loading, setLoading] = useState(false);
-  const [selectedInstallment, setSelectedInstallment] = useState<ExtendedPaymentInstallment | null>(null);
+  const [selectedInstallment, setSelectedInstallment] =
+    useState<ExtendedPaymentInstallment | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({
-    amount: '',
-    method: '',
-    reference: '',
-    notes: ''
+    amount: "",
+    method: "",
+    reference: "",
+    notes: "",
   });
 
   const { data: session } = useSession();
-  
 
-  const isAdmin = session?.user?.role === 'ADMIN';
+  const isAdmin = session?.user?.role === "ADMIN";
 
   // Charger TOUS les PaymentInstallment
   useEffect(() => {
@@ -48,7 +59,7 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        params.append('quoteId', quote?.id ?? '');
+        params.append("quoteId", quote?.id ?? "");
 
         const response = await fetch(`/api/payment-installments?${params}`);
         if (response.ok) {
@@ -56,6 +67,7 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
           console.log(data, "data");
           setAllInstallments(data.data.installments || []);
           if (data.data.installments.length === 0) {
+            console.log("createPaymentScheduleFromCalculation");
             await createPaymentScheduleFromCalculation();
           }
         } else if (response.status === 404) {
@@ -63,7 +75,7 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
           await createPaymentScheduleFromCalculation();
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des échéances:', error);
+        console.error("Erreur lors du chargement des échéances:", error);
         // En cas d'erreur, créer depuis calculationResult
         await createPaymentScheduleFromCalculation();
       } finally {
@@ -80,31 +92,33 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
 
     try {
       const response = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calculationResult })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ calculationResult }),
       });
 
       if (response.ok) {
         // Recharger les données après création
         const params = new URLSearchParams();
-        params.append('quoteId', quote.id);
+        params.append("quoteId", quote.id);
 
-        const refreshResponse = await fetch(`/api/payment-installments?${params}`);
+        const refreshResponse = await fetch(
+          `/api/payment-installments?${params}`
+        );
         if (refreshResponse.ok) {
           const data = await refreshResponse.json();
           setAllInstallments(data.data.installments || []);
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la création de l\'échéancier:', error);
+      console.error("Erreur lors de la création de l'échéancier:", error);
     }
   };
 
   // Recharger les données après modification
   const refreshData = async () => {
     const params = new URLSearchParams();
-    params.append('quoteId', quote?.id ?? '');
+    params.append("quoteId", quote?.id ?? "");
 
     try {
       const response = await fetch(`/api/payment-installments?${params}`);
@@ -113,7 +127,7 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
         setAllInstallments(data.data.installments || []);
       }
     } catch (error) {
-      console.error('Erreur lors du rechargement des données:', error);
+      console.error("Erreur lors du rechargement des données:", error);
     }
   };
 
@@ -122,24 +136,27 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
     if (!isAdmin || !selectedInstallment) return;
 
     try {
-      const response = await fetch(`/api/payment-installments/${selectedInstallment.id}/mark-paid`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentForm)
-      });
+      const response = await fetch(
+        `/api/payment-installments/${selectedInstallment.id}/mark-paid`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(paymentForm),
+        }
+      );
 
       if (response.ok) {
         await refreshData();
         setShowPaymentModal(false);
         setSelectedInstallment(null);
-        setPaymentForm({ amount: '', method: '', reference: '', notes: '' });
-        alert('Paiement validé avec succès !');
+        setPaymentForm({ amount: "", method: "", reference: "", notes: "" });
+        alert("Paiement validé avec succès !");
       } else {
-        alert('Erreur lors de la validation du paiement');
+        alert("Erreur lors de la validation du paiement");
       }
     } catch (error) {
-      console.error('Erreur lors de la validation du paiement:', error);
-      alert('Erreur lors de la validation du paiement');
+      console.error("Erreur lors de la validation du paiement:", error);
+      alert("Erreur lors de la validation du paiement");
     }
   };
 
@@ -149,9 +166,9 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
     setSelectedInstallment(installment);
     setPaymentForm({
       amount: (installment.amountTTC || 0).toString(),
-      method: 'BANK_TRANSFER',
-      reference: '',
-      notes: ''
+      method: "BANK_TRANSFER",
+      reference: "",
+      notes: "",
     });
     setShowPaymentModal(true);
   };
@@ -159,22 +176,32 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
   // Obtenir la couleur du statut
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PAID': return 'bg-green-100 text-green-800';
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'OVERDUE': return 'bg-red-100 text-red-800';
-      case 'PARTIALLY_PAID': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "PAID":
+        return "bg-green-100 text-green-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
+      case "OVERDUE":
+        return "bg-red-100 text-red-800";
+      case "PARTIALLY_PAID":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   // Obtenir le texte du statut
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'PAID': return 'Payé';
-      case 'PENDING': return 'En attente';
-      case 'OVERDUE': return 'En retard';
-      case 'PARTIALLY_PAID': return 'Partiellement payé';
-      default: return status;
+      case "PAID":
+        return "Payé";
+      case "PENDING":
+        return "En attente";
+      case "OVERDUE":
+        return "En retard";
+      case "PARTIALLY_PAID":
+        return "Partiellement payé";
+      default:
+        return status;
     }
   };
 
@@ -192,21 +219,23 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            {isAdmin ? 'Gestion des paiements' : 'Mes échéances de paiement'}
+            {isAdmin ? "Gestion des paiements" : "Mes échéances de paiement"}
           </h2>
           <p className="text-gray-600 mt-1">
-            {isAdmin ? 'Toutes les échéances de paiement' : 'Vos échéances de paiement'}
+            {isAdmin
+              ? "Toutes les échéances de paiement"
+              : "Vos échéances de paiement"}
           </p>
         </div>
       </div>
-
-      
 
       {/* Tableau des échéances */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">
-            {isAdmin ? 'Toutes les échéances de paiement' : 'Mes échéances de paiement'}
+            {isAdmin
+              ? "Toutes les échéances de paiement"
+              : "Mes échéances de paiement"}
           </h3>
         </div>
         <div className="overflow-x-auto">
@@ -244,76 +273,99 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {allInstallments && allInstallments.length > 0 ? allInstallments.map((installment) => (
-                <tr key={installment.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {installment?.schedule?.quote?.reference || 'N/A'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {installment?.schedule?.quote?.product?.name || 'N/A'}
-                      </div>
-                    </div>
-                  </td>
-                  {isAdmin && (
+              {allInstallments && allInstallments.length > 0 ? (
+                allInstallments.map((installment) => (
+                  <tr key={installment.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {installment?.schedule?.quote?.broker?.name || 'N/A'}
+                          {installment?.schedule?.quote?.reference || "N/A"}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {installment?.schedule?.quote?.broker?.companyName || 'N/A'}
+                          {installment?.schedule?.quote?.product?.name || "N/A"}
                         </div>
                       </div>
                     </td>
-                  )}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    Échéance #{installment?.installmentNumber || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {installment?.dueDate ? new Date(installment.dueDate).toLocaleDateString('fr-FR') : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {(installment?.amountTTC ?? 0).toLocaleString('fr-FR')} €
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(installment?.status || 'PENDING')}`}>
-                      {getStatusText(installment?.status || 'PENDING')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {installment?.paidAt ? (
-                      <div>
-                        <div>Payé le {new Date(installment.paidAt).toLocaleDateString('fr-FR')}</div>
-                        {installment.paymentMethod && (
-                          <div className="text-xs text-gray-400">
-                            {installment.paymentMethod} {installment.paymentReference && `- ${installment.paymentReference}`}
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {installment?.schedule?.quote?.broker?.name ||
+                              "N/A"}
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">Non payé</span>
+                          <div className="text-sm text-gray-500">
+                            {installment?.schedule?.quote?.broker
+                              ?.companyName || "N/A"}
+                          </div>
+                        </div>
+                      </td>
                     )}
-                  </td>
-                  {isAdmin && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {(installment?.status === 'PENDING' || installment?.status === 'OVERDUE') ? (
-                        <button
-                          onClick={() => openPaymentModal(installment)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Marquer comme payé
-                        </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      Échéance #{installment?.installmentNumber || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {installment?.dueDate
+                        ? new Date(installment.dueDate).toLocaleDateString(
+                            "fr-FR"
+                          )
+                        : "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {(installment?.amountTTC ?? 0).toLocaleString("fr-FR")} €
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                          installment?.status || "PENDING"
+                        )}`}
+                      >
+                        {getStatusText(installment?.status || "PENDING")}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {installment?.paidAt ? (
+                        <div>
+                          <div>
+                            Payé le{" "}
+                            {new Date(installment.paidAt).toLocaleDateString(
+                              "fr-FR"
+                            )}
+                          </div>
+                          {installment.paymentMethod && (
+                            <div className="text-xs text-gray-400">
+                              {installment.paymentMethod}{" "}
+                              {installment.paymentReference &&
+                                `- ${installment.paymentReference}`}
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-400">Non payé</span>
                       )}
                     </td>
-                  )}
-                </tr>
-              )) : (
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {installment?.status === "PENDING" ||
+                        installment?.status === "OVERDUE" ? (
+                          <button
+                            onClick={() => openPaymentModal(installment)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            Marquer comme payé
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : (
                 <tr>
-                  <td colSpan={isAdmin ? 8 : 6} className="px-6 py-12 text-center text-gray-500">
+                  <td
+                    colSpan={isAdmin ? 8 : 6}
+                    className="px-6 py-12 text-center text-gray-500"
+                  >
                     Aucune échéance trouvée
                   </td>
                 </tr>
@@ -329,26 +381,42 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Valider le paiement - {selectedInstallment?.schedule?.quote?.reference || 'N/A'} - Échéance #{selectedInstallment?.installmentNumber || 'N/A'}
+                Valider le paiement -{" "}
+                {selectedInstallment?.schedule?.quote?.reference || "N/A"} -
+                Échéance #{selectedInstallment?.installmentNumber || "N/A"}
               </h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Montant payé</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Montant payé
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     value={paymentForm.amount}
-                    onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                    onChange={(e) =>
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        amount: e.target.value,
+                      }))
+                    }
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Mode de paiement</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Mode de paiement
+                  </label>
                   <select
                     value={paymentForm.method}
-                    onChange={(e) => setPaymentForm(prev => ({ ...prev, method: e.target.value }))}
+                    onChange={(e) =>
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        method: e.target.value,
+                      }))
+                    }
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="BANK_TRANSFER">Virement bancaire</option>
@@ -361,22 +429,36 @@ export default function PaymentTrackingTab({ quote, calculationResult }: {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Référence</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Référence
+                  </label>
                   <input
                     type="text"
                     placeholder="Numéro de chèque, référence virement..."
                     value={paymentForm.reference}
-                    onChange={(e) => setPaymentForm(prev => ({ ...prev, reference: e.target.value }))}
+                    onChange={(e) =>
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        reference: e.target.value,
+                      }))
+                    }
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Notes
+                  </label>
                   <textarea
                     rows={3}
                     value={paymentForm.notes}
-                    onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) =>
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>

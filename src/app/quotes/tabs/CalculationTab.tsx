@@ -364,7 +364,7 @@ export default function CalculationTab({
                   <h2 className="text-3xl font-bold mb-2">
                     {calculationResult.refus
                       ? "Demande Refusée"
-                      : "Prime RCD Calculée"}
+                      : "Prime RCD Annuelle"}
                   </h2>
                   <p
                     className={`text-lg ${
@@ -1229,642 +1229,730 @@ export default function CalculationTab({
                   </div>
                 </div>
               )}
+            </>
+          )}
 
-              {/* Échéancier */}
-              {calculationResult.echeancier &&
-                calculationResult.echeancier.echeances &&
-                calculationResult.echeancier.echeances.length > 0 && (
-                  <div className="space-y-6">
-                    {/* Échéancier détaillé */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                          <svg
-                            className="w-5 h-5 mr-2 text-emerald-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                          Échéancier de paiement détaillé
-                        </h3>
-                      </div>
-                      <div className="p-6">
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="bg-gray-50">
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                  Date échéance
-                                </th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                  Début période
-                                </th>
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                  Fin période
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  RCD HT
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  PJ HT
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Frais HT
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Frais Gestion HT
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Reprise HT
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Total HT
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Taxe
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Total TTC
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                              {calculationResult.echeancier.echeances.map(
-                                (echeance: any, index: number) => (
-                                  <tr key={index} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                      {echeance.date}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">
-                                      {echeance.debutPeriode}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">
-                                      {echeance.finPeriode}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.rcd?.toLocaleString("fr-FR") ||
-                                        "0"}{" "}
-                                      €
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.pj?.toLocaleString("fr-FR") ||
-                                        "0"}{" "}
-                                      €
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.frais?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.fraisGestion?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                      {echeance.reprise?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
-                                    </td>
-                                    <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                                      {echeance.totalHT?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-orange-600 text-right">
-                                      {echeance.taxe?.toLocaleString("fr-FR") ||
-                                        "0"}{" "}
-                                      €
-                                    </td>
-                                    <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
-                                      {echeance.totalTTC?.toLocaleString(
-                                        "fr-FR"
-                                      ) || "0"}{" "}
-                                      €
-                                    </td>
-                                  </tr>
-                                )
-                              )}
-                            </tbody>
-                            {/* Ligne de totaux */}
-                            <tfoot>
-                              <tr className="bg-gray-100 font-semibold">
-                                <td
-                                  className="px-4 py-3 text-sm font-medium text-gray-900"
-                                  colSpan={3}
-                                >
-                                  TOTAUX
+          {/* Échéancier - Visible pour tous les utilisateurs */}
+          {!calculationResult.refus &&
+            calculationResult.echeancier &&
+            calculationResult.echeancier.echeances &&
+            calculationResult.echeancier.echeances.length > 0 && (
+              <div className="space-y-6">
+                {/* Résumé des primes par année */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {(() => {
+                    // Calculer la prime pour l'année en cours et N+1
+                    const currentYear = new Date().getFullYear().toString();
+                    const nextYear = (new Date().getFullYear() + 1).toString();
+
+                    const primeAnneeEnCours =
+                      calculationResult.echeancier.echeances
+                        .filter((echeance: any) =>
+                          echeance.date.startsWith(currentYear)
+                        )
+                        .reduce(
+                          (sum: number, echeance: any) =>
+                            sum + (echeance.totalTTC || 0),
+                          0
+                        );
+
+                    const primeAnneeN1 = calculationResult.echeancier.echeances
+                      .filter((echeance: any) =>
+                        echeance.date.startsWith(nextYear)
+                      )
+                      .reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.totalTTC || 0),
+                        0
+                      );
+
+                    return (
+                      <>
+                        {/* Prime année en cours */}
+                        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg p-6 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-emerald-100 text-sm font-medium mb-2">
+                                Prime {currentYear}
+                              </p>
+                              <div className="text-3xl font-bold mb-1">
+                                {primeAnneeEnCours.toLocaleString("fr-FR")} €
+                              </div>
+                              <p className="text-emerald-100 text-xs">
+                                {
+                                  calculationResult.echeancier.echeances.filter(
+                                    (e: any) => e.date.startsWith(currentYear)
+                                  ).length
+                                }{" "}
+                                échéance(s)
+                              </p>
+                            </div>
+                            <div className="p-4 bg-white/20 rounded-full">
+                              <svg
+                                className="w-8 h-8"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Prime année N+1 */}
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-blue-100 text-sm font-medium mb-2">
+                                Prime {nextYear}
+                              </p>
+                              <div className="text-3xl font-bold mb-1">
+                                {primeAnneeN1.toLocaleString("fr-FR")} €
+                              </div>
+                              <p className="text-blue-100 text-xs">
+                                {
+                                  calculationResult.echeancier.echeances.filter(
+                                    (e: any) => e.date.startsWith(nextYear)
+                                  ).length
+                                }{" "}
+                                échéance(s)
+                              </p>
+                            </div>
+                            <div className="p-4 bg-white/20 rounded-full">
+                              <svg
+                                className="w-8 h-8"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Échéancier détaillé */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <svg
+                        className="w-5 h-5 mr-2 text-emerald-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      Échéancier de paiement détaillé
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                              Date échéance
+                            </th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                              Début période
+                            </th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                              Fin période
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              RCD HT
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              PJ HT
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Frais HT
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Frais Gestion HT
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Reprise HT
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Total HT
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Taxe
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Total TTC
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {calculationResult.echeancier.echeances.map(
+                            (echeance: any, index: number) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                  {echeance.date}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.rcd || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {echeance.debutPeriode}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {echeance.finPeriode}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                  {echeance.rcd?.toLocaleString("fr-FR") || "0"}{" "}
                                   €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.pj || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                  {echeance.pj?.toLocaleString("fr-FR") || "0"}{" "}
                                   €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.frais || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                  {echeance.frais?.toLocaleString("fr-FR") ||
+                                    "0"}{" "}
                                   €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.fraisGestion || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                  {echeance.fraisGestion?.toLocaleString(
+                                    "fr-FR"
+                                  ) || "0"}{" "}
                                   €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.reprise || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                  {echeance.reprise?.toLocaleString("fr-FR") ||
+                                    "0"}{" "}
                                   €
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.totalHT || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                                  {echeance.totalHT?.toLocaleString("fr-FR") ||
+                                    "0"}{" "}
                                   €
                                 </td>
                                 <td className="px-4 py-3 text-sm text-orange-600 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.taxe || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                  {echeance.taxe?.toLocaleString("fr-FR") ||
+                                    "0"}{" "}
                                   €
                                 </td>
                                 <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
-                                  {calculationResult.echeancier.echeances
-                                    .reduce(
-                                      (sum: number, echeance: any) =>
-                                        sum + (echeance.totalTTC || 0),
-                                      0
-                                    )
-                                    .toLocaleString("fr-FR")}{" "}
+                                  {echeance.totalTTC?.toLocaleString("fr-FR") ||
+                                    "0"}{" "}
                                   €
                                 </td>
                               </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                      </div>
+                            )
+                          )}
+                        </tbody>
+                        {/* Ligne de totaux */}
+                        <tfoot>
+                          <tr className="bg-gray-100 font-semibold">
+                            <td
+                              className="px-4 py-3 text-sm font-medium text-gray-900"
+                              colSpan={3}
+                            >
+                              TOTAUX
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.rcd || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.pj || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.frais || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.fraisGestion || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.reprise || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.totalHT || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm text-orange-600 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.taxe || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any) =>
+                                    sum + (echeance.totalTTC || 0),
+                                  0
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
+                  </div>
+                </div>
 
-                    {/* Échéancier regroupé par année */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                          <svg
-                            className="w-5 h-5 mr-2 text-blue-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                            />
-                          </svg>
-                          Échéancier par année
-                        </h3>
-                      </div>
-                      <div className="p-6">
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="bg-gray-50">
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                  Année
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  RCD
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  RCD HT
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Taxe
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  PJ
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Frais
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Frais Gestion
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Reprise
-                                </th>
-
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Total TTC
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Nb échéances
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                              {(() => {
-                                // Grouper les échéances par année
-                                const echeancesParAnnee =
-                                  calculationResult.echeancier.echeances.reduce(
-                                    (acc: any, echeance: any) => {
-                                      const annee = echeance.date.split("/")[0];
-                                      if (!acc[annee]) {
-                                        acc[annee] = {
-                                          annee,
-                                          rcd: 0,
-                                          rcdHT: 0,
-                                          taxe: 0,
-                                          pj: 0,
-                                          frais: 0,
-                                          fraisGestion: 0,
-                                          reprise: 0,
-                                          totalTTC: 0,
-                                          nbEcheances: 0,
-                                        };
-                                      }
-                                      acc[annee].rcd += echeance.rcd || 0;
-                                      acc[annee].pj += echeance.pj || 0;
-                                      acc[annee].frais += echeance.frais || 0;
-                                      acc[annee].fraisGestion +=
-                                        echeance.fraisGestion || 0;
-                                      acc[annee].reprise +=
-                                        echeance.reprise || 0;
-                                      acc[annee].taxe += echeance.taxe || 0;
-                                      acc[annee].rcdHT +=
-                                        (echeance.rcd || 0) -
-                                        (echeance.taxe || 0);
-                                      acc[annee].totalTTC +=
-                                        echeance.totalTTC || 0;
-                                      acc[annee].nbEcheances += 1;
-                                      return acc;
-                                    },
-                                    {}
-                                  );
-
-                                return Object.values(echeancesParAnnee)
-                                  .sort((a: any, b: any) =>
-                                    a.annee.localeCompare(b.annee)
-                                  )
-                                  .map((annee: any, index: number) => (
-                                    <tr
-                                      key={index}
-                                      className="hover:bg-gray-50"
-                                    >
-                                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                        {annee.annee}
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.rcd.toLocaleString("fr-FR")} €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.rcdHT.toLocaleString("fr-FR")} €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.taxe.toLocaleString("fr-FR")} €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.pj.toLocaleString("fr-FR")} €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.frais.toLocaleString("fr-FR")} €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.fraisGestion.toLocaleString(
-                                          "fr-FR"
-                                        )}{" "}
-                                        €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.reprise.toLocaleString("fr-FR")}{" "}
-                                        €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                                        {annee.totalTTC.toLocaleString("fr-FR")}{" "}
-                                        €
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                        {annee.nbEcheances}
-                                      </td>
-                                    </tr>
-                                  ));
-                              })()}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tableau croisé Postes vs Types */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                          <svg
-                            className="w-5 h-5 mr-2 text-purple-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"
-                            />
-                          </svg>
-                          Répartition par postes et types
-                        </h3>
-                      </div>
-                      <div className="p-6">
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="bg-gray-50">
-                                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                  Type
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  RCD
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  PJ
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Frais
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Frais Gestion
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Reprise
-                                </th>
-                                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                  Total
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                              {(() => {
-                                // Calculer les totaux par type
-                                const totaux =
-                                  calculationResult.echeancier.echeances.reduce(
-                                    (acc: any, echeance: any) => {
-                                      acc.rcd += echeance.rcd || 0;
-                                      acc.pj += echeance.pj || 0;
-                                      acc.frais += echeance.frais || 0;
-                                      acc.fraisGestion +=
-                                        echeance.fraisGestion || 0;
-                                      acc.reprise += echeance.reprise || 0;
-                                      acc.totalHT += echeance.totalHT || 0;
-                                      acc.totalTTC += echeance.totalTTC || 0;
-                                      acc.taxe += echeance.taxe || 0;
-                                      return acc;
-                                    },
-                                    {
+                {/* Échéancier regroupé par année */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <svg
+                        className="w-5 h-5 mr-2 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                      Échéancier par année
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                              Année
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              RCD
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              RCD HT
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Taxe
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              PJ
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Frais
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Frais Gestion
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Reprise
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Total TTC
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Nb échéances
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {(() => {
+                            // Grouper les échéances par année
+                            const echeancesParAnnee =
+                              calculationResult.echeancier.echeances.reduce(
+                                (acc: any, echeance: any) => {
+                                  const annee = echeance.date.split("/")[0];
+                                  if (!acc[annee]) {
+                                    acc[annee] = {
+                                      annee,
                                       rcd: 0,
+                                      rcdHT: 0,
+                                      taxe: 0,
                                       pj: 0,
                                       frais: 0,
                                       fraisGestion: 0,
                                       reprise: 0,
-                                      totalHT: 0,
                                       totalTTC: 0,
-                                      taxe: 0,
-                                    }
-                                  );
+                                      nbEcheances: 0,
+                                    };
+                                  }
+                                  acc[annee].rcd += echeance.rcd || 0;
+                                  acc[annee].pj += echeance.pj || 0;
+                                  acc[annee].frais += echeance.frais || 0;
+                                  acc[annee].fraisGestion +=
+                                    echeance.fraisGestion || 0;
+                                  acc[annee].reprise += echeance.reprise || 0;
+                                  acc[annee].taxe += echeance.taxe || 0;
+                                  acc[annee].rcdHT +=
+                                    (echeance.rcd || 0) - (echeance.taxe || 0);
+                                  acc[annee].totalTTC += echeance.totalTTC || 0;
+                                  acc[annee].nbEcheances += 1;
+                                  return acc;
+                                },
+                                {}
+                              );
 
-                                return [
-                                  {
-                                    type: "HT",
-                                    rcd: totaux.rcd,
-                                    pj: totaux.pj,
-                                    frais: totaux.frais,
-                                    fraisGestion: totaux.fraisGestion,
-                                    reprise: totaux.reprise,
-                                    total: totaux.totalHT,
-                                    className: "text-gray-600",
-                                  },
-                                  {
-                                    type: "Taxe",
-                                    rcd: 0,
-                                    pj: 0,
-                                    frais: 0,
-                                    fraisGestion: 0,
-                                    reprise: 0,
-                                    total: totaux.taxe,
-                                    className: "text-orange-600",
-                                  },
-                                  {
-                                    type: "TTC",
-                                    rcd: totaux.rcd,
-                                    pj: totaux.pj,
-                                    frais: totaux.frais,
-                                    fraisGestion: totaux.fraisGestion,
-                                    reprise: totaux.reprise,
-                                    total: totaux.totalTTC,
-                                    className: "text-indigo-600 font-semibold",
-                                  },
-                                ].map((row: any, index: number) => (
-                                  <tr key={index} className="hover:bg-gray-50">
-                                    <td
-                                      className={`px-4 py-3 text-sm font-medium ${row.className}`}
-                                    >
-                                      {row.type}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-right">
-                                      <span className={row.className}>
-                                        {row.rcd.toLocaleString("fr-FR")} €
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-right">
-                                      <span className={row.className}>
-                                        {row.pj.toLocaleString("fr-FR")} €
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-right">
-                                      <span className={row.className}>
-                                        {row.frais.toLocaleString("fr-FR")} €
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-right">
-                                      <span className={row.className}>
-                                        {row.fraisGestion.toLocaleString(
-                                          "fr-FR"
-                                        )}{" "}
-                                        €
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-right">
-                                      <span className={row.className}>
-                                        {row.reprise.toLocaleString("fr-FR")} €
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-right">
-                                      <span
-                                        className={`font-semibold ${row.className}`}
-                                      >
-                                        {row.total.toLocaleString("fr-FR")} €
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ));
-                              })()}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              {/* Détail par activité */}
-              {calculationResult.returnTab &&
-                calculationResult.returnTab.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                        <svg
-                          className="w-5 h-5 mr-2 text-indigo-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                          />
-                        </svg>
-                        Détail par activité
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                Activité
-                              </th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                Part CA (%)
-                              </th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                Taux de base
-                              </th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                Prime Mini Act.
-                              </th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                Dégressivité
-                              </th>
-                              <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
-                                Prime au-delà
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {calculationResult.returnTab.map(
-                              (activity: any, index: number) => (
+                            return Object.values(echeancesParAnnee)
+                              .sort((a: any, b: any) =>
+                                a.annee.localeCompare(b.annee)
+                              )
+                              .map((annee: any, index: number) => (
                                 <tr key={index} className="hover:bg-gray-50">
                                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                    {activity.nomActivite}
+                                    {annee.annee}
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                    {(activity.partCA * 100).toFixed(1) || "0"}%
+                                    {annee.rcd.toLocaleString("fr-FR")} €
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                    {(activity.tauxBase * 100)?.toFixed(3) ||
-                                      "0"}
-                                    %
+                                    {annee.rcdHT.toLocaleString("fr-FR")} €
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                    {activity.PrimeMiniAct?.toLocaleString(
-                                      "fr-FR"
-                                    ) || "0"}{" "}
+                                    {annee.taxe.toLocaleString("fr-FR")} €
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                    {annee.pj.toLocaleString("fr-FR")} €
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                    {annee.frais.toLocaleString("fr-FR")} €
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                    {annee.fraisGestion.toLocaleString("fr-FR")}{" "}
                                     €
                                   </td>
                                   <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                    {activity.Deg400k > 0
-                                      ? `${
-                                          (activity.Deg400k * 100)?.toFixed(
-                                            1
-                                          ) || "0"
-                                        }%`
-                                      : "-"}
+                                    {annee.reprise.toLocaleString("fr-FR")} €
                                   </td>
                                   <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                                    {activity.Prime100Min?.toLocaleString(
-                                      "fr-FR"
-                                    ) || "0"}{" "}
-                                    €
+                                    {annee.totalTTC.toLocaleString("fr-FR")} €
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                    {annee.nbEcheances}
                                   </td>
                                 </tr>
-                              )
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                              ));
+                          })()}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                )}
-            </>
-          )}
+                </div>
+
+                {/* Tableau croisé Postes vs Types */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <svg
+                        className="w-5 h-5 mr-2 text-purple-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"
+                        />
+                      </svg>
+                      Répartition par postes et types
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                              Type
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              RCD
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              PJ
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Frais
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Frais Gestion
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Reprise
+                            </th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {(() => {
+                            // Calculer les totaux par type
+                            const totaux =
+                              calculationResult.echeancier.echeances.reduce(
+                                (acc: any, echeance: any) => {
+                                  acc.rcd += echeance.rcd || 0;
+                                  acc.pj += echeance.pj || 0;
+                                  acc.frais += echeance.frais || 0;
+                                  acc.fraisGestion +=
+                                    echeance.fraisGestion || 0;
+                                  acc.reprise += echeance.reprise || 0;
+                                  acc.totalHT += echeance.totalHT || 0;
+                                  acc.totalTTC += echeance.totalTTC || 0;
+                                  acc.taxe += echeance.taxe || 0;
+                                  return acc;
+                                },
+                                {
+                                  rcd: 0,
+                                  pj: 0,
+                                  frais: 0,
+                                  fraisGestion: 0,
+                                  reprise: 0,
+                                  totalHT: 0,
+                                  totalTTC: 0,
+                                  taxe: 0,
+                                }
+                              );
+
+                            return [
+                              {
+                                type: "HT",
+                                rcd: totaux.rcd,
+                                pj: totaux.pj,
+                                frais: totaux.frais,
+                                fraisGestion: totaux.fraisGestion,
+                                reprise: totaux.reprise,
+                                total: totaux.totalHT,
+                                className: "text-gray-600",
+                              },
+                              {
+                                type: "Taxe",
+                                rcd: 0,
+                                pj: 0,
+                                frais: 0,
+                                fraisGestion: 0,
+                                reprise: 0,
+                                total: totaux.taxe,
+                                className: "text-orange-600",
+                              },
+                              {
+                                type: "TTC",
+                                rcd: totaux.rcd,
+                                pj: totaux.pj,
+                                frais: totaux.frais,
+                                fraisGestion: totaux.fraisGestion,
+                                reprise: totaux.reprise,
+                                total: totaux.totalTTC,
+                                className: "text-indigo-600 font-semibold",
+                              },
+                            ].map((row: any, index: number) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td
+                                  className={`px-4 py-3 text-sm font-medium ${row.className}`}
+                                >
+                                  {row.type}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  <span className={row.className}>
+                                    {row.rcd.toLocaleString("fr-FR")} €
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  <span className={row.className}>
+                                    {row.pj.toLocaleString("fr-FR")} €
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  <span className={row.className}>
+                                    {row.frais.toLocaleString("fr-FR")} €
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  <span className={row.className}>
+                                    {row.fraisGestion.toLocaleString("fr-FR")} €
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  <span className={row.className}>
+                                    {row.reprise.toLocaleString("fr-FR")} €
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  <span
+                                    className={`font-semibold ${row.className}`}
+                                  >
+                                    {row.total.toLocaleString("fr-FR")} €
+                                  </span>
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          {/* Détail par activité - Visible pour ADMIN seulement */}
+          {!calculationResult.refus &&
+            session?.user?.role === "ADMIN" &&
+            calculationResult.returnTab &&
+            calculationResult.returnTab.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <svg
+                      className="w-5 h-5 mr-2 text-indigo-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                    Détail par activité
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                            Activité
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                            Part CA (%)
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                            Taux de base
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                            Prime Mini Act.
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                            Dégressivité
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
+                            Prime au-delà
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {calculationResult.returnTab.map(
+                          (activity: any, index: number) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                {activity.nomActivite}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                {(activity.partCA * 100).toFixed(1) || "0"}%
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                {(activity.tauxBase * 100)?.toFixed(3) || "0"}%
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                {activity.PrimeMiniAct?.toLocaleString(
+                                  "fr-FR"
+                                ) || "0"}{" "}
+                                €
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                {activity.Deg400k > 0
+                                  ? `${
+                                      (activity.Deg400k * 100)?.toFixed(1) ||
+                                      "0"
+                                    }%`
+                                  : "-"}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                                {activity.Prime100Min?.toLocaleString(
+                                  "fr-FR"
+                                ) || "0"}{" "}
+                                €
+                              </td>
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
       )}
     </div>

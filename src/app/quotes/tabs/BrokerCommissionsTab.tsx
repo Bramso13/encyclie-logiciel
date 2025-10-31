@@ -1,3 +1,4 @@
+import React from "react";
 import { CalculationResult } from "@/lib/types";
 
 interface BrokerCommissionsTabProps {
@@ -40,11 +41,31 @@ export default function BrokerCommissionsTab({
     }).format(amount);
   };
 
-  // Calculer la commission pour une échéance : 10% de (totalHT + fraisGestion)
+  // Calculer la commission pour une échéance : 10% de (totalHT - fraisGestion)
   const calculateCommission = (echeance: Echeance) => {
-    const base = echeance.totalHT;
+    const base =
+      echeance.totalHT - echeance.fraisGestion - echeance.pj - echeance.reprise;
     return base * 0.1;
   };
+
+  // Grouper les échéances par année
+  const echeancesByYear = echeances.reduce((acc, echeance) => {
+    // Extraire l'année de la date (format attendu : "JJ/MM/AAAA" ou similaire)
+    const dateParts = echeance.date.split("/");
+    const year =
+      dateParts.length === 3
+        ? dateParts[2]
+        : new Date(echeance.date).getFullYear().toString();
+
+    if (!acc[year]) {
+      acc[year] = [];
+    }
+    acc[year].push(echeance);
+    return acc;
+  }, {} as Record<string, Echeance[]>);
+
+  // Trier les années
+  const sortedYears = Object.keys(echeancesByYear).sort();
 
   // Calculer le total des commissions
   const totalCommissions = echeances.reduce((sum, echeance) => {
@@ -65,14 +86,14 @@ export default function BrokerCommissionsTab({
               chaque échéance
             </p>
           </div>
-          <div className="text-right">
+          {/* <div className="text-right">
             <p className="text-sm text-gray-500 uppercase tracking-wide mb-1">
               Commission totale
             </p>
             <p className="text-3xl font-bold text-indigo-600">
               {formatAmount(totalCommissions)} €
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -102,62 +123,105 @@ export default function BrokerCommissionsTab({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {echeances.map((echeance, index) => {
-                const baseCommission = echeance.totalHT + echeance.fraisGestion;
-                const commission = calculateCommission(echeance);
+            <tbody className="bg-white">
+              {sortedYears.map((year) => {
+                const yearEcheances = echeancesByYear[year];
+
+                // Calculer le total des commissions pour l'année
+                const yearTotalCommissions = yearEcheances.reduce(
+                  (sum, echeance) => {
+                    return sum + calculateCommission(echeance);
+                  },
+                  0
+                );
 
                 return (
-                  <tr
-                    key={index}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-xs font-semibold text-indigo-600">
-                            {index + 1}
-                          </span>
+                  <React.Fragment key={year}>
+                    {/* En-tête de l'année */}
+                    <tr className="bg-gray-100 border-t-2 border-gray-300">
+                      <td
+                        colSpan={6}
+                        className="px-6 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider"
+                      >
+                        Année {year}
+                      </td>
+                    </tr>
+
+                    {/* Échéances de l'année */}
+                    {yearEcheances.map((echeance, index) => {
+                      const baseCommission =
+                        echeance.totalHT + echeance.fraisGestion;
+                      const commission = calculateCommission(echeance);
+
+                      return (
+                        <tr
+                          key={`${year}-${index}`}
+                          className="hover:bg-gray-50 transition-colors border-b border-gray-200"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                <span className="text-xs font-semibold text-indigo-600">
+                                  {index + 1}
+                                </span>
+                              </div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {echeance.date}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-600">
+                              {echeance.debutPeriode}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              au {echeance.finPeriode}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatAmount(echeance.totalHT)} €
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="text-sm text-gray-600">
+                              {formatAmount(echeance.fraisGestion)} €
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="text-sm font-medium text-gray-700">
+                              {formatAmount(baseCommission)} €
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="text-sm font-bold text-indigo-600 bg-indigo-50 rounded-md px-3 py-2">
+                              {formatAmount(commission)} €
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* Sous-total de l'année */}
+                    <tr className="bg-blue-50 font-semibold border-b-2 border-blue-200">
+                      <td
+                        colSpan={5}
+                        className="px-6 py-3 text-right text-sm text-gray-900 uppercase tracking-wider"
+                      >
+                        Sous-total {year}
+                      </td>
+                      <td className="px-6 py-3 whitespace-nowrap text-right">
+                        <div className="text-base font-bold text-blue-700">
+                          {formatAmount(yearTotalCommissions)} €
                         </div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {echeance.date}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">
-                        {echeance.debutPeriode}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        au {echeance.finPeriode}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatAmount(echeance.totalHT)} €
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="text-sm text-gray-600">
-                        {formatAmount(echeance.fraisGestion)} €
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="text-sm font-medium text-gray-700">
-                        {formatAmount(baseCommission)} €
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="text-sm font-bold text-indigo-600 bg-indigo-50 rounded-md px-3 py-2">
-                        {formatAmount(commission)} €
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 );
               })}
 
-              {/* Ligne de total */}
-              <tr className="bg-indigo-50 font-semibold">
+              {/* Ligne de total général */}
+              <tr className="bg-indigo-50 font-semibold border-t-2 border-indigo-300">
                 <td
                   colSpan={5}
                   className="px-2 py-4 text-right text-sm text-gray-900 uppercase tracking-wider"

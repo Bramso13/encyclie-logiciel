@@ -94,12 +94,6 @@ export default function BrokerScreen({ user }: BrokerScreenProps) {
     // The store will automatically update with the new quote
   };
 
-  const handleBackToDashboard = () => {
-    setShowSuccessPage(false);
-    setCreatedQuote(null);
-    setActiveTab("quotes");
-  };
-
   const handleQuoteSelect = (quoteId: string) => {
     router.push(`/quotes/${quoteId}`);
   };
@@ -109,7 +103,7 @@ export default function BrokerScreen({ user }: BrokerScreenProps) {
       <div className="space-y-6">
         <QuoteSuccessPage
           quote={createdQuote}
-          onBackToDashboard={handleBackToDashboard}
+          onBackToDashboard={() => handleQuoteSelect(createdQuote.id)}
         />
       </div>
     );

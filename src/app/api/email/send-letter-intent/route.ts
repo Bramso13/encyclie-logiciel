@@ -6,12 +6,12 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
 
     const quoteId = formData.get("quoteId") as string;
-    const directorName = formData.get("directorName") as string;
+    const brokerName = formData.get("brokerName") as string;
     const companyName = formData.get("companyName") as string;
     const clientEmail = formData.get("clientEmail") as string;
     const pdfFile = formData.get("pdf") as File;
 
-    if (!quoteId || !directorName || !companyName || !clientEmail || !pdfFile) {
+    if (!quoteId || !brokerName || !companyName || !clientEmail || !pdfFile) {
       return NextResponse.json(
         { error: "Données manquantes" },
         { status: 400 }
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
 
     // Template d'email pour la lettre d'intention
-    const emailTemplate = getLetterIntentTemplate(directorName, companyName);
+    const emailTemplate = getLetterIntentTemplate(brokerName, companyName);
 
     // Envoyer l'email avec le PDF en pièce jointe
     await sendEmailWithAttachment(
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Template d'email pour la lettre d'intention
-const getLetterIntentTemplate = (directorName: string, companyName: string) => {
+const getLetterIntentTemplate = (brokerName: string, companyName: string) => {
   return {
     subject: `Lettre d'intention - Assurance RC Décennale - ${companyName}`,
     html: `
@@ -109,7 +109,7 @@ const getLetterIntentTemplate = (directorName: string, companyName: string) => {
           </div>
           
           <div class="content">
-            <h2>Bonjour ${directorName},</h2>
+            <h2>Bonjour ${brokerName},</h2>
             
             <p>Nous vous remercions pour votre demande d'assurance Responsabilité Civile Décennale pour <strong>${companyName}</strong>.</p>
             
@@ -158,7 +158,7 @@ const getLetterIntentTemplate = (directorName: string, companyName: string) => {
       </html>
     `,
     text: `
-Bonjour ${directorName},
+Bonjour ${brokerName},
 
 Nous vous remercions pour votre demande d'assurance Responsabilité Civile Décennale pour ${companyName}.
 
