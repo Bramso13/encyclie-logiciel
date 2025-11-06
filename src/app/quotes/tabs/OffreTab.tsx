@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { Quote, CalculationResult } from "@/lib/types";
 import { useSession } from "@/lib/auth-client";
 
-import OfferLetterPreview from "@/components/pdf/OfferLetterPreview";
-
 interface OffreTabProps {
   quote: Quote;
   calculationResult: CalculationResult | null;
@@ -147,10 +145,27 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   const [editableDocuments, setEditableDocuments] = useState(
     JSON.parse(JSON.stringify(DOCUMENT_CHECKLIST))
   );
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
 
   const isAdmin = session?.user?.role === "ADMIN";
 
   console.log("quote.formData", quote.formData);
+
+  const getDocumentLabel = (documentId: string) => {
+    // Gérer le document obligatoire
+    if (documentId === REQUIRED_DOCUMENT.id) {
+      return REQUIRED_DOCUMENT.label;
+    }
+    const docChecklist = editableDocuments;
+    for (const category of Object.values(docChecklist)) {
+      const item = (category as any).items.find(
+        (i: any) => i.id === documentId
+      );
+      if (item) return item.label;
+    }
+    return documentId;
+  };
 
   // Charger l'état de l'offre si elle existe
   useEffect(() => {
@@ -181,6 +196,101 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
     fetchOfferData();
   }, [quote.id]);
+
+  // Charger le PDF quand showOfferLetterPreview est activé
+  useEffect(() => {
+    let currentPdfUrl: string | null = null;
+    let isMounted = true;
+
+    const loadPDF = async () => {
+      if (!showOfferLetterPreview || !quote || !calculationResult) {
+        if (isMounted) {
+          setPdfUrl(null);
+          setLoadingPdf(false);
+        }
+        return;
+      }
+
+      try {
+        if (isMounted) setLoadingPdf(true);
+
+        // Fonction locale pour obtenir le label d'un document
+        const getDocLabel = (documentId: string) => {
+          if (documentId === REQUIRED_DOCUMENT.id) {
+            return REQUIRED_DOCUMENT.label;
+          }
+          for (const category of Object.values(editableDocuments)) {
+            const item = (category as any).items.find(
+              (i: any) => i.id === documentId
+            );
+            if (item) return item.label;
+          }
+          return documentId;
+        };
+
+        const response = await fetch("/api/generate-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "offer-letter",
+            quote,
+            calculationResult,
+            formData: quote.formData,
+            selectedDocuments: Array.from(selectedDocuments).map((docId) =>
+              getDocLabel(docId)
+            ),
+          }),
+        });
+
+        if (!response.ok) throw new Error("Erreur génération PDF");
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        currentPdfUrl = url;
+
+        if (isMounted) {
+          // Nettoyer l'ancienne URL avant de définir la nouvelle
+          setPdfUrl((prevUrl) => {
+            if (prevUrl) {
+              window.URL.revokeObjectURL(prevUrl);
+            }
+            return url;
+          });
+          setLoadingPdf(false);
+        } else {
+          // Si le composant est démonté, nettoyer immédiatement
+          window.URL.revokeObjectURL(url);
+        }
+      } catch (e) {
+        console.error("Erreur chargement PDF:", e);
+        if (isMounted) {
+          setLoadingPdf(false);
+          setPdfUrl(null);
+        }
+      }
+    };
+
+    loadPDF();
+
+    // Nettoyer l'URL lors du démontage
+    return () => {
+      isMounted = false;
+      if (currentPdfUrl) {
+        window.URL.revokeObjectURL(currentPdfUrl);
+      }
+      setPdfUrl((prevUrl) => {
+        if (prevUrl) {
+          window.URL.revokeObjectURL(prevUrl);
+        }
+        return null;
+      });
+    };
+  }, [
+    showOfferLetterPreview,
+    quote,
+    calculationResult,
+    selectedDocuments,
+    editableDocuments,
+  ]);
 
   const handleDocumentToggle = (documentId: string) => {
     // Empêcher la désélection du document obligatoire
@@ -375,21 +485,6 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
     } finally {
       setGeneratingPdf(false);
     }
-  };
-
-  const getDocumentLabel = (documentId: string) => {
-    // Gérer le document obligatoire
-    if (documentId === REQUIRED_DOCUMENT.id) {
-      return REQUIRED_DOCUMENT.label;
-    }
-    const docChecklist = editableDocuments;
-    for (const category of Object.values(docChecklist)) {
-      const item = (category as any).items.find(
-        (i: any) => i.id === documentId
-      );
-      if (item) return item.label;
-    }
-    return documentId;
   };
 
   const handleUpdateDocumentLabel = (
@@ -1003,8 +1098,37 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
           <h3 className="text-xl font-semibold mb-6 text-gray-900">
             Prévisualisation de la Lettre d'Offre
           </h3>
-          <div className="border border-gray-300 rounded-lg overflow-hidden">
-            <OfferLetterPreview quote={quote} formData={quote.formData} />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {loadingPdf ? (
+              <div className="flex items-center justify-center py-24">
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                  <span className="text-gray-600">
+                    Chargement du document...
+                  </span>
+                </div>
+              </div>
+            ) : pdfUrl ? (
+              <iframe
+                src={pdfUrl}
+                className="w-full"
+                style={{ height: "calc(100vh - 300px)", minHeight: "800px" }}
+                title="Lettre d'offre PDF"
+              />
+            ) : (
+              <div className="flex items-center justify-center py-24">
+                <div className="text-center">
+                  <p className="text-gray-500 mb-2">
+                    Aucun document disponible
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {!calculationResult
+                      ? "Le calcul de prime est requis pour générer le document"
+                      : "Erreur lors du chargement du document"}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

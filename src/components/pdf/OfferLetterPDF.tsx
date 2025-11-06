@@ -1,7 +1,14 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Image,
+} from "@react-pdf/renderer";
 import { Quote, FormData } from "@/lib/types";
-import { getTaxeByRegion } from "@/lib/tarificateurs/rcd";
+import { getTaxeByRegion, tableauTax } from "@/lib/tarificateurs/rcd";
 
 interface OfferLetterPDFProps {
   quote: Quote;
@@ -9,6 +16,7 @@ interface OfferLetterPDFProps {
   calculationResult: any;
   brokerCode: string;
   selectedDocuments: string[];
+  baseUrl?: string;
 }
 
 const styles = StyleSheet.create({
@@ -174,6 +182,41 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     marginBottom: 4,
   },
+  pageFooter: {
+    position: "absolute",
+    bottom: 20,
+    left: 30,
+    right: 30,
+    fontSize: 6,
+    color: "#374151",
+    textAlign: "center",
+    lineHeight: 1.3,
+    paddingTop: 8,
+    borderTop: "1px solid #d1d5db",
+  },
+  pageFooterText: {
+    fontSize: 6,
+    color: "#374151",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
+  },
+  checkboxBox: {
+    width: 10,
+    height: 10,
+    border: "1px solid #000000",
+    marginRight: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: {
+    fontSize: 8,
+    color: "#000000",
+  },
 });
 
 const OfferLetterPDF = ({
@@ -182,17 +225,14 @@ const OfferLetterPDF = ({
   calculationResult,
   brokerCode,
   selectedDocuments,
+  baseUrl,
 }: OfferLetterPDFProps) => {
+  const logoSrc = `${baseUrl ? baseUrl : ""}/couleur_1.png`;
   const formatCurrency = (value: string | number | undefined) => {
     if (value === undefined || value === null || value === "") return "N/A";
     const num = typeof value === "string" ? parseFloat(value) : value;
     if (isNaN(num)) return "N/A";
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(num);
+    return Math.round(num).toLocaleString("fr-FR");
   };
 
   const formatDate = (dateString: string | undefined) => {
@@ -213,15 +253,40 @@ const OfferLetterPDF = ({
     return x.toFixed(2);
   }
 
+  const PageFooter = () => (
+    <View style={styles.pageFooter}>
+      <Text style={styles.pageFooterText}>Distribué et géré par :</Text>
+      <Text style={styles.pageFooterText}>
+        ENCYCLIE CONSTRUCTION – 42 Rue Notre-Dame des Victoire, 75002 PARIS -
+        SAS au capital de 1 000 € - SIREN 897 796 785 – RCS ST NAZAIRE – N°
+        ORIAS : 21 004 564 –
+      </Text>
+      <Text style={styles.pageFooterText}>
+        www.orias.fr – Sous le contrôle de l'ACPR, Autorité de Contrôle
+        Prudentiel et de Résolution – 4 Place de Budapest, CS 92459, 75436 PARIS
+        CEDEX 09 – acpr.banque-france.fr –
+      </Text>
+      <Text style={styles.pageFooterText}>
+        Assurance de Responsabilité Civile Professionnelle et Garantie
+        Financière conformes au Code des assurances.
+      </Text>
+    </View>
+  );
+
   return (
     <Document>
       {/* Page 1 - Déclaration du proposant */}
       <Page size="A4" style={styles.page}>
-        <Text style={styles.title}>
+        {/* Logo en haut */}
+        <View style={{ marginBottom: 8, alignItems: "center" }}>
+          <Image src={logoSrc} style={{ width: 90, height: 45 }} />
+        </View>
+
+        <Text style={[styles.title, { marginBottom: 8 }]}>
           PROPOSITION D'ASSURANCE RESPONSABILITÉ CIVILE DÉCENNALE
         </Text>
 
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, { marginBottom: 6, paddingBottom: 4 }]}>
           <Text style={styles.headerText}>
             Durée de validité du projet : 30 jours
           </Text>
@@ -233,11 +298,18 @@ const OfferLetterPDF = ({
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Déclaration du proposant</Text>
+        <View style={[styles.section, { marginBottom: 0 }]}>
+          <Text
+            style={[
+              styles.sectionHeader,
+              { marginBottom: 6, paddingBottom: 3 },
+            ]}
+          >
+            Déclaration du proposant
+          </Text>
 
-          <View style={styles.grid2}>
-            <View style={styles.gridItem}>
+          <View style={[styles.grid2, { marginBottom: 6 }]}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>
                 Nom de la société / Raison sociale :
               </Text>
@@ -245,15 +317,15 @@ const OfferLetterPDF = ({
                 {formData.companyName || "N/A"}
               </Text>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>Forme juridique :</Text>
               <Text style={styles.fieldValue}>
                 {formData.legalForm || "N/A"}
               </Text>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>Auto-entrepreneur :</Text>
-              <View style={styles.checkboxGroup}>
+              <View style={[styles.checkboxGroup, { marginTop: 0 }]}>
                 <Text style={styles.checkbox}>
                   {formatBoolean(
                     formData.legalForm.toLowerCase() ===
@@ -262,7 +334,7 @@ const OfferLetterPDF = ({
                 </Text>
               </View>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>
                 Nom & Prénom du ou des dirigeants :
               </Text>
@@ -270,44 +342,51 @@ const OfferLetterPDF = ({
                 {formData.directorName || "N/A"}
               </Text>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>Rue du siège social :</Text>
               <Text style={styles.fieldValue}>{formData.address || "N/A"}</Text>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>CP Ville du siège social :</Text>
               <Text style={styles.fieldValue}>
                 {formData.postalCode} {formData.city}
               </Text>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>N° SIREN</Text>
               <Text style={styles.fieldValue}>{formData.siret || "N/A"}</Text>
             </View>
           </View>
 
-          <Text style={styles.subsectionHeader}>Votre déclaration</Text>
+          <Text
+            style={[
+              styles.subsectionHeader,
+              { marginBottom: 4, marginTop: 4, paddingBottom: 2 },
+            ]}
+          >
+            Votre déclaration
+          </Text>
 
-          <View style={styles.grid2}>
-            <View style={styles.gridItem}>
+          <View style={[styles.grid2, { marginBottom: 6 }]}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>Date d'effet souhaitée :</Text>
               <Text style={styles.fieldValue}>
                 {formatDate(formData.dateDeffet)}
               </Text>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>
                 Chiffre d'affaires total du dernier exercice ou chiffre
                 d'affaires prévisionnel si création d'entreprise en euros hors
-                taxes : €
+                taxes :
               </Text>
               <Text style={styles.fieldValue}>
-                {formatCurrency(formData.chiffreAffaires)}
+                {formData.chiffreAffaires} €
               </Text>
             </View>
           </View>
 
-          <View style={{ marginBottom: 10 }}>
+          <View style={{ marginBottom: 4 }}>
             <Text style={styles.fieldLabel}>
               Part de chiffre d'affaires total hors taxes maximum pour les
               activités sous-traitées (le sous-traitant doit être titulaire d'un
@@ -316,14 +395,14 @@ const OfferLetterPDF = ({
             <Text style={styles.fieldValue}>
               {formData.subContractingPercent || "N/A"}%
             </Text>
-            <Text style={styles.infoText}>
+            <Text style={[styles.infoText, { marginTop: 1 }]}>
               Le sous-traitant doit être titulaire d'un contrat d'assurance RC
               Décennale de dix ans minimum
             </Text>
           </View>
 
-          <View style={styles.grid2}>
-            <View style={styles.gridItem}>
+          <View style={[styles.grid2, { marginBottom: 6 }]}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>
                 Effectif y compris le chef d'entreprise : personnes
               </Text>
@@ -331,7 +410,7 @@ const OfferLetterPDF = ({
                 {formData.nombreSalaries || "N/A"}
               </Text>
             </View>
-            <View style={styles.gridItem}>
+            <View style={[styles.gridItem, { marginBottom: 4 }]}>
               <Text style={styles.fieldLabel}>
                 Date de création de l'entreprise :
               </Text>
@@ -343,40 +422,16 @@ const OfferLetterPDF = ({
             </View>
           </View>
 
-          <View style={{ marginBottom: 10 }}>
+          <View style={{ marginBottom: 4 }}>
             <Text style={styles.fieldLabel}>
-              Expérience professionnelle (y compris en qualité de salarié) :
-              années
-            </Text>
-            <View style={styles.checkboxGroup}>
-              <Text style={styles.checkbox}>
-                {parseFloat(formData.experienceMetier) < 1
-                  ? "Moins de 1 an (refus)"
-                  : ""}
-              </Text>
-              <Text style={styles.checkbox}>
-                {formatBoolean(
-                  parseFloat(formData.experienceMetier) >= 1 &&
-                    parseFloat(formData.experienceMetier) < 3
-                )
-                  ? "1 à 3 ans"
-                  : ""}
-              </Text>
-              <Text style={styles.checkbox}>
-                {parseFloat(formData.experienceMetier) >= 3 &&
-                parseFloat(formData.experienceMetier) < 5
-                  ? "3 à 5 ans"
-                  : ""}
-              </Text>
-            </View>
-            <Text style={styles.infoText}>
-              Expérience déclarée: {formData.experienceMetier || "N/A"} ans
+              Expérience professionnelle (y compris en qualité de salarié) :{" "}
+              {parseFloat(formData.experienceMetier)} ans
             </Text>
           </View>
 
           {formData.previousResiliationDate && (
             <>
-              <View style={{ marginBottom: 10 }}>
+              <View style={{ marginBottom: 4 }}>
                 <Text style={styles.fieldLabel}>
                   La précédente assurance a été souscrite le :
                 </Text>
@@ -385,12 +440,12 @@ const OfferLetterPDF = ({
                 </Text>
               </View>
 
-              <View style={{ marginBottom: 10 }}>
+              <View style={{ marginBottom: 4 }}>
                 <Text style={styles.fieldLabel}>
                   Le contrat d'assurance de l'entreprise est-il encore en cours
                   :
                 </Text>
-                <View style={styles.checkboxGroup}>
+                <View style={[styles.checkboxGroup, { marginTop: 2 }]}>
                   <Text style={styles.checkbox}>
                     {formatBoolean(formData.previousRcdStatus === "EN_COURS")
                       ? "OUI"
@@ -404,58 +459,64 @@ const OfferLetterPDF = ({
                 </View>
               </View>
 
-              <View style={{ marginBottom: 10 }}>
+              <View style={{ marginBottom: 4 }}>
                 <Text style={styles.fieldLabel}>
                   Le contrat a été résilié :
                 </Text>
-                <Text style={styles.infoText}>
+                <Text style={[styles.infoText, { marginTop: 1 }]}>
                   Par l'assuré: □ motif de la résiliation:{" "}
                   {formData.motifResiliation || "N/A"}
                 </Text>
-                <Text style={styles.infoText}>
+                <Text style={[styles.infoText, { marginTop: 1 }]}>
                   Par l'assureur: □ motif de la résiliation: N/A
                 </Text>
               </View>
             </>
           )}
 
-          <View style={{ marginBottom: 8 }}>
-            <Text style={styles.paragraph}>
+          <View style={{ marginBottom: 4 }}>
+            <Text
+              style={[styles.paragraph, { marginBottom: 0, lineHeight: 1.2 }]}
+            >
               Avez-vous déclaré un sinistre au cours des 36 derniers mois (même
               sans suite)? {formatBoolean(formData.sinistre36Mois)} □
             </Text>
           </View>
 
-          <View style={{ marginBottom: 8 }}>
-            <Text style={styles.paragraph}>
+          <View style={{ marginBottom: 4 }}>
+            <Text
+              style={[styles.paragraph, { marginBottom: 0, lineHeight: 1.2 }]}
+            >
               Avez-vous connaissance d'événements susceptibles d'engager votre
               responsabilité? {formatBoolean(formData.evenementsResponsabilite)}{" "}
               □
             </Text>
           </View>
 
-          <View style={{ marginBottom: 10 }}>
+          <View style={{ marginBottom: 4 }}>
             <Text style={styles.fieldLabel}>Nombre total d'activités :</Text>
             <Text style={styles.fieldValue}>
               {formData.activities?.length || 0}
             </Text>
           </View>
 
-          <View style={{ marginBottom: 8 }}>
-            <Text style={styles.paragraph}>
+          <View style={{ marginBottom: 4 }}>
+            <Text
+              style={[styles.paragraph, { marginBottom: 0, lineHeight: 1.2 }]}
+            >
               Le souscripteur fait-il l'objet d'une procédure de redressement,
               liquidation judiciaire ou de sauvetage ?{" "}
               {formatBoolean(formData.procedureCollective)} □
             </Text>
           </View>
 
-          <View style={{ marginBottom: 10 }}>
+          <View style={{ marginBottom: 4 }}>
             <Text style={styles.fieldLabel}>
               Le souscripteur réalise-t-il du négoce de matériaux?{" "}
               {formatBoolean(formData.negoceMateriaux)} □
             </Text>
             {formData.negoceMateriaux && (
-              <View style={{ marginTop: 6 }}>
+              <View style={{ marginTop: 3 }}>
                 <Text style={styles.fieldLabel}>
                   Si oui, Nature des produits :
                 </Text>
@@ -473,16 +534,35 @@ const OfferLetterPDF = ({
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.subsectionHeader}>
+        <View style={[styles.section, { marginBottom: 0, marginTop: 4 }]}>
+          <Text
+            style={[
+              styles.subsectionHeader,
+              { marginBottom: 4, marginTop: 0, paddingBottom: 2 },
+            ]}
+          >
             Garantie reprise du passé en cas de défaillance d'un précédent
             assureur :
           </Text>
-          <Text style={styles.paragraph}>
-            OUI, je souhaite souscrire l'extension garantie reprise du passé
-            pour les 10 années précédant la souscription du présent contrat □
-          </Text>
-          <Text style={styles.paragraphSmall}>
+          <View style={styles.checkboxContainer}>
+            <View style={styles.checkboxBox}>
+              {formData.garantieReprisePasse && (
+                <Text style={styles.checkboxChecked}>✓</Text>
+              )}
+            </View>
+            <Text
+              style={[styles.paragraph, { marginBottom: 0, lineHeight: 1.2 }]}
+            >
+              OUI, je souhaite souscrire l'extension garantie reprise du passé
+              pour les 10 années précédant la souscription du présent contrat
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.paragraphSmall,
+              { marginBottom: 0, lineHeight: 1.2 },
+            ]}
+          >
             La garantie reprise du passé sera accordée au titre du contrat, les
             garanties Responsabilité pour dommages de nature Décennale et
             Responsabilité du sous-traitant en cas de dommage de nature
@@ -500,16 +580,61 @@ const OfferLetterPDF = ({
             présentes Conditions particulières.
           </Text>
         </View>
+        <PageFooter />
       </Page>
 
       {/* Page 2 - Activités Garanties et Montants */}
       <Page size="A4" style={styles.page}>
         <Text style={styles.title}>ACTIVITÉS GARANTIES</Text>
-        <Text style={styles.paragraph}>
-          N° d'activité, selon nomenclature, en annexe
-        </Text>
-        <Text style={styles.paragraph}>Libellé(s)</Text>
 
+        <View style={[styles.table, { marginTop: 10, marginBottom: 10 }]}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              N° d'activité
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 3 }]}>Libellé</Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Part CA (%)
+            </Text>
+          </View>
+          {formData.activities && formData.activities.length > 0 ? (
+            formData.activities.map((activity: any, idx: number) => (
+              <View
+                key={idx}
+                style={idx % 2 === 0 ? styles.tableRow : styles.tableRowGray}
+              >
+                <Text style={[styles.tableCell, { flex: 1 }]}>
+                  {activity.code || "—"}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 3 }]}>
+                  {tableauTax.find(
+                    (tax) => tax.code.toString() === activity.code?.toString()
+                  )?.title || "—"}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>
+                  {activity.caSharePercent
+                    ? `${parseFloat(activity.caSharePercent.toString()).toFixed(
+                        1
+                      )}%`
+                    : "—"}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 5 }]}>
+                Aucune activité déclarée
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <PageFooter />
+      </Page>
+
+      {/* Page 3 - Montant des garanties et des franchises */}
+
+      <Page size="A4" style={styles.page}>
         <Text style={styles.sectionHeader}>
           MONTANT DES GARANTIES ET DES FRANCHISES
         </Text>
@@ -683,6 +808,7 @@ const OfferLetterPDF = ({
           (*): Franchise doublée en cas de sous-traitance à une entreprise non
           assurée en Responsabilité Civile Décennale pour ces travaux
         </Text>
+        <PageFooter />
       </Page>
 
       {/* Page 3 - Produits d'assurance et détails des primes */}
@@ -724,23 +850,15 @@ const OfferLetterPDF = ({
         <Text style={styles.sectionHeader}>DETAILS DE LA PRIME :</Text>
 
         <Text style={[styles.fieldLabel, { marginBottom: 6 }]}>
-          PRIMES année en cours pour la période du{" "}
+          PRIMES pour la période du{" "}
           {formatDate(
-            calculationResult?.echeancier?.echeances?.filter(
-              (echeance: any) =>
-                new Date(echeance.date).getFullYear() ===
-                new Date().getFullYear()
-            )[0]?.debutPeriode
+            calculationResult?.echeancier?.echeances?.[0]?.debutPeriode
           )}{" "}
           au{" "}
           {formatDate(
-            calculationResult?.echeancier?.echeances
-              ?.filter(
-                (echeance: any) =>
-                  new Date(echeance.date).getFullYear() ===
-                  new Date().getFullYear()
-              )
-              .slice(-1)[0]?.finPeriode
+            calculationResult?.echeancier?.echeances?.[
+              calculationResult?.echeancier?.echeances?.length - 1
+            ]?.finPeriode
           )}
         </Text>
         <View style={styles.table}>
@@ -763,47 +881,29 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.rcd - echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd - echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.rcd || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.rcd || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -815,47 +915,29 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  ) *
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) *
                   (1 - getTaxeByRegion(quote?.formData?.territory))
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  ) * getTaxeByRegion(quote?.formData?.territory)
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -867,51 +949,33 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) -
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.rcd || 0) + (echeance.pj || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -923,17 +987,11 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.fraisGestion || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.fraisGestion || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -947,55 +1005,37 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0) -
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1008,50 +1048,29 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.reprise || 0),
-                    0
-                  ) *
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) *
                   (1 - getTaxeByRegion(quote?.formData?.territory))
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.reprise || 0),
-                    0
-                  ) * getTaxeByRegion(quote?.formData?.territory)
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.reprise || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1059,57 +1078,39 @@ const OfferLetterPDF = ({
 
           <View style={[styles.tableRow, { backgroundColor: "#dbeafe" }]}>
             <Text style={[styles.tableCell, { flex: 2, fontWeight: "bold" }]}>
-              Prime totale à régler( avec reprise passé)
+              Prime totale à régler
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0) +
-                      (echeance.reprise || 0) -
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) +
+                    (echeance.reprise || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.totalTTC || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.totalTTC || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1148,47 +1149,29 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.rcd - echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd - echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.rcd || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.rcd || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1200,47 +1183,29 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  ) *
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) *
                   (1 - getTaxeByRegion(quote?.formData?.territory))
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  ) * getTaxeByRegion(quote?.formData?.territory)
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1252,51 +1217,33 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) -
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.rcd || 0) + (echeance.pj || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1308,17 +1255,11 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.fraisGestion || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.fraisGestion || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1332,55 +1273,37 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0) -
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1393,50 +1316,29 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.reprise || 0),
-                    0
-                  ) *
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) *
                   (1 - getTaxeByRegion(quote?.formData?.territory))
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.reprise || 0),
-                    0
-                  ) * getTaxeByRegion(quote?.formData?.territory)
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.reprise || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1448,58 +1350,41 @@ const OfferLetterPDF = ({
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0) +
-                      (echeance.reprise || 0) -
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) +
+                    (echeance.reprise || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.totalTTC || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.totalTTC || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
           </View>
         </View>
+        <PageFooter />
       </Page>
 
       {/* Page 4 - Échéancier et modalités */}
@@ -1547,38 +1432,6 @@ const OfferLetterPDF = ({
                 </Text>
               </View>
             ))}
-          </View>
-        </View>
-
-        <Text style={[styles.sectionHeader, { marginTop: 15 }]}>
-          DETAIL DES PAIEMENTS A EFFECTUER : (à revoir avec Priscilla)
-        </Text>
-
-        <View style={styles.table}>
-          <View style={styles.tableRowGray}>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>Date</Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Total HT €
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>Taxe €</Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Total TTC €
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 0.8 }]}>RCD</Text>
-            <Text style={[styles.tableCellHeader, { flex: 0.8 }]}>PJ</Text>
-            <Text style={[styles.tableCellHeader, { flex: 0.8 }]}>Frais</Text>
-            <Text style={[styles.tableCellHeader, { flex: 0.8 }]}>Reprise</Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>-</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>-</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>-</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>-</Text>
-            <Text style={[styles.tableCell, { flex: 0.8 }]}>-</Text>
-            <Text style={[styles.tableCell, { flex: 0.8 }]}>-</Text>
-            <Text style={[styles.tableCell, { flex: 0.8 }]}>-</Text>
-            <Text style={[styles.tableCell, { flex: 0.8 }]}>-</Text>
           </View>
         </View>
 
@@ -1776,6 +1629,7 @@ const OfferLetterPDF = ({
             </Text>
           </View>
         </View>
+        <PageFooter />
       </Page>
 
       {/* Page 5 - Conditions et déclarations finales */}
@@ -1982,6 +1836,7 @@ const OfferLetterPDF = ({
             sans signature.
           </Text>
         </View>
+        <PageFooter />
       </Page>
     </Document>
   );

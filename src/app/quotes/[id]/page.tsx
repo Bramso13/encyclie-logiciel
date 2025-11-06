@@ -24,6 +24,8 @@ import PieceJointeTab from "../tabs/PieceJointeTab";
 import BrokerCommissionsTab from "../tabs/BrokerCommissionsTab";
 import OffreTab from "../tabs/OffreTab";
 import AppelDePrimeTab from "../tabs/AppelDePrimeTab";
+import ContratTab from "../tabs/ContratTab";
+import AggravationTab from "../tabs/AggravationTab";
 import { calculateWithMapping } from "@/lib/utils";
 
 export default function QuoteDetailPage() {
@@ -202,6 +204,44 @@ export default function QuoteDetailPage() {
             strokeLinejoin="round"
             strokeWidth={2}
             d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4 1.343 4 3-1.79 3-4 3m0-12V4m0 16v-2M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "contrat",
+      label: "Contrat",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "aggravation",
+      label: "Aggravation et réajustement",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
           />
         </svg>
       ),
@@ -703,6 +743,18 @@ export default function QuoteDetailPage() {
             calculationResult={calculationResult}
             session={session}
           />
+        )}
+
+        {activeTab === "contrat" && (
+          <ContratTab
+            quote={quote}
+            session={session}
+            calculationResult={calculationResult}
+          />
+        )}
+
+        {activeTab === "aggravation" && (
+          <AggravationTab quote={quote} calculationResult={calculationResult} />
         )}
 
         {activeTab === "chat" && <ChatTab quote={quote} />}

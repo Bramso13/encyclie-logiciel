@@ -973,58 +973,6 @@ export default function CalculationTab({
                 </div>
               </div>
 
-              {/* Prime d'aggravation Bilan N-1 non fourni */}
-              {calculationResult.primeAggravationBilanN_1NonFourni &&
-                calculationResult.primeAggravationBilanN_1NonFourni > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                        <svg
-                          className="w-5 h-5 mr-2 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                          />
-                        </svg>
-                        Prime d'aggravation - Bilan N-1 non fourni
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="text-lg font-semibold text-red-900 mb-2">
-                              Majoration appliquée
-                            </h4>
-                            <p className="text-red-700 text-sm">
-                              Une majoration a été appliquée car le bilan N-1
-                              n'a pas été fourni. Cette prime supplémentaire
-                              s'ajoute au montant de base.
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-3xl font-bold text-red-600">
-                              {calculationResult.primeAggravationBilanN_1NonFourni.toLocaleString(
-                                "fr-FR"
-                              )}{" "}
-                              €
-                            </div>
-                            <div className="text-sm text-red-500">
-                              Prime d'aggravation
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
               {/* Reprise du passé */}
               {calculationResult.reprisePasseResult && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200">

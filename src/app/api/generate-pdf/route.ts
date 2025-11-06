@@ -3,6 +3,7 @@ import { pdf } from "@react-pdf/renderer";
 import React from "react";
 import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
 import PremiumCallPDF from "@/components/pdf/PremiumCallPDF";
+import ContratPDF from "@/components/pdf/ContratPDF";
 
 import { ApiError, withAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
@@ -69,8 +70,18 @@ export async function POST(request: NextRequest) {
             formData,
             brokerCode: brokerProfile.code,
             selectedDocuments,
+            baseUrl,
           });
           filename = `proposition-offre-${quote.reference || "devis"}.pdf`;
+          break;
+        case "contrat":
+          pdfDocument = React.createElement(ContratPDF, {
+            baseUrl,
+            quote,
+            formData: quote?.formData || formData,
+            calculationResult,
+          });
+          filename = `contrat-${quote.reference || "devis"}.pdf`;
           break;
 
         default:

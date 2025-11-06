@@ -935,6 +935,27 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             <p className="mt-1 text-sm text-red-600">{pappersError}</p>
           )}
         </div>
+        <div>
+          <label
+            htmlFor="companyName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Raison sociale
+          </label>
+          <input
+            type="text"
+            id="companyName"
+            value={companyData.companyName}
+            disabled
+            readOnly
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.companyName ? "border-red-300" : "border-gray-300"
+            }`}
+          />
+          {errors.companyName && (
+            <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>
+          )}
+        </div>
 
         <div className="sm:col-span-2">
           <label
@@ -1050,28 +1071,6 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
           />
           {errors.directorName && (
             <p className="mt-1 text-sm text-red-600">{errors.directorName}</p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="companyName"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Raison sociale
-          </label>
-          <input
-            type="text"
-            id="companyName"
-            value={companyData.companyName}
-            disabled
-            readOnly
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
-              errors.companyName ? "border-red-300" : "border-gray-300"
-            }`}
-          />
-          {errors.companyName && (
-            <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>
           )}
         </div>
       </div>
