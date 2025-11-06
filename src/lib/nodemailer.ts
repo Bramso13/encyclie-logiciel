@@ -1,13 +1,10 @@
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 
-// Types pour les logs d'email
-type EmailType =
-  | "OFFER_LETTER"
-  | "BROKER_INVITATION"
-  | "PAYMENT_REMINDER"
-  | "DOCUMENT_REQUEST"
-  | "GENERAL";
+// Types pour les logs d'email - Doit correspondre à l'enum EmailType dans Prisma
+import { EmailType as PrismaEmailType } from "@prisma/client";
+
+type EmailType = PrismaEmailType;
 
 interface LogEmailParams {
   to: string;
@@ -297,6 +294,264 @@ Prochaines étapes :
 3. Se connecter à la plateforme
 4. Explorer les fonctionnalités
 5. Commencer à créer des devis
+
+Cordialement,
+L'équipe Encyclie Construction
+    `,
+  };
+};
+
+// Template d'email pour notifier les admins qu'un document a été uploadé
+export const getDocumentUploadedTemplate = (
+  quoteReference: string,
+  documentType: string,
+  documentName: string,
+  brokerName: string
+) => {
+  const quoteUrl = `${process.env.NEXTAUTH_URL}/quotes/${quoteReference}`;
+
+  return {
+    subject: `Nouveau document uploadé - Devis ${quoteReference}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Nouveau document uploadé</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background: #f9fafb;
+              padding: 30px;
+              border-radius: 0 0 8px 8px;
+            }
+            .card {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .button {
+              display: inline-block;
+              background: #4f46e5;
+              color: white;
+              padding: 12px 24px;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: 600;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              color: #6b7280;
+              font-size: 14px;
+              margin-top: 30px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>📄 Nouveau document uploadé</h1>
+          </div>
+          
+          <div class="content">
+            <h2>Bonjour,</h2>
+            
+            <p>Un nouveau document a été uploadé pour le devis <strong>${quoteReference}</strong>.</p>
+            
+            <div class="card">
+              <h3>📋 Détails du document</h3>
+              <p><strong>Type de document :</strong> ${documentType}</p>
+              <p><strong>Nom du fichier :</strong> ${documentName}</p>
+              <p><strong>Uploadé par :</strong> ${brokerName}</p>
+            </div>
+            
+            <p>Veuillez vérifier et valider ce document dans la plateforme.</p>
+            
+            <a href="${quoteUrl}" class="button">Voir le devis</a>
+            
+            <p>Cordialement,<br>L'équipe Encyclie Construction</p>
+          </div>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Encyclie Construction. Tous droits réservés.</p>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+Bonjour,
+
+Un nouveau document a été uploadé pour le devis ${quoteReference}.
+
+Détails du document :
+- Type de document : ${documentType}
+- Nom du fichier : ${documentName}
+- Uploadé par : ${brokerName}
+
+Veuillez vérifier et valider ce document dans la plateforme.
+
+Accéder au devis : ${quoteUrl}
+
+Cordialement,
+L'équipe Encyclie Construction
+    `,
+  };
+};
+
+// Template d'email pour notifier le client qu'un document a été validé et liste les pièces manquantes
+export const getDocumentValidatedTemplate = (
+  quoteReference: string,
+  documentType: string,
+  documentName: string,
+  missingDocuments: string[]
+) => {
+  const quoteUrl = `${process.env.NEXTAUTH_URL}/quotes/${quoteReference}`;
+
+  const missingDocsList = missingDocuments.length > 0 
+    ? missingDocuments.map(doc => `- ${doc}`).join('\n')
+    : 'Aucune pièce manquante';
+
+  return {
+    subject: `Document validé - Devis ${quoteReference}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Document validé</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background: #f9fafb;
+              padding: 30px;
+              border-radius: 0 0 8px 8px;
+            }
+            .card {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .card.warning {
+              background: #fef3c7;
+              border-left: 4px solid #f59e0b;
+            }
+            .button {
+              display: inline-block;
+              background: #4f46e5;
+              color: white;
+              padding: 12px 24px;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: 600;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              color: #6b7280;
+              font-size: 14px;
+              margin-top: 30px;
+            }
+            ul {
+              margin: 10px 0;
+              padding-left: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>✅ Document validé</h1>
+          </div>
+          
+          <div class="content">
+            <h2>Bonjour,</h2>
+            
+            <p>Votre document a été validé avec succès pour le devis <strong>${quoteReference}</strong>.</p>
+            
+            <div class="card">
+              <h3>📄 Document validé</h3>
+              <p><strong>Type :</strong> ${documentType}</p>
+              <p><strong>Fichier :</strong> ${documentName}</p>
+            </div>
+            
+            ${missingDocuments.length > 0 ? `
+            <div class="card warning">
+              <h3>⚠️ Pièces manquantes</h3>
+              <p>Il reste des documents à fournir pour compléter votre dossier :</p>
+              <ul>
+                ${missingDocuments.map(doc => `<li>${doc}</li>`).join('')}
+              </ul>
+            </div>
+            ` : `
+            <div class="card">
+              <h3>🎉 Dossier complet</h3>
+              <p>Tous les documents requis ont été fournis et validés. Votre dossier est complet !</p>
+            </div>
+            `}
+            
+            <a href="${quoteUrl}" class="button">Accéder au devis</a>
+            
+            <p>Cordialement,<br>L'équipe Encyclie Construction</p>
+          </div>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Encyclie Construction. Tous droits réservés.</p>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+Bonjour,
+
+Votre document a été validé avec succès pour le devis ${quoteReference}.
+
+Document validé :
+- Type : ${documentType}
+- Fichier : ${documentName}
+
+${missingDocuments.length > 0 ? `
+Pièces manquantes :
+${missingDocsList}
+
+Veuillez fournir ces documents pour compléter votre dossier.
+` : `
+🎉 Excellent ! Tous les documents requis ont été fournis et validés. Votre dossier est complet !
+`}
+
+Accéder au devis : ${quoteUrl}
 
 Cordialement,
 L'équipe Encyclie Construction

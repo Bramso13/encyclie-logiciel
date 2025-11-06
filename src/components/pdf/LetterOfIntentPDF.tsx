@@ -292,6 +292,18 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
     }
   };
 
+  // Fonction qui transforme une date format français (JJ/MM/AAAA) en date anglaise (YYYY-MM-DD)
+  function frenchToEnglishDate(frenchDate: string): string {
+    // gestion des formats JJ/MM/AAAA ou J/M/AAAA
+    const parts = frenchDate.split("/");
+    if (parts.length !== 3) return frenchDate;
+    // Pad month and day if needed
+    const day = parts[0].padStart(2, "0");
+    const month = parts[1].padStart(2, "0");
+    const year = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+    return `${year}-${month}-${day}`;
+  }
+
   // Fonction pour formater la date
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -410,10 +422,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
           <View style={styles.infoField}>
             <Text style={styles.fieldLabel}>Chiffre d'affaires :</Text>
             <Text style={styles.fieldValue}>
-              {financial(calculationResult?.caCalculee) ||
-                quote?.formData?.chiffreAffaires ||
-                "________________"}{" "}
-              €
+              {quote?.formData?.chiffreAffaires || "________________"} €
             </Text>
           </View>
           <View style={styles.infoField}>
@@ -543,13 +552,8 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     Total TTC
                   </Text>
                 </View>
-                {calculationResult.echeancier.echeances
-                  .filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .map((echeance: any, index: number) => (
+                {calculationResult.echeancier.echeances.map(
+                  (echeance: any, index: number) => (
                     <View key={index} style={styles.scheduleTableRow}>
                       <Text
                         style={[
@@ -632,7 +636,8 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                         {financial(echeance.totalTTC) || "0"} €
                       </Text>
                     </View>
-                  ))}
+                  )
+                )}
                 {/* Ligne de totaux */}
                 <View style={styles.scheduleTableFooter}>
                   <Text style={[styles.scheduleTableCell, { flex: 2.4 }]}>
@@ -645,17 +650,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.rcd || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.rcd || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -666,17 +665,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.pj || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.pj || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -687,17 +680,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.frais || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.frais || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -708,17 +695,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.fraisGestion || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.fraisGestion || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -729,17 +710,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.reprise || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.reprise || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -750,17 +725,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.totalHT || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.totalHT || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -771,17 +740,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.taxe || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.taxe || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -792,17 +755,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {financial(
-                      calculationResult.echeancier.echeances
-                        .filter(
-                          (echeance: any) =>
-                            new Date(echeance.date).getFullYear() ===
-                            new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.totalTTC || 0),
-                          0
-                        )
+                      calculationResult.echeancier.echeances.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.totalTTC || 0),
+                        0
+                      )
                     )}{" "}
                     €
                   </Text>
@@ -828,7 +785,20 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
 
           <View style={styles.tableRow}>
             <Text style={[styles.tableCell, styles.tableCellDescription]}>
-              PRIMES année en cours pour la période du au
+              PRIMES pour la période du{" "}
+              {formatDate(
+                frenchToEnglishDate(
+                  calculationResult?.echeancier?.echeances?.[0]?.date || ""
+                )
+              )}{" "}
+              au{" "}
+              {formatDate(
+                frenchToEnglishDate(
+                  calculationResult?.echeancier?.echeances?.[
+                    calculationResult?.echeancier?.echeances?.length - 1
+                  ]?.finPeriode || ""
+                )
+              )}
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
@@ -841,48 +811,30 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.rcd - echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd - echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.rcd || 0) + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd || 0) + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -894,47 +846,29 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  ) *
-                  (1 - getTaxeByRegion(quote?.formData?.territory))
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  ) * getTaxeByRegion(quote?.formData?.territory)
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) *
+                  (1 + getTaxeByRegion(quote?.formData?.territory))
               ) || ""}{" "}
               €
             </Text>
@@ -946,51 +880,33 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.rcd || 0) + (echeance.pj || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1002,17 +918,11 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.fraisGestion || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.fraisGestion || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1026,55 +936,37 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0) -
-                      (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
@@ -1097,54 +989,36 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum +
-                      (echeance.rcd || 0) +
-                      (echeance.pj || 0) +
-                      (echeance.fraisGestion || 0) +
-                      (echeance.reprise || 0) -
-                      (echeance.taxe || 0) +
-                      (Number(quote?.formData?.honoraireCourtier) || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) +
+                    (echeance.reprise || 0) -
+                    (echeance.taxe || 0) +
+                    (Number(quote?.formData?.honoraireCourtier) || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>
             <Text style={[styles.tableCell, styles.tableCellAmount]}>
               {financial(
-                calculationResult?.echeancier?.echeances
-                  ?.filter(
-                    (echeance: any) =>
-                      new Date(echeance.date).getFullYear() ===
-                      new Date().getFullYear()
-                  )
-                  .reduce(
-                    (sum: number, echeance: any) =>
-                      sum + (echeance.totalTTC || 0),
-                    0
-                  )
+                calculationResult?.echeancier?.echeances?.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.totalTTC || 0),
+                  0
+                )
               ) || ""}{" "}
               €
             </Text>

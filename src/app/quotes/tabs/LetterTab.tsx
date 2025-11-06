@@ -362,10 +362,7 @@ export default function LetterTab({
               <div className="flex text-sm">
                 <span className="font-bold mr-2">Chiffre d'affaires :</span>
                 <span>
-                  {calculationResult?.caCalculee?.toLocaleString("fr-FR") ||
-                    quote?.formData?.chiffreAffaires ||
-                    "________________"}{" "}
-                  €
+                  {quote?.formData?.chiffreAffaires || "________________"} €
                 </span>
               </div>
               <div className="flex text-sm">
@@ -562,14 +559,8 @@ export default function LetterTab({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
-                            {calculationResult.echeancier.echeances
-                              .filter(
-                                (echeance: any) =>
-                                  new Date(
-                                    frenchToEnglishDate(echeance.date)
-                                  ).getFullYear() === new Date().getFullYear()
-                              )
-                              .map((echeance: any, index: number) => (
+                            {calculationResult.echeancier.echeances.map(
+                              (echeance: any, index: number) => (
                                 <tr key={index} className="hover:bg-gray-50">
                                   <td className="px-2 py-1 font-medium text-gray-900">
                                     {echeance.date}
@@ -622,7 +613,8 @@ export default function LetterTab({
                                     €
                                   </td>
                                 </tr>
-                              ))}
+                              )
+                            )}
                           </tbody>
                           {/* Ligne de totaux */}
                           <tfoot>
@@ -635,13 +627,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 text-gray-900 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.rcd || 0),
@@ -652,13 +637,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 text-gray-900 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.pj || 0),
@@ -669,13 +647,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 text-gray-900 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.frais || 0),
@@ -686,13 +657,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 text-gray-900 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.fraisGestion || 0),
@@ -703,13 +667,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 text-gray-900 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.reprise || 0),
@@ -720,13 +677,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 text-gray-900 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.totalHT || 0),
@@ -737,13 +687,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 text-orange-600 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.taxe || 0),
@@ -754,13 +697,6 @@ export default function LetterTab({
                               </td>
                               <td className="px-2 py-1 font-bold text-indigo-600 text-right">
                                 {calculationResult.echeancier.echeances
-                                  .filter(
-                                    (echeance: any) =>
-                                      new Date(
-                                        frenchToEnglishDate(echeance.date)
-                                      ).getFullYear() ===
-                                      new Date().getFullYear()
-                                  )
                                   .reduce(
                                     (sum: number, echeance: any) =>
                                       sum + (echeance.totalTTC || 0),
@@ -806,7 +742,7 @@ export default function LetterTab({
 
                 <div className="grid grid-cols-4 border-b border-gray-200">
                   <div className="p-2 text-xs">
-                    PRIMES année en cours pour la période du{" "}
+                    PRIMES pour la période du{" "}
                     {formatDate(
                       frenchToEnglishDate(
                         calculationResult?.echeancier?.echeances?.[0]?.date
@@ -817,7 +753,7 @@ export default function LetterTab({
                       frenchToEnglishDate(
                         calculationResult?.echeancier?.echeances?.[
                           calculationResult?.echeancier?.echeances?.length - 1
-                        ]?.date
+                        ]?.finPeriode || ""
                       )
                     )}
                   </div>
@@ -832,13 +768,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.rcd - echeance.taxe || 0),
                         0
@@ -848,13 +778,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.taxe || 0),
                         0
@@ -864,13 +788,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.rcd || 0) + (echeance.taxe || 0),
                         0
@@ -883,54 +801,34 @@ export default function LetterTab({
                 <div className="grid grid-cols-4 border-b border-gray-200">
                   <div className="p-2 text-xs">Prime Protection Juridique</div>
                   <div className="p-2 text-xs text-right">
-                    {(
-                      calculationResult?.echeancier?.echeances
-                        ?.filter(
-                          (echeance: any) =>
-                            new Date(
-                              frenchToEnglishDate(echeance.date)
-                            ).getFullYear() === new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.pj || 0),
-                          0
-                        ) *
-                      (1 - getTaxeByRegion(quote?.formData?.territory))
-                    )?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {(
-                      calculationResult?.echeancier?.echeances
-                        ?.filter(
-                          (echeance: any) =>
-                            new Date(
-                              frenchToEnglishDate(echeance.date)
-                            ).getFullYear() === new Date().getFullYear()
-                        )
-                        .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.pj || 0),
-                          0
-                        ) * getTaxeByRegion(quote?.formData?.territory)
-                    )?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.pj || 0),
                         0
                       )
                       ?.toLocaleString("fr-FR") || ""}{" "}
+                    €
+                  </div>
+                  <div className="p-2 text-xs text-right">
+                    {(
+                      calculationResult?.echeancier?.echeances?.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.pj || 0),
+                        0
+                      ) * getTaxeByRegion(quote?.formData?.territory)
+                    )?.toLocaleString("fr-FR") || ""}{" "}
+                    €
+                  </div>
+                  <div className="p-2 text-xs text-right">
+                    {(
+                      calculationResult?.echeancier?.echeances?.reduce(
+                        (sum: number, echeance: any) =>
+                          sum + (echeance.pj || 0),
+                        0
+                      ) *
+                      (1 + getTaxeByRegion(quote?.formData?.territory))
+                    ).toLocaleString("fr-FR") || ""}{" "}
                     €
                   </div>
                 </div>
@@ -939,13 +837,7 @@ export default function LetterTab({
                   <div className="p-2 text-xs">Montant total RCD + PJ</div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.rcd || 0) + (echeance.pj || 0),
                         0
@@ -955,13 +847,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.taxe || 0),
                         0
@@ -971,13 +857,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum +
                           (echeance.rcd || 0) +
@@ -994,13 +874,7 @@ export default function LetterTab({
                   <div className="p-2 text-xs">Honoraire de gestion</div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.fraisGestion || 0),
                         0
@@ -1018,13 +892,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum +
                           (echeance.rcd || 0) +
@@ -1038,13 +906,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.taxe || 0),
                         0
@@ -1054,13 +916,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum +
                           (echeance.rcd || 0) +
@@ -1075,7 +931,7 @@ export default function LetterTab({
 
                 {/* <div className="grid grid-cols-4 border-b border-gray-200">
                         <div className="p-2 text-xs">Prime RCD pour la garantie reprise du passé (Prime unique à la souscription)</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.filter((echeance: any) => new Date(echeance.date).getFullYear() === new Date().getFullYear()).reduce((sum: number, echeance: any) => sum + (echeance.reprise || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
+                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.reduce((sum: number, echeance: any) => sum + (echeance.reprise || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
                         <div className="p-2 text-xs text-right"></div>
                         <div className="p-2 text-xs text-right"></div>
                       </div> */}
@@ -1091,13 +947,7 @@ export default function LetterTab({
                   <div className="p-2 text-xs">Prime totale à régler</div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum +
                           (echeance.rcd || 0) +
@@ -1113,13 +963,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.taxe || 0),
                         0
@@ -1129,13 +973,7 @@ export default function LetterTab({
                   </div>
                   <div className="p-2 text-xs text-right">
                     {calculationResult?.echeancier?.echeances
-                      ?.filter(
-                        (echeance: any) =>
-                          new Date(
-                            frenchToEnglishDate(echeance.date)
-                          ).getFullYear() === new Date().getFullYear()
-                      )
-                      .reduce(
+                      ?.reduce(
                         (sum: number, echeance: any) =>
                           sum + (echeance.totalTTC || 0),
                         0

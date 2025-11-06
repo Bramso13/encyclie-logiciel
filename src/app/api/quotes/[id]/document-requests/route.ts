@@ -48,6 +48,18 @@ export async function GET(
               fileName: true,
               originalName: true,
               documentType: true,
+              fileSize: true,
+              uploadedAt: true,
+              isVerified: true,
+              validationNotes: true,
+              validatedAt: true,
+              validatedBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
             },
           },
         },

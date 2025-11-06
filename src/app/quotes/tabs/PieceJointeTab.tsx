@@ -39,6 +39,10 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
   const [downloadingDocs, setDownloadingDocs] = useState<Set<string>>(
     new Set()
   );
+  const [validatingDocs, setValidatingDocs] = useState<Set<string>>(new Set());
+  const [validationNotes, setValidationNotes] = useState<
+    Record<string, string>
+  >({});
 
   const isAdmin = session?.user?.role === "ADMIN";
   const isBroker = session?.user?.role === "BROKER";
@@ -243,6 +247,55 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
     return new Date(dateString).toLocaleString("fr-FR");
   };
 
+  const handleValidateDocument = async (
+    documentId: string,
+    isVerified: boolean
+  ) => {
+    setValidatingDocs((prev) => new Set(prev).add(documentId));
+
+    try {
+      const notes = validationNotes[documentId] || "";
+      const response = await fetch(
+        `/api/quotes/${quote.id}/documents/${documentId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            isVerified,
+            validationNotes: notes,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Recharger les documents
+        await fetchDocuments();
+        // Réinitialiser les notes pour ce document
+        setValidationNotes((prev) => {
+          const newNotes = { ...prev };
+          delete newNotes[documentId];
+          return newNotes;
+        });
+        alert(`Document ${isVerified ? "accepté" : "refusé"} avec succès !`);
+      } else {
+        throw new Error(result.error || "Erreur lors de la validation");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la validation:", error);
+      alert("Erreur lors de la validation du document");
+    } finally {
+      setValidatingDocs((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(documentId);
+        return newSet;
+      });
+    }
+  };
+
   // Récupérer les documents requis du produit
   const requiredDocs = quote.product?.requiredDocs || [];
   const requiredDocTypes = Array.isArray(requiredDocs) ? requiredDocs : [];
@@ -312,138 +365,6 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* Documents additionnels demandés */}
-      {documentRequests.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-medium text-blue-800 mb-3">
-            Documents additionnels demandés
-          </h3>
-          <div className="space-y-3">
-            {documentRequests.map((request) => (
-              <div
-                key={request.id}
-                className={`p-4 rounded ${
-                  request.isFulfilled ? "bg-green-100" : "bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      {request.isFulfilled ? (
-                        <svg
-                          className="w-4 h-4 text-green-600"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-4 h-4 text-orange-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      )}
-                      <span className="font-medium">
-                        {request.documentType}
-                      </span>
-                    </div>
-                    {request.description && (
-                      <p className="text-sm text-gray-600 mt-1 ml-6">
-                        {request.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 ml-6">
-                      Demandé par {request.requestedBy.name} le{" "}
-                      {formatDate(request.requestedAt)}
-                    </p>
-                    {request.isFulfilled && request.fulfilledByDocument && (
-                      <div className="text-sm text-green-600 mt-2 ml-6">
-                        ✓ Fourni: {request.fulfilledByDocument.originalName}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bouton d'upload pour l'admin */}
-                  {isAdmin && !request.isFulfilled && (
-                    <div className="ml-4">
-                      <label className="inline-flex items-center px-3 py-2 border border-blue-300 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 cursor-pointer">
-                        {uploadingRequestId === request.id ? (
-                          <>
-                            <svg
-                              className="w-4 h-4 mr-2 animate-spin"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Upload...
-                          </>
-                        ) : (
-                          <>
-                            <svg
-                              className="w-4 h-4 mr-2"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                              />
-                            </svg>
-                            Uploader
-                          </>
-                        )}
-                        <input
-                          type="file"
-                          onChange={(e) =>
-                            handleFileUpload(
-                              e,
-                              request.documentType,
-                              request.id
-                            )
-                          }
-                          disabled={uploading}
-                          accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -527,30 +448,64 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
           </div>
         )}
 
-        {/* Liste des documents uploadés */}
+        {/* Liste unifiée des documents */}
         <div>
           <h3 className="font-medium mb-3">
             Documents fournis ({documents.length})
           </h3>
 
-          {documents.length === 0 ? (
+          {documents.length === 0 && documentRequests.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               Aucun document n'a été uploadé pour ce devis.
             </div>
           ) : (
-            <div className="space-y-3">
-              {documents.map((document) => (
-                <div
-                  key={document.id}
-                  className="border border-gray-200 rounded-lg p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <div className="space-y-4">
+              {/* Demandes de documents avec leurs documents fournis */}
+              {documentRequests.map((request) => {
+                // Trouver tous les documents liés à cette demande
+                // (soit le fulfilledByDocument, soit les documents avec le même documentType)
+                const relatedDocuments = documents.filter(
+                  (doc) =>
+                    doc.documentType === request.documentType ||
+                    request.fulfilledByDocument?.id === doc.id
+                );
+
+                // Vérifier s'il y a au moins un document accepté
+                const hasAcceptedDocument = relatedDocuments.some(
+                  (doc) => doc.isVerified === true
+                );
+
+                // Vérifier si tous les documents sont refusés ou s'il n'y en a pas
+                const allDocumentsRefused =
+                  relatedDocuments.length === 0 ||
+                  relatedDocuments.every(
+                    (doc) => doc.isVerified === false && doc.validationNotes
+                  );
+
+                return (
+                  <div
+                    key={request.id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    {/* En-tête de la demande */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          {hasAcceptedDocument ? (
                             <svg
-                              className="w-6 h-6 text-blue-600"
+                              className="w-5 h-5 text-green-600"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              className="w-5 h-5 text-orange-500"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -559,102 +514,460 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                               />
                             </svg>
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {document.originalName}
-                          </p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span>
-                              {DOCUMENT_TYPES.find(
-                                (t) => t.value === document.documentType
-                              )?.label || document.documentType}
+                          )}
+                          <span className="font-medium text-gray-900">
+                            {request.documentType}
+                          </span>
+                          {hasAcceptedDocument && (
+                            <span className="text-xs text-green-600 font-medium">
+                              (Accepté)
                             </span>
-                            <span>{formatFileSize(document.fileSize)}</span>
-                            <span>{formatDate(document.uploadedAt)}</span>
-                          </div>
-                          {document.isVerified && (
-                            <div className="flex items-center space-x-1 mt-1">
-                              <svg
-                                className="w-4 h-4 text-green-500"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              <span className="text-xs text-green-600">
-                                Vérifié
-                              </span>
-                              {document.validatedBy && (
-                                <span className="text-xs text-gray-500">
-                                  par {document.validatedBy.name}
-                                </span>
-                              )}
-                            </div>
                           )}
                         </div>
+                        {request.description && (
+                          <p className="text-sm text-gray-600 mt-1 ml-7">
+                            {request.description}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 ml-7">
+                          Demandé par {request.requestedBy.name} le{" "}
+                          {formatDate(request.requestedAt)}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleDownloadDocument(document)}
-                        disabled={downloadingDocs.has(document.id)}
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {downloadingDocs.has(document.id) ? (
-                          <>
-                            <svg
-                              className="w-4 h-4 mr-1 animate-spin"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
+
+                    {/* Documents fournis pour cette demande */}
+                    {relatedDocuments.length > 0 && (
+                      <div className="ml-7 space-y-2 mt-3">
+                        {relatedDocuments.map((document) => (
+                          <div
+                            key={document.id}
+                            className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <svg
+                                    className="w-4 h-4 text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                  </svg>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {document.originalName}
+                                  </span>
+                                  {document.isVerified ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                      Accepté
+                                    </span>
+                                  ) : document.validationNotes ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                      Refusé
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                      En attente
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1 ml-6">
+                                  <span>
+                                    {formatFileSize(document.fileSize)}
+                                  </span>
+                                  <span>
+                                    Uploadé le {formatDate(document.uploadedAt)}
+                                  </span>
+                                  {document.isVerified &&
+                                    document.validatedBy && (
+                                      <span className="text-gray-500">
+                                        par {document.validatedBy.name}
+                                      </span>
+                                    )}
+                                </div>
+                                {document.validationNotes && (
+                                  <p className="text-xs text-red-600 mt-1 ml-6 italic">
+                                    Refusé: {document.validationNotes}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2 ml-4">
+                                <button
+                                  onClick={() =>
+                                    handleDownloadDocument(document)
+                                  }
+                                  disabled={downloadingDocs.has(document.id)}
+                                  className="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-xs leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <svg
+                                    className="w-3 h-3 mr-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                  </svg>
+                                  Télécharger
+                                </button>
+                                {/* Boutons de validation pour l'admin */}
+                                {isAdmin && !document.isVerified && (
+                                  <>
+                                    <div className="ml-2">
+                                      <textarea
+                                        placeholder="Notes (optionnel)..."
+                                        value={
+                                          validationNotes[document.id] || ""
+                                        }
+                                        onChange={(e) =>
+                                          setValidationNotes((prev) => ({
+                                            ...prev,
+                                            [document.id]: e.target.value,
+                                          }))
+                                        }
+                                        rows={2}
+                                        className="w-48 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        handleValidateDocument(
+                                          document.id,
+                                          true
+                                        )
+                                      }
+                                      disabled={validatingDocs.has(document.id)}
+                                      className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {validatingDocs.has(document.id)
+                                        ? "Validation..."
+                                        : "✓ Accepter"}
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleValidateDocument(
+                                          document.id,
+                                          false
+                                        )
+                                      }
+                                      disabled={validatingDocs.has(document.id)}
+                                      className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {validatingDocs.has(document.id)
+                                        ? "Validation..."
+                                        : "✗ Refuser"}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Bouton d'upload seulement si tous les documents sont refusés ou s'il n'y en a pas */}
+                    {isAdmin && allDocumentsRefused && (
+                      <div className="mt-3 ml-7">
+                        <label className="inline-flex items-center px-3 py-2 border border-blue-300 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 cursor-pointer">
+                          {uploadingRequestId === request.id ? (
+                            <>
+                              <svg
+                                className="w-4 h-4 mr-2 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              Upload...
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
                                 stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Téléchargement...
-                          </>
-                        ) : (
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                />
+                              </svg>
+                              Uploader un document
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            onChange={(e) =>
+                              handleFileUpload(
+                                e,
+                                request.documentType,
+                                request.id
+                              )
+                            }
+                            disabled={uploading}
+                            accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Documents uploadés directement (non liés à une demande) */}
+              {documents
+                .filter(
+                  (doc) =>
+                    !documentRequests.some(
+                      (req) =>
+                        req.documentType === doc.documentType ||
+                        req.fulfilledByDocument?.id === doc.id
+                    )
+                )
+                .map((document) => (
+                  <div
+                    key={document.id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <svg
+                                className="w-6 h-6 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {document.originalName}
+                            </p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-500">
+                              <span>
+                                {DOCUMENT_TYPES.find(
+                                  (t) => t.value === document.documentType
+                                )?.label || document.documentType}
+                              </span>
+                              <span>{formatFileSize(document.fileSize)}</span>
+                              <span>{formatDate(document.uploadedAt)}</span>
+                            </div>
+                            {document.isVerified && (
+                              <div className="flex items-center space-x-1 mt-1">
+                                <svg
+                                  className="w-4 h-4 text-green-500"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                <span className="text-xs text-green-600">
+                                  Vérifié
+                                </span>
+                                {document.validatedBy && (
+                                  <span className="text-xs text-gray-500">
+                                    par {document.validatedBy.name}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {!document.isVerified &&
+                              document.validationNotes && (
+                                <p className="text-xs text-red-600 mt-1 italic">
+                                  Refusé: {document.validationNotes}
+                                </p>
+                              )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleDownloadDocument(document)}
+                          disabled={downloadingDocs.has(document.id)}
+                          className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {downloadingDocs.has(document.id) ? (
+                            <>
+                              <svg
+                                className="w-4 h-4 mr-1 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              Téléchargement...
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                              Télécharger
+                            </>
+                          )}
+                        </button>
+                        {/* Boutons de validation pour l'admin */}
+                        {isAdmin && !document.isVerified && (
                           <>
-                            <svg
-                              className="w-4 h-4 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            <div className="ml-2">
+                              <textarea
+                                placeholder="Notes de validation (optionnel)..."
+                                value={validationNotes[document.id] || ""}
+                                onChange={(e) =>
+                                  setValidationNotes((prev) => ({
+                                    ...prev,
+                                    [document.id]: e.target.value,
+                                  }))
+                                }
+                                rows={2}
+                                className="w-48 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
-                            </svg>
-                            Télécharger
+                            </div>
+                            <button
+                              onClick={() =>
+                                handleValidateDocument(document.id, true)
+                              }
+                              disabled={validatingDocs.has(document.id)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {validatingDocs.has(document.id) ? (
+                                <>
+                                  <svg
+                                    className="w-4 h-4 mr-1 animate-spin"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                  Validation...
+                                </>
+                              ) : (
+                                <>
+                                  <svg
+                                    className="w-4 h-4 mr-1"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                  Accepter
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleValidateDocument(document.id, false)
+                              }
+                              disabled={validatingDocs.has(document.id)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {validatingDocs.has(document.id) ? (
+                                "Validation..."
+                              ) : (
+                                <>
+                                  <svg
+                                    className="w-4 h-4 mr-1"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                  Refuser
+                                </>
+                              )}
+                            </button>
                           </>
                         )}
-                      </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </div>

@@ -191,10 +191,10 @@ const tableauTax2025 = [
   { code: 20, title: "Electricité -Télécommunications", rate: 0.0298 },
 ];
 
-// Taux pour 2026 (2.5% de plus que 2025)
+// Taux pour 2026 (3.5% de plus que 2025)
 const tableauTax2026 = tableauTax2025.map((item) => ({
   ...item,
-  rate: item.rate * 1.025,
+  rate: item.rate * 1.035,
 }));
 
 // Export pour compatibilité avec le code existant (par défaut 2025)
@@ -622,11 +622,16 @@ export function calculPrimeRCD(params: {
 
   const plafond = 70_000;
 
+  // Fonction helper pour arrondir à 2 décimales
+  const roundToTwoDecimals = (value: number): number => {
+    return Math.round(value * 100) / 100;
+  };
+
   const returnTab: returnTab[] = [];
 
   const returnValue: returnValue = {
-    caCalculee: caCalculee,
-    honoraireGestion: honoraireGestion,
+    caCalculee: roundToTwoDecimals(caCalculee),
+    honoraireGestion: roundToTwoDecimals(honoraireGestion),
     refus:
       refus.experienceDirigeant ||
       refus.sansAssuranceDepuisPlusDe12Mois ||
@@ -649,9 +654,16 @@ export function calculPrimeRCD(params: {
     primeMiniAvecMajorations: 0,
     primeAuDela: 0,
     primeTotal: 0,
-    majorations: majorations,
+    majorations: Object.fromEntries(
+      Object.entries(majorations).map(([key, value]) => [
+        key,
+        typeof value === "number" ? roundToTwoDecimals(value) : value,
+      ])
+    ) as typeof majorations,
     reprisePasseResult: undefined,
-    protectionJuridique: protectionJuridique1an * (1 + taxeProtectionJuridique),
+    protectionJuridique: roundToTwoDecimals(
+      protectionJuridique1an * (1 + taxeProtectionJuridique)
+    ),
     fraisGestion: 0,
     totalTTC: 0,
     nbEcheances: {
@@ -729,53 +741,63 @@ export function calculPrimeRCD(params: {
     returnTab.push({
       nomActivite:
         tableauTax.find((tax) => tax.code === activite.code)?.title ?? "",
-      partCA: activite.caSharePercent,
-      tauxBase,
-      tauxApplique: tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1),
-      PrimeMiniAct: primeMiniAct,
-      DegMax: degMax ?? 0,
-      Deg400k: deg400k ?? 0,
+      partCA: roundToTwoDecimals(activite.caSharePercent),
+      tauxBase: roundToTwoDecimals(tauxBase),
+      tauxApplique: roundToTwoDecimals(
+        tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1)
+      ),
+      PrimeMiniAct: roundToTwoDecimals(primeMiniAct),
+      DegMax: roundToTwoDecimals(degMax ?? 0),
+      Deg400k: roundToTwoDecimals(deg400k ?? 0),
       PrimeRefAct: -1,
       Prime100Ref: -1,
-      Prime100Min: prime100Min,
+      Prime100Min: roundToTwoDecimals(prime100Min),
     });
   });
 
-  returnValue.PminiHT = returnTab.reduce(
-    (acc, activite) => acc + activite.PrimeMiniAct,
-    0
+  returnValue.PminiHT = roundToTwoDecimals(
+    returnTab.reduce((acc, activite) => acc + activite.PrimeMiniAct, 0)
   );
-  returnValue.primeMini = returnTab.reduce(
-    (acc, activite) => acc + activite.Prime100Min,
-    0
+  returnValue.primeMini = roundToTwoDecimals(
+    returnTab.reduce((acc, activite) => acc + activite.Prime100Min, 0)
   );
-  returnValue.primeMiniAvecMajorations = returnValue.PminiHT * totalMajorations;
-  returnValue.PrimeHTSansMajorations =
-    returnValue.PminiHT + returnValue.primeMini;
-  returnValue.totalMajorations = totalMajorations;
+  returnValue.primeMiniAvecMajorations = roundToTwoDecimals(
+    returnValue.PminiHT * totalMajorations
+  );
+  returnValue.PrimeHTSansMajorations = roundToTwoDecimals(
+    returnValue.PminiHT + returnValue.primeMini
+  );
+  returnValue.totalMajorations = roundToTwoDecimals(totalMajorations);
 
-  returnValue.primeTotal =
-    returnValue.PrimeHTSansMajorations * totalMajorations;
-  returnValue.fraisGestion = returnValue.primeTotal * txFraisGestion;
-  returnValue.autres.fraisFractionnementPrimeHT =
+  returnValue.primeTotal = roundToTwoDecimals(
+    returnValue.PrimeHTSansMajorations * totalMajorations
+  );
+  returnValue.fraisGestion = roundToTwoDecimals(
+    returnValue.primeTotal * txFraisGestion
+  );
+  returnValue.autres.fraisFractionnementPrimeHT = roundToTwoDecimals(
     returnValue.nbEcheances > 1
       ? returnValue.nbEcheances * fraisFractionnementPrime
-      : 0;
-  returnValue.autres.taxeAssurance =
+      : 0
+  );
+  returnValue.autres.taxeAssurance = roundToTwoDecimals(
     returnValue.primeTotal * taxeAssurance +
-    returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance;
-  returnValue.autres.protectionJuridiqueTTC =
-    protectionJuridique1an * (1 + taxeProtectionJuridique);
-  returnValue.autres.total =
+      returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance
+  );
+  returnValue.autres.protectionJuridiqueTTC = roundToTwoDecimals(
+    protectionJuridique1an * (1 + taxeProtectionJuridique)
+  );
+  returnValue.autres.total = roundToTwoDecimals(
     returnValue.autres.taxeAssurance +
-    returnValue.autres.protectionJuridiqueTTC +
-    returnValue.autres.fraisFractionnementPrimeHT;
-  returnValue.primeAuDela =
-    returnValue.primeTotal - returnValue.primeMiniAvecMajorations;
-  returnValue.totalTTC =
-    returnValue.primeTotal +
-    returnValue.autres.total +
-    returnValue.fraisGestion;
+      returnValue.autres.protectionJuridiqueTTC +
+      returnValue.autres.fraisFractionnementPrimeHT
+  );
+  returnValue.primeAuDela = roundToTwoDecimals(
+    returnValue.primeTotal - returnValue.primeMiniAvecMajorations
+  );
+  returnValue.totalTTC = roundToTwoDecimals(
+    returnValue.primeTotal + returnValue.autres.total + returnValue.fraisGestion
+  );
   returnValue.returnTab = returnTab;
 
   // ========== CALCULS POUR L'ANNÉE N+1 (2026) ==========
@@ -800,68 +822,81 @@ export function calculPrimeRCD(params: {
     returnTabN1.push({
       nomActivite:
         tableauTaxN1.find((tax) => tax.code === activite.code)?.title ?? "",
-      partCA: activite.caSharePercent,
-      tauxBase,
-      tauxApplique: tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1),
-      PrimeMiniAct: primeMiniAct,
-      DegMax: degMax ?? 0,
-      Deg400k: deg400k ?? 0,
+      partCA: roundToTwoDecimals(activite.caSharePercent),
+      tauxBase: roundToTwoDecimals(tauxBase),
+      tauxApplique: roundToTwoDecimals(
+        tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1)
+      ),
+      PrimeMiniAct: roundToTwoDecimals(primeMiniAct),
+      DegMax: roundToTwoDecimals(degMax ?? 0),
+      Deg400k: roundToTwoDecimals(deg400k ?? 0),
       PrimeRefAct: -1,
       Prime100Ref: -1,
-      Prime100Min: prime100Min,
+      Prime100Min: roundToTwoDecimals(prime100Min),
     });
   });
 
-  returnValue.PminiHTN1 = returnTabN1.reduce(
-    (acc, activite) => acc + activite.PrimeMiniAct,
-    0
+  returnValue.PminiHTN1 = roundToTwoDecimals(
+    returnTabN1.reduce((acc, activite) => acc + activite.PrimeMiniAct, 0)
   );
-  returnValue.primeMiniN1 = returnTabN1.reduce(
-    (acc, activite) => acc + activite.Prime100Min,
-    0
+  returnValue.primeMiniN1 = roundToTwoDecimals(
+    returnTabN1.reduce((acc, activite) => acc + activite.Prime100Min, 0)
   );
-  returnValue.primeMiniAvecMajorationsN1 =
-    returnValue.PminiHTN1 * totalMajorations;
-  returnValue.PrimeHTSansMajorationsN1 =
-    returnValue.PminiHTN1 + returnValue.primeMiniN1;
+  returnValue.primeMiniAvecMajorationsN1 = roundToTwoDecimals(
+    returnValue.PminiHTN1 * totalMajorations
+  );
+  returnValue.PrimeHTSansMajorationsN1 = roundToTwoDecimals(
+    returnValue.PminiHTN1 + returnValue.primeMiniN1
+  );
 
-  returnValue.primeTotalN1 =
-    returnValue.PrimeHTSansMajorationsN1 * totalMajorations;
-  returnValue.fraisGestionN1 = returnValue.primeTotalN1 * txFraisGestion;
-  returnValue.autresN1.fraisFractionnementPrimeHT =
+  returnValue.primeTotalN1 = roundToTwoDecimals(
+    returnValue.PrimeHTSansMajorationsN1 * totalMajorations
+  );
+  returnValue.fraisGestionN1 = roundToTwoDecimals(
+    returnValue.primeTotalN1 * txFraisGestion
+  );
+  returnValue.autresN1.fraisFractionnementPrimeHT = roundToTwoDecimals(
     returnValue.nbEcheances > 1
       ? returnValue.nbEcheances * fraisFractionnementPrime
-      : 0;
-  returnValue.autresN1.taxeAssurance =
+      : 0
+  );
+  returnValue.autresN1.taxeAssurance = roundToTwoDecimals(
     returnValue.primeTotalN1 * taxeAssurance +
-    returnValue.autresN1.fraisFractionnementPrimeHT * taxeAssurance;
-  returnValue.autresN1.protectionJuridiqueTTC =
-    protectionJuridique1an * (1 + taxeProtectionJuridique);
-  returnValue.autresN1.total =
+      returnValue.autresN1.fraisFractionnementPrimeHT * taxeAssurance
+  );
+  returnValue.autresN1.protectionJuridiqueTTC = roundToTwoDecimals(
+    protectionJuridique1an * (1 + taxeProtectionJuridique)
+  );
+  returnValue.autresN1.total = roundToTwoDecimals(
     returnValue.autresN1.taxeAssurance +
-    returnValue.autresN1.protectionJuridiqueTTC +
-    returnValue.autresN1.fraisFractionnementPrimeHT;
-  returnValue.primeAuDelaN1 =
-    returnValue.primeTotalN1 - returnValue.primeMiniAvecMajorationsN1;
-  returnValue.totalTTCN1 =
+      returnValue.autresN1.protectionJuridiqueTTC +
+      returnValue.autresN1.fraisFractionnementPrimeHT
+  );
+  returnValue.primeAuDelaN1 = roundToTwoDecimals(
+    returnValue.primeTotalN1 - returnValue.primeMiniAvecMajorationsN1
+  );
+  returnValue.totalTTCN1 = roundToTwoDecimals(
     returnValue.primeTotalN1 +
-    returnValue.autresN1.total +
-    returnValue.fraisGestionN1;
+      returnValue.autresN1.total +
+      returnValue.fraisGestionN1
+  );
   returnValue.returnTabN1 = returnTabN1;
 
-  returnValue.primeAggravationBilanN_1NonFourni = returnValue.majorations
-    .nonFournitureBilanN_1
-    ? returnValue.primeTotal *
-      returnValue.majorations.nonFournitureBilanN_1 *
-      (1 + txFraisGestion + taxeAssurance)
-    : 0;
+  returnValue.primeAggravationBilanN_1NonFourni = roundToTwoDecimals(
+    returnValue.majorations.nonFournitureBilanN_1
+      ? returnValue.primeTotal *
+          returnValue.majorations.nonFournitureBilanN_1 *
+          (1 + txFraisGestion + taxeAssurance)
+      : 0
+  );
 
-  returnValue.primeAggravationBilanN_1NonFourniN1 = returnValue.majorations
-    .nonFournitureBilanN_1
-    ? returnValue.primeTotalN1 *
-      returnValue.majorations.nonFournitureBilanN_1 *
-      (1 + txFraisGestion + taxeAssurance)
-    : 0;
+  returnValue.primeAggravationBilanN_1NonFourniN1 = roundToTwoDecimals(
+    returnValue.majorations.nonFournitureBilanN_1
+      ? returnValue.primeTotalN1 *
+          returnValue.majorations.nonFournitureBilanN_1 *
+          (1 + txFraisGestion + taxeAssurance)
+      : 0
+  );
 
   returnValue.echeancier = genererEcheancier({
     tauxTaxe: taxeAssurance,
@@ -1512,24 +1547,33 @@ export function calculReprisePasseRCD(
 
     tableauAnnees.push({
       annee,
-      tauxTI: tauxTIAnnee,
+      tauxTI: Math.round(tauxTIAnnee * 100) / 100,
       pourcentageAnnee: Math.round(pourcentageAnnee * 10000) / 100, // en %
-      primeRepriseAnnee: Math.round(primeRepriseAnnee),
+      primeRepriseAnnee: Math.round(primeRepriseAnnee * 100) / 100,
     });
   }
 
+  const roundToTwoDecimals = (value: number): number => {
+    return Math.round(value * 100) / 100;
+  };
+
   return {
     tableauAnnees,
-    ratioSP: sP,
-    frequenceSinistres: Math.round(frequence * 100) / 100,
+    ratioSP: roundToTwoDecimals(sP),
+    frequenceSinistres: roundToTwoDecimals(frequence),
     categorieAnciennete,
     categorieFrequence,
     categorieRatioSP,
-    tauxMajoration,
-    primeReprisePasseTTC: tableauAnnees.reduce(
-      (sum, item) => sum + item.primeRepriseAnnee,
-      0
+    tauxMajoration:
+      typeof tauxMajoration === "number"
+        ? roundToTwoDecimals(tauxMajoration)
+        : tauxMajoration,
+    primeReprisePasseTTC: roundToTwoDecimals(
+      tableauAnnees.reduce((sum, item) => sum + item.primeRepriseAnnee, 0)
     ),
-    primeApresSinistralite: primeAnnuelleHT * tauxMajoration,
+    primeApresSinistralite:
+      typeof tauxMajoration === "number"
+        ? roundToTwoDecimals(primeAnnuelleHT * tauxMajoration)
+        : 0,
   };
 }

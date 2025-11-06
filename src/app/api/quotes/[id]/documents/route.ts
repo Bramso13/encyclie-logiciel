@@ -6,6 +6,7 @@ import {
   withAuth,
   ApiError,
 } from "@/lib/api-utils";
+import { sendEmail, getDocumentUploadedTemplate } from "@/lib/nodemailer";
 
 // POST /api/quotes/[id]/documents - Add document metadata for quote
 export async function POST(
@@ -43,6 +44,13 @@ export async function POST(
           id: true,
           brokerId: true,
           reference: true,
+          broker: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
         },
       });
 
@@ -66,6 +74,72 @@ export async function POST(
           quoteId: params.id,
         },
       });
+
+      // Envoyer notification et email aux admins
+      try {
+        // Récupérer tous les admins
+        const admins = await prisma.user.findMany({
+          where: { role: "ADMIN", isActive: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        });
+
+        // Créer les notifications pour chaque admin
+        await Promise.all(
+          admins.map((admin) =>
+            prisma.notification.create({
+              data: {
+                type: "GENERAL",
+                title: "Nouveau document uploadé",
+                message: `Un nouveau document "${originalName}" (${documentType}) a été uploadé pour le devis ${quote.reference} par ${quote.broker.name}.`,
+                userId: admin.id,
+                relatedEntityType: "quote",
+                relatedEntityId: params.id,
+              },
+            })
+          )
+        );
+
+        // Envoyer les emails aux admins
+        const emailTemplate = getDocumentUploadedTemplate(
+          quote.reference,
+          documentType,
+          originalName,
+          quote.broker.name || "Courtier"
+        );
+
+        await Promise.all(
+          admins.map((admin) =>
+            sendEmail(
+              admin.email,
+              emailTemplate.subject,
+              emailTemplate.html,
+              emailTemplate.text,
+              {
+                type: "DOCUMENT_UPLOADED",
+                relatedQuoteId: params.id,
+                relatedUserId: admin.id,
+                sentById: userId,
+              }
+            ).catch((error) => {
+              console.error(
+                `Erreur lors de l'envoi de l'email à ${admin.email}:`,
+                error
+              );
+              // Ne pas faire échouer la requête si l'email échoue
+            })
+          )
+        );
+      } catch (notificationError) {
+        console.error(
+          "Erreur lors de l'envoi des notifications/emails:",
+          notificationError
+        );
+        // Ne pas faire échouer la requête si les notifications échouent
+      }
 
       return createApiResponse(document, "Document ajouté avec succès", 201);
     });
@@ -108,7 +182,19 @@ export async function GET(
           originalName: true,
           documentType: true,
           fileSize: true,
+          filePath: true,
+          fileType: true,
           uploadedAt: true,
+          isVerified: true,
+          validationNotes: true,
+          validatedAt: true,
+          validatedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
         },
         orderBy: { uploadedAt: "desc" },
       });

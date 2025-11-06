@@ -11,8 +11,14 @@ import OfferLetterPDF from "@/components/pdf/OfferLetterPDF";
 export async function POST(request: NextRequest) {
   return withAuth(async (userId, userRole) => {
     try {
-      const { type, quote, calculationResult, formData, selectedDocuments } =
-        await request.json();
+      const {
+        type,
+        quote,
+        calculationResult,
+        formData,
+        selectedDocuments,
+        markdownContent,
+      } = await request.json();
 
       console.log("selectedDocuments", selectedDocuments);
 
@@ -37,6 +43,7 @@ export async function POST(request: NextRequest) {
 
       let pdfDocument: any;
       let filename: string;
+      const baseUrl = request.headers.get("origin") || request.nextUrl.origin;
 
       switch (type) {
         case "letter-of-intent":
@@ -51,6 +58,7 @@ export async function POST(request: NextRequest) {
           pdfDocument = React.createElement(PremiumCallPDF, {
             quote,
             calculationResult,
+            baseUrl,
           });
           filename = `appel-prime-${quote.reference || "devis"}.pdf`;
           break;
@@ -64,6 +72,7 @@ export async function POST(request: NextRequest) {
           });
           filename = `proposition-offre-${quote.reference || "devis"}.pdf`;
           break;
+
         default:
           return NextResponse.json(
             { success: false, error: "Type de document non supporté" },

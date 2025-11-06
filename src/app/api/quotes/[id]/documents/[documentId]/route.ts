@@ -6,6 +6,7 @@ import {
   withAuth,
   ApiError
 } from "@/lib/api-utils";
+import { sendEmail, getDocumentValidatedTemplate } from "@/lib/nodemailer";
 
 // GET /api/quotes/[id]/documents/[documentId] - Download document
 export async function GET(
@@ -116,7 +117,21 @@ export async function PUT(
             select: { 
               id: true, 
               brokerId: true,
-              status: true
+              status: true,
+              reference: true,
+              broker: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              product: {
+                select: {
+                  id: true,
+                  requiredDocs: true,
+                },
+              },
             }
           }
         }
@@ -145,6 +160,111 @@ export async function PUT(
           validatedById: isVerified ? userId : null
         }
       });
+
+      // Si le document est validé, envoyer un email au client avec les pièces manquantes
+      if (isVerified) {
+        try {
+          // Récupérer tous les documents du devis
+          const allDocuments = await prisma.quoteDocument.findMany({
+            where: { quoteId: params.id },
+            select: {
+              documentType: true,
+              isVerified: true,
+            },
+          });
+
+          // Récupérer les demandes de documents
+          const documentRequests = await prisma.documentRequest.findMany({
+            where: { quoteId: params.id },
+            select: {
+              documentType: true,
+              isFulfilled: true,
+            },
+          });
+
+          // Types de documents avec leurs labels
+          const DOCUMENT_TYPES_MAP: Record<string, string> = {
+            KBIS: "KBIS",
+            FINANCIAL_STATEMENT: "Bilan financier",
+            INSURANCE_CERTIFICATE: "Attestation d'assurance",
+            SIGNED_QUOTE: "Devis signé",
+            ATTESTATION: "Attestation",
+            OTHER: "Autre",
+          };
+
+          // Documents requis du produit
+          const requiredDocs = (document.quote.product?.requiredDocs as string[]) || [];
+          
+          // Documents requis supplémentaires (demandes de documents non satisfaites)
+          const pendingRequests = documentRequests
+            .filter((req) => !req.isFulfilled)
+            .map((req) => req.documentType);
+
+          // Documents validés
+          const verifiedDocumentTypes = allDocuments
+            .filter((doc) => doc.isVerified === true)
+            .map((doc) => doc.documentType);
+
+          // Documents fournis (validés ou non)
+          const providedDocumentTypes = allDocuments.map((doc) => doc.documentType);
+
+          // Calculer les documents manquants
+          const missingDocuments: string[] = [];
+
+          // Vérifier les documents requis du produit
+          requiredDocs.forEach((docType) => {
+            if (!verifiedDocumentTypes.includes(docType)) {
+              const label = DOCUMENT_TYPES_MAP[docType] || docType;
+              if (!missingDocuments.includes(label)) {
+                missingDocuments.push(label);
+              }
+            }
+          });
+
+          // Vérifier les demandes de documents en attente
+          pendingRequests.forEach((docType) => {
+            if (!verifiedDocumentTypes.includes(docType)) {
+              const label = DOCUMENT_TYPES_MAP[docType] || docType;
+              if (!missingDocuments.includes(label)) {
+                missingDocuments.push(label);
+              }
+            }
+          });
+
+          // Envoyer l'email au broker
+          const emailTemplate = getDocumentValidatedTemplate(
+            document.quote.reference,
+            DOCUMENT_TYPES_MAP[document.documentType] || document.documentType,
+            document.originalName,
+            missingDocuments
+          );
+
+          await sendEmail(
+            document.quote.broker.email,
+            emailTemplate.subject,
+            emailTemplate.html,
+            emailTemplate.text,
+            {
+              type: "DOCUMENT_VALIDATED",
+              relatedQuoteId: params.id,
+              relatedUserId: document.quote.broker.id,
+              sentById: userId,
+            }
+          ).catch((error) => {
+            console.error(
+              `Erreur lors de l'envoi de l'email au broker ${document.quote.broker.email}:`,
+              error
+            );
+            // Ne pas faire échouer la requête si l'email échoue
+          });
+        } catch (emailError) {
+          console.error(
+            "Erreur lors de l'envoi de l'email de validation:",
+            emailError
+          );
+          // Ne pas faire échouer la requête si l'email échoue
+        }
+      }
 
       return new Response(
         JSON.stringify({

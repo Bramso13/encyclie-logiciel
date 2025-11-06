@@ -11,6 +11,12 @@ interface OffreTabProps {
   calculationResult: CalculationResult | null;
 }
 
+// Document obligatoire qui ne peut pas être modifié
+const REQUIRED_DOCUMENT = {
+  id: "offre_signee",
+  label: "Offre signée",
+};
+
 // Liste complète des pièces justificatives selon les spécifications
 const DOCUMENT_CHECKLIST = {
   general: {
@@ -129,7 +135,7 @@ const DOCUMENT_CHECKLIST = {
 export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   const { data: session } = useSession();
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(
-    new Set()
+    new Set([REQUIRED_DOCUMENT.id])
   );
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -157,7 +163,14 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
             setOfferData(result.data);
             setOfferSent(result.data.sent || false);
             if (result.data.requiredDocuments) {
-              setSelectedDocuments(new Set(result.data.requiredDocuments));
+              const documentsSet = new Set<string>(
+                Array.isArray(result.data.requiredDocuments)
+                  ? result.data.requiredDocuments
+                  : []
+              );
+              // S'assurer que le document obligatoire est toujours inclus
+              documentsSet.add(REQUIRED_DOCUMENT.id);
+              setSelectedDocuments(documentsSet);
             }
           }
         }
@@ -170,6 +183,10 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   }, [quote.id]);
 
   const handleDocumentToggle = (documentId: string) => {
+    // Empêcher la désélection du document obligatoire
+    if (documentId === REQUIRED_DOCUMENT.id) {
+      return;
+    }
     const newSelected = new Set(selectedDocuments);
     if (newSelected.has(documentId)) {
       newSelected.delete(documentId);
@@ -192,8 +209,13 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
     const newSelected = new Set(selectedDocuments);
     const docChecklist = editableDocuments;
     docChecklist[category].items.forEach((item: any) => {
-      newSelected.delete(item.id);
+      // Ne pas désélectionner le document obligatoire
+      if (item.id !== REQUIRED_DOCUMENT.id) {
+        newSelected.delete(item.id);
+      }
     });
+    // S'assurer que le document obligatoire reste sélectionné
+    newSelected.add(REQUIRED_DOCUMENT.id);
     setSelectedDocuments(newSelected);
   };
 
@@ -356,6 +378,10 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
   };
 
   const getDocumentLabel = (documentId: string) => {
+    // Gérer le document obligatoire
+    if (documentId === REQUIRED_DOCUMENT.id) {
+      return REQUIRED_DOCUMENT.label;
+    }
     const docChecklist = editableDocuments;
     for (const category of Object.values(docChecklist)) {
       const item = (category as any).items.find(
@@ -1013,6 +1039,31 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
                 Réinitialiser
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Document obligatoire */}
+        <div className="mb-6 pb-6 border-b border-gray-300">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold text-gray-800">
+              Documents obligatoires
+            </h4>
+          </div>
+          <div className="space-y-2 pl-4">
+            <div className="flex items-start space-x-3 p-2 rounded bg-blue-50 border border-blue-200">
+              <input
+                type="checkbox"
+                checked={selectedDocuments.has(REQUIRED_DOCUMENT.id)}
+                disabled={true}
+                className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-not-allowed opacity-75"
+              />
+              <label className="flex-1 text-sm text-gray-700 font-medium cursor-not-allowed">
+                {REQUIRED_DOCUMENT.label}
+              </label>
+              <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded">
+                Obligatoire
+              </span>
+            </div>
           </div>
         </div>
 

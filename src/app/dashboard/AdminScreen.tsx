@@ -1275,9 +1275,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
                         Référence
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                        Produit
-                      </th>
+
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
                         Courtier
                       </th>
@@ -1321,9 +1319,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {quote.reference}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {quote.product.name}
-                          </td>
+
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
