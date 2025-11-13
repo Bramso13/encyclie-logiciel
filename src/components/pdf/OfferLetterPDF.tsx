@@ -28,6 +28,9 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
     color: "#000000",
   },
+  header: {
+    marginBottom: 20,
+  },
   title: {
     fontSize: 16,
     fontWeight: "bold",
@@ -50,7 +53,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
     marginBottom: 10,
-    marginTop: 8,
+    marginTop: 20,
     color: "#374151",
     borderBottom: "1px solid #9ca3af",
     paddingBottom: 4,
@@ -172,8 +175,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   footer: {
-    marginTop: 20,
-    paddingTop: 12,
     borderTop: "1px solid #d1d5db",
     textAlign: "center",
   },
@@ -217,6 +218,33 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: "#000000",
   },
+  signatureSection: {
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  signatureBox: {
+    border: "1px solid #1f2937",
+    padding: 5,
+    minHeight: 35,
+    marginTop: 3,
+    width: "60%",
+  },
+  signatureLabel: {
+    fontSize: 7,
+    fontWeight: "bold",
+    marginBottom: 2,
+    color: "#1f2937",
+  },
+  signatureLine: {
+    borderBottom: "1px solid #1f2937",
+    marginTop: 8,
+    paddingBottom: 1,
+  },
+  signatureText: {
+    fontSize: 5,
+    color: "#6b7280",
+    marginTop: 1,
+  },
 });
 
 const OfferLetterPDF = ({
@@ -253,6 +281,615 @@ const OfferLetterPDF = ({
     return x.toFixed(2);
   }
 
+  // Fonction helper pour filtrer les échéances par année
+  const getEcheancesByYear = (year: number) => {
+    if (!calculationResult?.echeancier?.echeances) return [];
+    return calculationResult.echeancier.echeances.filter((echeance: any) => {
+      if (!echeance.debutPeriode) return false;
+      const date = new Date(echeance.debutPeriode);
+      return date.getFullYear() === year;
+    });
+  };
+
+  // Fonction helper pour générer le tableau "PRIMES pour la période du..."
+  const renderPrimesTable = (year: number, echeances: any[]) => {
+    if (echeances.length === 0) return null;
+
+    const firstDate = echeances[0]?.debutPeriode;
+    const lastDate = echeances[echeances.length - 1]?.finPeriode;
+
+    return (
+      <>
+        <Text style={[styles.fieldLabel, { marginBottom: 6 }]}>
+          PRIMES pour la période du {formatDate(firstDate)} au{" "}
+          {formatDate(lastDate)} (Année {year})
+        </Text>
+        <View style={styles.table}>
+          <View style={styles.tableRowGray}>
+            <Text style={[styles.tableCellHeader, { flex: 2 }]}></Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montants H.T
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montants Taxes
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montant TTC
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Prime RCD provisionnelle hors reprise du passé
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd - echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.rcd || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Prime Protection Juridique Complément RCD
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) *
+                  (1 - getTaxeByRegion(quote?.formData?.territory))
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Montant total RCD + PJ
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Honoraire de gestion
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.fraisGestion || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Montant RCD +PJ+ Frais gestion
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Prime RCD pour la garantie reprise du passé (Prime unique à la
+              souscription)
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) *
+                  (1 - getTaxeByRegion(quote?.formData?.territory))
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={[styles.tableRow, { backgroundColor: "#dbeafe" }]}>
+            <Text style={[styles.tableCell, { flex: 2, fontWeight: "bold" }]}>
+              Prime totale à régler
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) +
+                    (echeance.reprise || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.totalTTC || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+        </View>
+      </>
+    );
+  };
+
+  // Fonction helper pour générer le tableau échéancier
+  const renderEcheancierTable = (year: number, echeances: any[]) => {
+    if (echeances.length === 0) return null;
+
+    return (
+      <>
+        <Text style={styles.sectionHeader}>
+          ECHEANCIER (y compris reprise passé si incluse) - Année {year}
+        </Text>
+        <View style={styles.table}>
+          <View style={styles.tableRowGray}>
+            <Text style={[styles.tableCellHeader, { flex: 2 }]}>
+              ECHEANCIER (y compris reprise passé si incluse)
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montants H.T
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montants Taxes
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montant TTC
+            </Text>
+          </View>
+          <View style={styles.table}>
+            {echeances.map((echeance: any, idx: number) => (
+              <View style={styles.tableRow} key={`${echeance.date}-${idx}`}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>
+                  PRIME pour la période du {formatDate(echeance.debutPeriode)}{" "}
+                  au {formatDate(echeance.finPeriode)}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>
+                  {financial(
+                    echeance.rcd +
+                      echeance.pj +
+                      echeance.fraisGestion +
+                      echeance.reprise -
+                      echeance.taxe
+                  ) || ""}{" "}
+                  €
+                </Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>
+                  {financial(echeance.taxe) || ""} €
+                </Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>
+                  {financial(echeance.totalTTC) || ""} €
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </>
+    );
+  };
+
+  // Fonction helper pour générer le tableau "PRIMES annuelles pour la période du..."
+  const renderPrimesAnnuellesTable = (year: number, echeances: any[]) => {
+    if (echeances.length === 0) return null;
+
+    const firstDate = echeances[0]?.debutPeriode;
+    const lastDate = echeances[echeances.length - 1]?.finPeriode;
+
+    return (
+      <>
+        <Text style={[styles.fieldLabel, { marginTop: 15, marginBottom: 6 }]}>
+          PRIMES annuelles pour la période du {formatDate(firstDate)} au{" "}
+          {formatDate(lastDate)} (Année {year})
+        </Text>
+        <View style={styles.table}>
+          <View style={styles.tableRowGray}>
+            <Text style={[styles.tableCellHeader, { flex: 2 }]}></Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montants H.T
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montants Taxes
+            </Text>
+            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
+              Montant TTC
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Prime RCD provisionnelle hors reprise du passé
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd - echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.rcd || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Prime Protection Juridique Complément RCD
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) *
+                  (1 - getTaxeByRegion(quote?.formData?.territory))
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Montant total RCD + PJ
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Honoraire de gestion
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.fraisGestion || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Montant RCD +PJ+ Frais gestion
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={styles.tableRow}>
+            <Text style={[styles.tableCell, { flex: 2 }]}>
+              Prime RCD pour la garantie reprise du passé (Prime unique à la
+              souscription)
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) *
+                  (1 - getTaxeByRegion(quote?.formData?.territory))
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                ) * getTaxeByRegion(quote?.formData?.territory)
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1 }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+
+          <View style={[styles.tableRow, { backgroundColor: "#dbeafe" }]}>
+            <Text style={[styles.tableCell, { flex: 2, fontWeight: "bold" }]}>
+              Prime totale à régler( avec reprise passé)
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum +
+                    (echeance.rcd || 0) +
+                    (echeance.pj || 0) +
+                    (echeance.fraisGestion || 0) +
+                    (echeance.reprise || 0) -
+                    (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
+              {financial(
+                echeances.reduce(
+                  (sum: number, echeance: any) =>
+                    sum + (echeance.totalTTC || 0),
+                  0
+                )
+              ) || ""}{" "}
+              €
+            </Text>
+          </View>
+        </View>
+      </>
+    );
+  };
+
   const PageFooter = () => (
     <View style={styles.pageFooter}>
       <Text style={styles.pageFooterText}>Distribué et géré par :</Text>
@@ -277,9 +914,11 @@ const OfferLetterPDF = ({
     <Document>
       {/* Page 1 - Déclaration du proposant */}
       <Page size="A4" style={styles.page}>
-        {/* Logo en haut */}
-        <View style={{ marginBottom: 8, alignItems: "center" }}>
-          <Image src={logoSrc} style={{ width: 90, height: 45 }} />
+        {/* En-tête avec logo */}
+        <View style={styles.header}>
+          <View style={{ marginBottom: 10 }}>
+            <Image src={logoSrc} style={{ width: 90, height: 45 }} />
+          </View>
         </View>
 
         <Text style={[styles.title, { marginBottom: 8 }]}>
@@ -339,7 +978,7 @@ const OfferLetterPDF = ({
                 Nom & Prénom du ou des dirigeants :
               </Text>
               <Text style={styles.fieldValue}>
-                {formData.directorName || "N/A"}
+                {formData.directorName?.toUpperCase() || "N/A"}
               </Text>
             </View>
             <View style={[styles.gridItem, { marginBottom: 4 }]}>
@@ -464,11 +1103,11 @@ const OfferLetterPDF = ({
                   Le contrat a été résilié :
                 </Text>
                 <Text style={[styles.infoText, { marginTop: 1 }]}>
-                  Par l'assuré: □ motif de la résiliation:{" "}
+                  Par l'assuré: motif de la résiliation:{" "}
                   {formData.motifResiliation || "N/A"}
                 </Text>
                 <Text style={[styles.infoText, { marginTop: 1 }]}>
-                  Par l'assureur: □ motif de la résiliation: N/A
+                  Par l'assureur: motif de la résiliation: N/A
                 </Text>
               </View>
             </>
@@ -479,7 +1118,7 @@ const OfferLetterPDF = ({
               style={[styles.paragraph, { marginBottom: 0, lineHeight: 1.2 }]}
             >
               Avez-vous déclaré un sinistre au cours des 36 derniers mois (même
-              sans suite)? {formatBoolean(formData.sinistre36Mois)} □
+              sans suite)? {formatBoolean(formData.sinistre36Mois)}
             </Text>
           </View>
 
@@ -489,7 +1128,6 @@ const OfferLetterPDF = ({
             >
               Avez-vous connaissance d'événements susceptibles d'engager votre
               responsabilité? {formatBoolean(formData.evenementsResponsabilite)}{" "}
-              □
             </Text>
           </View>
 
@@ -506,14 +1144,14 @@ const OfferLetterPDF = ({
             >
               Le souscripteur fait-il l'objet d'une procédure de redressement,
               liquidation judiciaire ou de sauvetage ?{" "}
-              {formatBoolean(formData.procedureCollective)} □
+              {formatBoolean(formData.procedureCollective)}
             </Text>
           </View>
 
           <View style={{ marginBottom: 4 }}>
             <Text style={styles.fieldLabel}>
               Le souscripteur réalise-t-il du négoce de matériaux?{" "}
-              {formatBoolean(formData.negoceMateriaux)} □
+              {formatBoolean(formData.negoceMateriaux)}
             </Text>
             {formData.negoceMateriaux && (
               <View style={{ marginTop: 3 }}>
@@ -849,591 +1487,25 @@ const OfferLetterPDF = ({
 
         <Text style={styles.sectionHeader}>DETAILS DE LA PRIME :</Text>
 
-        <Text style={[styles.fieldLabel, { marginBottom: 6 }]}>
-          PRIMES pour la période du{" "}
-          {formatDate(
-            calculationResult?.echeancier?.echeances?.[0]?.debutPeriode
-          )}{" "}
-          au{" "}
-          {formatDate(
-            calculationResult?.echeancier?.echeances?.[
-              calculationResult?.echeancier?.echeances?.length - 1
-            ]?.finPeriode
-          )}
-        </Text>
-        <View style={styles.table}>
-          <View style={styles.tableRowGray}>
-            <Text style={[styles.tableCellHeader, { flex: 2 }]}></Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montants H.T
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montants Taxes
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montant TTC
-            </Text>
-          </View>
+        {/* Tableaux pour 2025 */}
+        {renderPrimesTable(2025, getEcheancesByYear(2025))}
+        {renderPrimesAnnuellesTable(2025, getEcheancesByYear(2025))}
 
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Prime RCD provisionnelle hors reprise du passé
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.rcd - echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.rcd || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Prime Protection Juridique Complément RCD
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                ) *
-                  (1 - getTaxeByRegion(quote?.formData?.territory))
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                ) * getTaxeByRegion(quote?.formData?.territory)
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Montant total RCD + PJ
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Honoraire de gestion
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.fraisGestion || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Montant RCD +PJ+ Frais gestion
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Prime RCD pour la garantie reprise du passé (Prime unique à la
-              souscription)
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                ) *
-                  (1 - getTaxeByRegion(quote?.formData?.territory))
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                ) * getTaxeByRegion(quote?.formData?.territory)
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={[styles.tableRow, { backgroundColor: "#dbeafe" }]}>
-            <Text style={[styles.tableCell, { flex: 2, fontWeight: "bold" }]}>
-              Prime totale à régler
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0) +
-                    (echeance.reprise || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.totalTTC || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-        </View>
-
-        <Text style={[styles.fieldLabel, { marginTop: 15, marginBottom: 6 }]}>
-          PRIMES annuelles pour la période du{" "}
-          {formatDate(
-            calculationResult?.echeancier?.echeances[0]?.debutPeriode
-          )}{" "}
-          au{" "}
-          {formatDate(
-            calculationResult?.echeancier?.echeances[
-              calculationResult?.echeancier?.echeances?.length - 1
-            ]?.finPeriode
-          )}
-        </Text>
-        <View style={styles.table}>
-          <View style={styles.tableRowGray}>
-            <Text style={[styles.tableCellHeader, { flex: 2 }]}></Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montants H.T
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montants Taxes
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montant TTC
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Prime RCD provisionnelle hors reprise du passé
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.rcd - echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.rcd || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Prime Protection Juridique Complément RCD
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                ) *
-                  (1 - getTaxeByRegion(quote?.formData?.territory))
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                ) * getTaxeByRegion(quote?.formData?.territory)
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Montant total RCD + PJ
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Honoraire de gestion
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.fraisGestion || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}></Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Montant RCD +PJ+ Frais gestion
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]}>
-              Prime RCD pour la garantie reprise du passé (Prime unique à la
-              souscription)
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                ) *
-                  (1 - getTaxeByRegion(quote?.formData?.territory))
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                ) * getTaxeByRegion(quote?.formData?.territory)
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
-
-          <View style={[styles.tableRow, { backgroundColor: "#dbeafe" }]}>
-            <Text style={[styles.tableCell, { flex: 2, fontWeight: "bold" }]}>
-              Prime totale à régler( avec reprise passé)
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0) +
-                    (echeance.reprise || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-            <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                calculationResult?.echeancier?.echeances?.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.totalTTC || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
-            </Text>
-          </View>
+        {/* Tableaux pour 2026 */}
+        <View style={{ marginTop: 120 }}>
+          {renderPrimesTable(2026, getEcheancesByYear(2026))}
+          {renderPrimesAnnuellesTable(2026, getEcheancesByYear(2026))}
         </View>
         <PageFooter />
       </Page>
 
       {/* Page 4 - Échéancier et modalités */}
       <Page size="A4" style={styles.page}>
-        <Text style={styles.sectionHeader}>
-          ECHEANCIER (y compris reprise passé si incluse)
-        </Text>
-        <View style={styles.table}>
-          <View style={styles.tableRowGray}>
-            <Text style={[styles.tableCellHeader, { flex: 2 }]}>
-              ECHEANCIER (y compris reprise passé si incluse)
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montants H.T
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montants Taxes
-            </Text>
-            <Text style={[styles.tableCellHeader, { flex: 1 }]}>
-              Montant TTC
-            </Text>
-          </View>
-          <View style={styles.table}>
-            {calculationResult?.echeancier?.echeances?.map((echeance: any) => (
-              <View style={styles.tableRow} key={echeance.date}>
-                <Text style={[styles.tableCell, { flex: 2 }]}>
-                  PRIME pour la période du {formatDate(echeance.debutPeriode)}{" "}
-                  au {formatDate(echeance.finPeriode)}
-                </Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>
-                  {financial(
-                    echeance.rcd +
-                      echeance.pj +
-                      echeance.fraisGestion +
-                      echeance.reprise -
-                      echeance.taxe
-                  ) || ""}{" "}
-                  €
-                </Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>
-                  {financial(echeance.taxe) || ""} €
-                </Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>
-                  {financial(echeance.totalTTC) || ""} €
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
+        {/* Échéancier pour 2025 */}
+        {renderEcheancierTable(2025, getEcheancesByYear(2025))}
+
+        {/* Échéancier pour 2026 */}
+        {renderEcheancierTable(2026, getEcheancesByYear(2026))}
 
         <View
           style={{
@@ -1444,7 +1516,7 @@ const OfferLetterPDF = ({
           }}
         >
           <Text style={styles.paragraph}>Dont TTC € __________</Text>
-          <Text style={styles.paragraph}>□</Text>
+          <Text style={styles.paragraph}> </Text>
         </View>
 
         <Text style={styles.paragraphSmall}>
@@ -1476,14 +1548,11 @@ const OfferLetterPDF = ({
             {selectedDocuments && selectedDocuments.length > 0 ? (
               <View
                 style={{
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  gap: 0,
+                  flexDirection: "column",
                 }}
               >
                 {selectedDocuments.map((document, idx) => (
                   <Text style={styles.paragraphSmall} key={idx}>
-                    {" "}
                     - {document}
                   </Text>
                 ))}
@@ -1521,7 +1590,9 @@ const OfferLetterPDF = ({
           </View>
         </View>
 
-        <Text style={[styles.subsectionHeader, { color: "#1e40af" }]}>
+        <Text
+          style={[styles.subsectionHeader, { color: "#1e40af", marginTop: 60 }]}
+        >
           Vos assureurs :
         </Text>
 
@@ -1658,8 +1729,9 @@ const OfferLetterPDF = ({
             <View style={styles.bulletItem}>
               <Text style={styles.bullet}>•</Text>
               <Text style={styles.bulletText}>
-                Le chiffre d'affaires annuel doit être ≤ 500 000€, ou ≤ 70 000€
-                pour les auto-entrepreneurs.
+                Le chiffre d'affaires annuel doit être inférieur ou égal à 1 000
+                000€, ou inférieur ou égal à 70 000€ pour les
+                auto-entrepreneurs.
               </Text>
             </View>
             <View style={styles.bulletItem}>
@@ -1674,16 +1746,18 @@ const OfferLetterPDF = ({
               <Text style={styles.bullet}>•</Text>
               <Text style={styles.bulletText}>
                 Pour les travaux soumis à l'assurance obligatoire : montant du
-                projet ≤ 500 000€, et coût total de construction (tous corps
-                d'état, y compris honoraires) ≤ 15 000 000€.
+                projet inférieur ou égal à 1 000 000€, et coût total de
+                construction (tous corps d'état, y compris honoraires) inférieur
+                ou égal à 15 000 000€.
               </Text>
             </View>
             <View style={styles.bulletItem}>
               <Text style={styles.bullet}>•</Text>
               <Text style={styles.bulletText}>
                 Pour les travaux non soumis à l'assurance obligatoire : montant
-                du projet ≤ 350 000€, et coût total de construction (tous corps
-                d'état, y compris honoraires) ≤ 1 000 000€.
+                du projet inférieur ou égal à 350 000€, et coût total de
+                construction (tous corps d'état, y compris honoraires) inférieur
+                ou égal à 1 000 000€.
               </Text>
             </View>
           </View>
@@ -1788,7 +1862,7 @@ const OfferLetterPDF = ({
         </Text>
 
         <Text style={styles.sectionHeader}>
-          BASE DE L'OFFRE ET DOCUMENTS RÉFÉRENCÉS
+          BASE DE L'OFFRE ET DOCUMENTS RÉFÉRENCÉES
         </Text>
 
         <Text style={styles.paragraphSmall}>
@@ -1827,7 +1901,17 @@ const OfferLetterPDF = ({
           </View>
         </View>
 
-        <View style={styles.footer}>
+        <View style={styles.signatureSection}>
+          <Text style={styles.signatureLabel}>Signature du souscripteur</Text>
+          <View style={styles.signatureBox}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureText}>Nom et prénom</Text>
+            <View style={[styles.signatureLine, { marginTop: 6 }]} />
+            <Text style={styles.signatureText}>Date et signature</Text>
+          </View>
+        </View>
+
+        {/* <View style={styles.footer}>
           <Text style={styles.footerText}>
             Document généré le {formatDate(new Date().toISOString())}
           </Text>
@@ -1835,7 +1919,7 @@ const OfferLetterPDF = ({
             Ceci est une prévisualisation et n'a pas de valeur contractuelle
             sans signature.
           </Text>
-        </View>
+        </View> */}
         <PageFooter />
       </Page>
     </Document>

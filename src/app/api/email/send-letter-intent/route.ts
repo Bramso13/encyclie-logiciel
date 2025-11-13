@@ -11,6 +11,12 @@ export async function POST(request: NextRequest) {
     const clientEmail = formData.get("clientEmail") as string;
     const pdfFile = formData.get("pdf") as File;
 
+    console.log("quoteId", quoteId);
+    console.log("brokerName", brokerName);
+    console.log("companyName", companyName);
+    console.log("clientEmail", clientEmail);
+    console.log("pdfFile", pdfFile);
+
     if (!quoteId || !brokerName || !companyName || !clientEmail || !pdfFile) {
       return NextResponse.json(
         { error: "Données manquantes" },

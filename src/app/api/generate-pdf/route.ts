@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
             quote,
             calculationResult,
             user: { ...user, brokerCode: brokerProfile.code },
+            baseUrl,
           });
           filename = `lettre-intention-${quote.reference || "devis"}.pdf`;
           break;

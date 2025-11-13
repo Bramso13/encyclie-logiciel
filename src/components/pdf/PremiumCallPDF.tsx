@@ -31,8 +31,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   periodBox: {
-    backgroundColor: "#f0fdf4",
-    border: "2px solid #22c55e",
+    backgroundColor: "#F39200",
+    border: "2px solid #C36C0B",
     borderRadius: 8,
     padding: 20,
     marginBottom: 20,
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   periodTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#15803d",
+    color: "black",
     marginBottom: 10,
   },
   periodDates: {
@@ -52,12 +52,12 @@ const styles = StyleSheet.create({
   periodDate: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#15803d",
+    color: "black",
   },
   periodSeparator: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#16a34a",
+    color: "black",
     marginHorizontal: 15,
   },
   summaryBox: {
@@ -98,27 +98,27 @@ const styles = StyleSheet.create({
     color: "#4f46e5",
   },
   tableTitle: {
-    fontSize: 16,
+    fontSize: 8,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 4,
     color: "#1f2937",
   },
   table: {
-    marginBottom: 20,
+    marginBottom: 8,
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#dcfce7",
-    borderBottom: "1px solid #22c55e",
+    backgroundColor: "#F39200",
+    borderBottom: "1px solid #C36C0B",
   },
   tableHeaderCell: {
     flex: 1,
-    padding: 8,
-    fontSize: 10,
+    padding: 2,
+    fontSize: 6,
     fontWeight: "bold",
     color: "#374151",
     textAlign: "center",
-    borderRight: "1px solid #22c55e",
+    borderRight: "1px solid #C36C0B",
   },
   tableRow: {
     flexDirection: "row",
@@ -126,8 +126,8 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     flex: 1,
-    padding: 8,
-    fontSize: 10,
+    padding: 2,
+    fontSize: 6,
     color: "#374151",
     textAlign: "center",
     borderRight: "1px solid #e5e7eb",
@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
   },
   detailHeader: {
     flexDirection: "row",
-    backgroundColor: "#fed7aa",
-    borderBottom: "1px solid #f97316",
+    backgroundColor: "#F39200",
+    borderBottom: "1px solid #C36C0B",
   },
   detailHeaderCell: {
     flex: 1,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#374151",
     textAlign: "center",
-    borderRight: "1px solid #f97316",
+    borderRight: "1px solid #C36C0B",
   },
   detailRow: {
     flexDirection: "row",
@@ -191,6 +191,36 @@ const styles = StyleSheet.create({
   contactInfo: {
     fontSize: 10,
     color: "#6b7280",
+  },
+  insuredInfo: {
+    backgroundColor: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 15,
+  },
+  insuredInfoTitle: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#1f2937",
+    marginBottom: 8,
+    borderBottom: "1px solid #d1d5db",
+    paddingBottom: 4,
+  },
+  insuredInfoRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  insuredInfoLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#6b7280",
+    width: 100,
+  },
+  insuredInfoValue: {
+    fontSize: 9,
+    color: "#374151",
+    flex: 1,
   },
 });
 
@@ -230,6 +260,58 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
           <View style={{ marginBottom: 10 }}>
             <Image src={logoSrc} style={{ width: 90, height: 45 }} />
           </View>
+
+          {/* Références de l'assuré */}
+          <View style={styles.insuredInfo}>
+            <Text style={styles.insuredInfoTitle}>Références de l'assuré</Text>
+            <View style={styles.insuredInfoRow}>
+              <Text style={styles.insuredInfoLabel}>Référence dossier :</Text>
+              <Text style={styles.insuredInfoValue}>
+                {quote?.reference || "N/A"}
+              </Text>
+            </View>
+            {quote?.formData?.companyName && (
+              <View style={styles.insuredInfoRow}>
+                <Text style={styles.insuredInfoLabel}>Raison sociale :</Text>
+                <Text style={styles.insuredInfoValue}>
+                  {quote.formData.companyName}
+                </Text>
+              </View>
+            )}
+            {quote?.formData?.directorName && (
+              <View style={styles.insuredInfoRow}>
+                <Text style={styles.insuredInfoLabel}>Dirigeant :</Text>
+                <Text style={styles.insuredInfoValue}>
+                  {quote.formData.directorName}
+                </Text>
+              </View>
+            )}
+            {(quote?.formData?.address ||
+              quote?.formData?.postalCode ||
+              quote?.formData?.city) && (
+              <View style={styles.insuredInfoRow}>
+                <Text style={styles.insuredInfoLabel}>Adresse :</Text>
+                <Text style={styles.insuredInfoValue}>
+                  {[
+                    quote?.formData?.address,
+                    quote?.formData?.postalCode,
+                    quote?.formData?.city,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                </Text>
+              </View>
+            )}
+            {quote?.formData?.siret && (
+              <View style={styles.insuredInfoRow}>
+                <Text style={styles.insuredInfoLabel}>SIRET :</Text>
+                <Text style={styles.insuredInfoValue}>
+                  {quote.formData.siret}
+                </Text>
+              </View>
+            )}
+          </View>
+
           <Text style={styles.greeting}>Monsieur,</Text>
           <Text style={styles.introduction}>
             vous trouverez ci-joint votre appel de prime ainsi que votre

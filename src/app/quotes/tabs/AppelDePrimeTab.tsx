@@ -35,13 +35,17 @@ export default function AppelDePrimeTab({
         const response = await fetch("/api/generate-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "premium-call", quote, calculationResult }),
+          body: JSON.stringify({
+            type: "premium-call",
+            quote,
+            calculationResult,
+          }),
         });
         if (!response.ok) throw new Error("Erreur génération PDF");
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         currentPdfUrl = url;
-        
+
         if (isMounted) {
           // Nettoyer l'ancienne URL avant de définir la nouvelle
           setPdfUrl((prevUrl) => {
@@ -79,7 +83,11 @@ export default function AppelDePrimeTab({
       const response = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "premium-call", quote, calculationResult }),
+        body: JSON.stringify({
+          type: "premium-call",
+          quote,
+          calculationResult,
+        }),
       });
       if (!response.ok) throw new Error("Erreur génération PDF");
       const blob = await response.blob();
@@ -121,7 +129,7 @@ export default function AppelDePrimeTab({
         "companyName",
         quote.formData?.companyName || quote.companyData?.companyName || ""
       );
-      formData.append("clientEmail", brokerInfo.email || "");
+      formData.append("clientEmail", session?.user?.email || "");
       formData.append(
         "pdf",
         pdfBlob,
@@ -203,5 +211,3 @@ export default function AppelDePrimeTab({
     </div>
   );
 }
-
-

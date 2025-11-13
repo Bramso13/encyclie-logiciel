@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Pencil, Check, X, Save } from "lucide-react";
 import ActivityBreakdownField from "@/components/quotes/ActivityBreakdown";
 import { tableauTax } from "@/lib/tarificateurs/rcd";
+import { useSession } from "@/lib/auth-client";
 
 function formatFieldValue(value: any, fieldType: string): string {
   if (value === null || value === undefined) return "Non renseigné";
@@ -67,12 +68,15 @@ function prettifyKeyFr(key: string): string {
 }
 
 export default function FormDataTab({ quote }: { quote: Quote }) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [activeTab, setActiveTab] = useState(0);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<any>(null);
   const [tempFormData, setTempFormData] = useState<any>(quote.formData || {});
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   // Récupérer la configuration depuis quote.product
   const stepConfig = quote.product?.stepConfig as any;
@@ -81,14 +85,27 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
   const startEditing = (fieldKey: string, currentValue: any) => {
     setEditingField(fieldKey);
     setEditValue(currentValue);
+    setFieldError(null);
   };
 
   const cancelEditing = () => {
     setEditingField(null);
     setEditValue(null);
+    setFieldError(null);
   };
 
   const saveField = (fieldKey: string) => {
+    // Validation pour le champ territory - empêcher MAYOTTE pour les non-admins
+    if (fieldKey === "territory" && !isAdmin) {
+      const territoryValue = editValue?.toString().toUpperCase();
+      if (territoryValue === "MAYOTTE") {
+        setFieldError(
+          "Ce territoire n'est pas disponible. Veuillez contacter l'administrateur pour faire le calcul."
+        );
+        return;
+      }
+    }
+
     // Mettre à jour le formData temporaire
     setTempFormData({
       ...tempFormData,
@@ -97,6 +114,7 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
     setHasChanges(true);
     setEditingField(null);
     setEditValue(null);
+    setFieldError(null);
   };
 
   const updateQuote = async () => {
@@ -187,19 +205,55 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
             />
           );
         case "select":
+          // Pour le champ territory, filtrer MAYOTTE si l'utilisateur n'est pas admin
+          // Mais permettre de garder MAYOTTE si c'était déjà la valeur
+          const currentValueUpper =
+            editValue?.toString().toUpperCase() === "MAYOTTE";
+          const options =
+            key === "territory" && !isAdmin
+              ? fieldConfig?.options?.filter((option: any) => {
+                  // Garder MAYOTTE dans les options seulement si c'est la valeur actuelle
+                  if (option.value.toUpperCase() === "MAYOTTE") {
+                    return currentValueUpper;
+                  }
+                  return true;
+                })
+              : fieldConfig?.options;
+
           return (
-            <select
-              value={editValue || ""}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            >
-              <option value="">Sélectionner...</option>
-              {fieldConfig?.options?.map((option: any) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div>
+              <select
+                value={editValue || ""}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  // Vérifier si l'utilisateur essaie de sélectionner MAYOTTE
+                  if (
+                    key === "territory" &&
+                    !isAdmin &&
+                    newValue.toUpperCase() === "MAYOTTE"
+                  ) {
+                    setFieldError(
+                      "Ce territoire n'est pas disponible. Veuillez contacter l'administrateur pour faire le calcul."
+                    );
+                    return;
+                  }
+                  setEditValue(newValue);
+                  // Réinitialiser l'erreur si elle existe
+                  if (fieldError) setFieldError(null);
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              >
+                <option value="">Sélectionner...</option>
+                {options?.map((option: any) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {fieldError && key === "territory" && (
+                <p className="mt-2 text-sm text-red-600">{fieldError}</p>
+              )}
+            </div>
           );
         case "activity_breakdown":
           return (

@@ -2,9 +2,7 @@ import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
 import { CalculationResult, Quote } from "@/lib/types";
 import { pdf } from "@react-pdf/renderer";
 import { useState, useEffect } from "react";
-import Image from "next/image";
-import { getTaxeByRegion, tableauTax } from "@/lib/tarificateurs/rcd";
-import { getBrokerCode, getBrokerInfo } from "@/lib/utils";
+import { getBrokerInfo } from "@/lib/utils";
 
 export default function LetterTab({
   quote,
@@ -16,38 +14,65 @@ export default function LetterTab({
   session: any;
 }) {
   const [generatingLetterPDF, setGeneratingLetterPDF] = useState(false);
-  const [brokerCode, setBrokerCode] = useState("");
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(true);
+
+  // Charger le PDF au montage du composant
   useEffect(() => {
-    const fetchBrokerCode = async () => {
-      const code = await getBrokerCode(session?.user?.id);
-      console.log("code", code);
-      if (code) {
-        setBrokerCode(code);
+    let currentPdfUrl: string | null = null;
+    let isMounted = true;
+
+    const loadPDF = async () => {
+      if (!quote || !calculationResult) {
+        if (isMounted) setLoadingPdf(false);
+        return;
+      }
+      try {
+        if (isMounted) setLoadingPdf(true);
+
+        const response = await fetch("/api/generate-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "letter-of-intent",
+            quote,
+            calculationResult,
+          }),
+        });
+        if (!response.ok) throw new Error("Erreur génération PDF");
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        currentPdfUrl = url;
+
+        if (isMounted) {
+          // Nettoyer l'ancienne URL avant de définir la nouvelle
+          setPdfUrl((prevUrl) => {
+            if (prevUrl) {
+              window.URL.revokeObjectURL(prevUrl);
+            }
+            return url;
+          });
+          setLoadingPdf(false);
+        } else {
+          // Si le composant est démonté, nettoyer immédiatement
+          window.URL.revokeObjectURL(url);
+        }
+      } catch (e) {
+        console.error("Erreur chargement PDF:", e);
+        if (isMounted) setLoadingPdf(false);
       }
     };
-    fetchBrokerCode();
-  }, [session?.user?.id]);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "";
-    try {
-      return new Date(dateString).toLocaleDateString("fr-FR");
-    } catch {
-      return dateString;
-    }
-  };
+    loadPDF();
 
-  // Fonction qui transforme une date format français (JJ/MM/AAAA) en date anglaise (YYYY-MM-DD)
-  function frenchToEnglishDate(frenchDate: string): string {
-    // gestion des formats JJ/MM/AAAA ou J/M/AAAA
-    const parts = frenchDate.split("/");
-    if (parts.length !== 3) return frenchDate;
-    // Pad month and day if needed
-    const day = parts[0].padStart(2, "0");
-    const month = parts[1].padStart(2, "0");
-    const year = parts[2].length === 2 ? "20" + parts[2] : parts[2];
-    return `${year}-${month}-${day}`;
-  }
+    // Nettoyer l'URL lors du démontage
+    return () => {
+      isMounted = false;
+      if (currentPdfUrl) {
+        window.URL.revokeObjectURL(currentPdfUrl);
+      }
+    };
+  }, [quote, calculationResult]);
 
   // Fonctions pour la lettre d'intention
   const handleGeneratePDF = async () => {
@@ -116,24 +141,31 @@ export default function LetterTab({
       }
       const brokerInfo = await getBrokerInfo(session?.user?.id);
 
+      if (!brokerInfo) {
+        alert("Impossible d'envoyer l'email : broker non trouvé");
+        return;
+      }
+      console.log("brokerInfo", brokerInfo);
+
       // Générer le PDF
       const pdfBlob = await pdf(
         <LetterOfIntentPDF
           quote={quote}
           calculationResult={calculationResult}
           user={{ ...session?.user, brokerCode: brokerInfo.code }}
+          baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
         />
       ).toBlob();
 
       // Préparer les données pour l'API
       const formData = new FormData();
       formData.append("quoteId", quote.id);
-      formData.append("brokerName", brokerInfo.name || "");
+      formData.append("brokerName", session?.user?.name || "");
       formData.append(
         "companyName",
         quote.formData.companyName || quote.companyData.companyName
       );
-      formData.append("clientEmail", brokerInfo.email || "");
+      formData.append("clientEmail", session?.user?.email || "");
       formData.append(
         "pdf",
         pdfBlob,
@@ -177,47 +209,7 @@ export default function LetterTab({
             disabled={generatingLetterPDF}
             className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {generatingLetterPDF ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Génération...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Générer PDF
-              </>
-            )}
+            {generatingLetterPDF ? "Génération..." : "Télécharger PDF"}
           </button>
           <button
             onClick={handleSendEmail}
@@ -241,765 +233,34 @@ export default function LetterTab({
         </div>
       </div>
 
-      {/* Lettre d'intention */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-8">
-          <div className="max-w-4xl mx-auto">
-            {/* En-tête avec validité et logo */}
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex flex-col">
-                <div className="text-sm font-bold text-gray-900">
-                  {new Date().toLocaleDateString("fr-FR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })}
-                </div>
-                <div className="text-sm font-bold text-gray-900">
-                  Nom du courtier : {session?.user?.name}
-                </div>
-                <div className="text-sm font-bold text-gray-900">
-                  Code du courtier : {brokerCode}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="w-20 h-10 rounded mb-2 mx-auto">
-                  <Image
-                    src="/couleur_1.png"
-                    alt="ENCYCLIE CONSTRUCTION"
-                    width={80}
-                    height={40}
-                  />
-                </div>
-                <div className="text-sm font-bold text-gray-900">
-                  ENCYCLIE CONSTRUCTION
-                </div>
-              </div>
+      {/* Affichage du PDF */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {loadingPdf ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+              <span className="text-gray-600">Chargement du document...</span>
             </div>
-
-            {/* Destinataire */}
-            <div className="mb-4">
-              <div className="text-sm text-gray-700">
-                A l'attention de {quote?.formData?.directorName}
-              </div>
-            </div>
-
-            {/* Objet */}
-            <div className="mb-4">
-              <div className="text-sm font-bold text-gray-900">
-                Objet: Indication tarifaire RC Décennale
-              </div>
-            </div>
-
-            {/* Salutation */}
-            <div className="mb-4">
-              <div className="text-sm text-gray-700">
-                Cher Monsieur, Madame,
-              </div>
-            </div>
-
-            {/* Accusé de réception */}
-            <div className="mb-6">
-              <div className="text-sm text-gray-700">
-                Nous accusons réception de votre demande et nous vous
-                remercions:
-              </div>
-            </div>
-
-            {/* Informations entreprise */}
-            <div className="mb-6 space-y-2">
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">
-                  Nom de la société / Raison sociale :
-                </span>
-                <span>
-                  {quote?.formData?.companyName ||
-                    quote?.companyData?.companyName ||
-                    "________________"}
-                </span>
-              </div>
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">Forme juridique :</span>
-                <span>
-                  {quote?.formData?.legalForm ||
-                    quote?.companyData?.legalForm ||
-                    "________________"}
-                </span>
-              </div>
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">
-                  Nom & Prénom du ou des dirigeants :
-                </span>
-                <span>
-                  {quote?.formData?.directorName || "________________"}
-                </span>
-              </div>
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">Rue du siège social :</span>
-                <span>
-                  {quote?.formData?.address ||
-                    quote?.companyData?.address ||
-                    "________________"}
-                </span>
-              </div>
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">
-                  CP Ville du siège social :
-                </span>
-                <span>
-                  {quote?.formData?.postalCode + " " + quote?.formData?.city ||
-                    "________________"}
-                </span>
-              </div>
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">N° SIRET</span>
-                <span>
-                  {quote?.formData?.siret ||
-                    quote?.companyData?.siret ||
-                    "________________"}
-                </span>
-              </div>
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">Chiffre d'affaires :</span>
-                <span>
-                  {quote?.formData?.chiffreAffaires || "________________"} €
-                </span>
-              </div>
-              <div className="flex text-sm">
-                <span className="font-bold mr-2">Date d'effet :</span>
-                <span>
-                  {quote?.formData?.dateDeffet
-                    ? new Date(quote.formData.dateDeffet).toLocaleDateString(
-                        "fr-FR"
-                      )
-                    : "________________"}
-                </span>
-              </div>
-              <div className="text-sm">
-                <span className="font-bold mr-2">
-                  Effectif y compris le chef d'entreprise :
-                </span>
-                <span>
-                  {quote?.formData?.nombreSalaries || "xxx"} personnes
-                </span>
-              </div>
-              <div className="text-sm">
-                <span className="font-bold mr-2">
-                  Date de création de l'entreprise :
-                </span>
-                <span>
-                  {new Date(
-                    quote?.formData?.companyCreationDate ||
-                      quote?.companyData?.creationDate
-                  ).toLocaleDateString("fr-FR") || "xxx"}
-                </span>
-              </div>
-            </div>
-
-            {/* Expérience professionnelle
-                  <div className="mb-6">
-                    <div className="text-sm font-bold text-gray-900 mb-3">
-                      Expérience professionnelle (y compris en qualité de
-                      salarié) :
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center text-sm">
-                        <div
-                          className={`w-3 h-3 border border-gray-400 mr-2 ${
-                            parseFloat(quote?.formData?.experienceMetier) < 1
-                              ? "bg-gray-900"
-                              : ""
-                          }`}
-                        ></div>
-                        <span>Moins de 1 an (refus):</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <div
-                          className={`w-3 h-3 border border-gray-400 mr-2 ${
-                            parseFloat(quote?.formData?.experienceMetier) >=
-                              1 &&
-                            parseFloat(quote?.formData?.experienceMetier) < 3
-                              ? "bg-gray-900"
-                              : ""
-                          }`}
-                        ></div>
-                        <span>1 à 3 ans:</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <div
-                          className={`w-3 h-3 border border-gray-400 mr-2 ${
-                            parseFloat(quote?.formData?.experienceMetier) >=
-                              3 &&
-                            parseFloat(quote?.formData?.experienceMetier) < 5
-                              ? "bg-gray-900"
-                              : ""
-                          }`}
-                        ></div>
-                        <span>3 à 5 ans:</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <div
-                          className={`w-3 h-3 border border-gray-400 mr-2 ${
-                            parseFloat(quote?.formData?.experienceMetier) >= 5
-                              ? "bg-gray-900"
-                              : ""
-                          }`}
-                        ></div>
-                        <span>Sup à 5 ans:</span>
-                      </div>
-                    </div>
-                  </div> */}
-
-            {/* Activités professionnelles */}
-            <div className="mb-6">
-              <div className="text-sm font-bold text-gray-900 mb-3">
-                Activités professionnelles :
-              </div>
-              <table className="min-w-full text-sm text-gray-700 border border-gray-300 rounded">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-2 py-1 border-b border-gray-300 text-left">
-                      Activité
-                    </th>
-                    <th className="px-2 py-1 border-b border-gray-300 text-left">
-                      Code
-                    </th>
-                    <th className="px-2 py-1 border-b border-gray-300 text-left">
-                      Part CA (%){" "}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quote?.formData?.activities &&
-                  quote.formData.activities.length > 0 ? (
-                    quote.formData.activities.map(
-                      (activity: any, idx: number) => (
-                        <tr key={idx} className="border-b border-gray-200">
-                          <td className="px-2 py-1">
-                            {tableauTax.find(
-                              (tax) => tax.code.toString() === activity.code
-                            )?.title || "—"}
-                          </td>
-                          <td className="px-2 py-1">{activity.code || "—"}</td>
-                          <td className="px-2 py-1">
-                            {activity.caSharePercent || "—"} %
-                          </td>
-                        </tr>
-                      )
-                    )
-                  ) : (
-                    <tr>
-                      <td className="px-2 py-1" colSpan={3}>
-                        ________________
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {calculationResult?.echeancier?.echeances &&
-              calculationResult.echeancier.echeances.length > 0 && (
-                <div className="space-y-6">
-                  {/* Échéancier détaillé */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="px-4 py-2 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center">
-                        <svg
-                          className="w-4 h-4 mr-2 text-emerald-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        Échéancier de paiement détaillé
-                      </h3>
-                    </div>
-                    <div className="p-3">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="px-2 py-1 text-left font-medium text-gray-500">
-                                Début période
-                              </th>
-                              <th className="px-2 py-1 text-left font-medium text-gray-500">
-                                Fin période
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                RCD HT
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                PJ HT
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                Frais HT
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                Frais Gestion HT
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                Reprise HT
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                Total HT
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                Taxe
-                              </th>
-                              <th className="px-2 py-1 text-right font-medium text-gray-500">
-                                Total TTC
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {calculationResult.echeancier.echeances.map(
-                              (echeance: any, index: number) => (
-                                <tr key={index} className="hover:bg-gray-50">
-                                  <td className="px-2 py-1 font-medium text-gray-900">
-                                    {echeance.date}
-                                  </td>
-                                  <td className="px-2 py-1 text-gray-600">
-                                    {echeance.finPeriode}
-                                  </td>
-                                  <td className="px-2 py-1 text-gray-600 text-right">
-                                    {echeance.rcd?.toLocaleString("fr-FR") ||
-                                      "0"}{" "}
-                                    €
-                                  </td>
-                                  <td className="px-2 py-1 text-gray-600 text-right">
-                                    {echeance.pj?.toLocaleString("fr-FR") ||
-                                      "0"}{" "}
-                                    €
-                                  </td>
-                                  <td className="px-2 py-1 text-gray-600 text-right">
-                                    {echeance.frais?.toLocaleString("fr-FR") ||
-                                      "0"}{" "}
-                                    €
-                                  </td>
-                                  <td className="px-2 py-1 text-gray-600 text-right">
-                                    {echeance.fraisGestion?.toLocaleString(
-                                      "fr-FR"
-                                    ) || "0"}{" "}
-                                    €
-                                  </td>
-                                  <td className="px-2 py-1 text-gray-600 text-right">
-                                    {echeance.reprise?.toLocaleString(
-                                      "fr-FR"
-                                    ) || "0"}{" "}
-                                    €
-                                  </td>
-                                  <td className="px-2 py-1 font-medium text-gray-900 text-right">
-                                    {echeance.totalHT?.toLocaleString(
-                                      "fr-FR"
-                                    ) || "0"}{" "}
-                                    €
-                                  </td>
-                                  <td className="px-2 py-1 text-orange-600 text-right">
-                                    {echeance.taxe?.toLocaleString("fr-FR") ||
-                                      "0"}{" "}
-                                    €
-                                  </td>
-                                  <td className="px-2 py-1 font-bold text-indigo-600 text-right">
-                                    {echeance.totalTTC?.toLocaleString(
-                                      "fr-FR"
-                                    ) || "0"}{" "}
-                                    €
-                                  </td>
-                                </tr>
-                              )
-                            )}
-                          </tbody>
-                          {/* Ligne de totaux */}
-                          <tfoot>
-                            <tr className="bg-gray-100 font-semibold">
-                              <td
-                                className="px-2 py-1 font-medium text-gray-900"
-                                colSpan={2}
-                              >
-                                TOTAUX
-                              </td>
-                              <td className="px-2 py-1 text-gray-900 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.rcd || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                              <td className="px-2 py-1 text-gray-900 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.pj || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                              <td className="px-2 py-1 text-gray-900 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.frais || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                              <td className="px-2 py-1 text-gray-900 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.fraisGestion || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                              <td className="px-2 py-1 text-gray-900 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.reprise || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                              <td className="px-2 py-1 text-gray-900 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.totalHT || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                              <td className="px-2 py-1 text-orange-600 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.taxe || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                              <td className="px-2 py-1 font-bold text-indigo-600 text-right">
-                                {calculationResult.echeancier.echeances
-                                  .reduce(
-                                    (sum: number, echeance: any) =>
-                                      sum + (echeance.totalTTC || 0),
-                                    0
-                                  )
-                                  .toLocaleString("fr-FR")}{" "}
-                                €
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            {/* Paragraphe d'introduction */}
-            <div className="mb-6 text-sm text-gray-700 leading-relaxed">
-              Nous sommes en mesure de vous confirmer notre intérêt pour vos
-              projets suite à une étude préliminaire, et votre demande d'une
-              approche tarifaire sera examinée, sous réserves du dossier complet
-              et sous réserves de la validation par la Compagnie à laquelle le
-              projet sera soumis, notre proposition tarifaire indicative est de
-              :
-            </div>
-
-            {/* Tableau de tarification */}
-            <div className="mb-6">
-              <div className="border border-gray-300 rounded-lg overflow-hidden">
-                <div className="grid grid-cols-4 bg-gray-100 border-b border-gray-300">
-                  <div className="p-2 text-xs font-bold text-center"></div>
-                  <div className="p-2 text-xs font-bold text-center">
-                    Montants H.T
-                  </div>
-                  <div className="p-2 text-xs font-bold text-center">
-                    Montants Taxes
-                  </div>
-                  <div className="p-2 text-xs font-bold text-center">
-                    Montant TTC
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 border-b border-gray-200">
-                  <div className="p-2 text-xs">
-                    PRIMES pour la période du{" "}
-                    {formatDate(
-                      frenchToEnglishDate(
-                        calculationResult?.echeancier?.echeances?.[0]?.date
-                      )
-                    )}{" "}
-                    au{" "}
-                    {formatDate(
-                      frenchToEnglishDate(
-                        calculationResult?.echeancier?.echeances?.[
-                          calculationResult?.echeancier?.echeances?.length - 1
-                        ]?.finPeriode || ""
-                      )
-                    )}
-                  </div>
-                  <div className="p-2 text-xs text-right"></div>
-                  <div className="p-2 text-xs text-right"></div>
-                  <div className="p-2 text-xs text-right"></div>
-                </div>
-
-                <div className="grid grid-cols-4 border-b border-gray-200">
-                  <div className="p-2 text-xs">
-                    Prime RCD provisionnelle hors reprise du passé
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.rcd - echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.rcd || 0) + (echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 border-b border-gray-200">
-                  <div className="p-2 text-xs">Prime Protection Juridique</div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.pj || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {(
-                      calculationResult?.echeancier?.echeances?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.pj || 0),
-                        0
-                      ) * getTaxeByRegion(quote?.formData?.territory)
-                    )?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {(
-                      calculationResult?.echeancier?.echeances?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.pj || 0),
-                        0
-                      ) *
-                      (1 + getTaxeByRegion(quote?.formData?.territory))
-                    ).toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 border-b border-gray-200">
-                  <div className="p-2 text-xs">Montant total RCD + PJ</div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.rcd || 0) + (echeance.pj || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum +
-                          (echeance.rcd || 0) +
-                          (echeance.pj || 0) +
-                          (echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 border-b border-gray-200">
-                  <div className="p-2 text-xs">Honoraire de gestion</div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.fraisGestion || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right"></div>
-                  <div className="p-2 text-xs text-right"></div>
-                </div>
-
-                <div className="grid grid-cols-4 border-b border-gray-200">
-                  <div className="p-2 text-xs">
-                    Montant RCD +PJ+ Frais gestion
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum +
-                          (echeance.rcd || 0) +
-                          (echeance.pj || 0) +
-                          (echeance.fraisGestion || 0) -
-                          (echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum +
-                          (echeance.rcd || 0) +
-                          (echeance.pj || 0) +
-                          (echeance.fraisGestion || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                </div>
-
-                {/* <div className="grid grid-cols-4 border-b border-gray-200">
-                        <div className="p-2 text-xs">Prime RCD pour la garantie reprise du passé (Prime unique à la souscription)</div>
-                        <div className="p-2 text-xs text-right">{calculationResult?.echeancier?.echeances?.reduce((sum: number, echeance: any) => sum + (echeance.reprise || 0), 0)?.toLocaleString("fr-FR") || ""} €</div>
-                        <div className="p-2 text-xs text-right"></div>
-                        <div className="p-2 text-xs text-right"></div>
-                      </div> */}
-                <div className="grid grid-cols-4 border-b border-gray-200">
-                  <div className="p-2 text-xs">Honoraires de courtage :</div>
-                  <div className="p-2 text-xs text-right"></div>
-                  <div className="p-2 text-xs text-right"></div>
-                  <div className="p-2 text-xs text-right">
-                    {quote?.formData?.honoraireCourtier || "________________"} €
-                  </div>
-                </div>
-                <div className="grid grid-cols-4">
-                  <div className="p-2 text-xs">Prime totale à régler</div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum +
-                          (echeance.rcd || 0) +
-                          (echeance.pj || 0) +
-                          (echeance.fraisGestion || 0) +
-                          (echeance.reprise || 0) -
-                          (echeance.taxe || 0) +
-                          (Number(quote?.formData?.honoraireCourtier) || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.taxe || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                  <div className="p-2 text-xs text-right">
-                    {calculationResult?.echeancier?.echeances
-                      ?.reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.totalTTC || 0),
-                        0
-                      )
-                      ?.toLocaleString("fr-FR") || ""}{" "}
-                    €
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Pied de page */}
-            <div className="mt-8 pt-4 border-t border-gray-200 text-xs text-gray-600 leading-relaxed">
-              <p>
-                ENCYCLIE CONSTRUCTION - 42 Rue Notre-Dame des Victoire, 75002
-                PARIS - SAS au capital de 1 000 € - SIREN 897 796 785 - RCS ST
-                NAZAIRE - N° ORIAS : 21 004 564 - www.orias.fr - Sous le
-                contrôle de l'ACPR, Autorité de Contrôle Prudentiel et de
-                Résolution - 4 Place de Budapest, CS 92459, 75436 PARIS CEDEX 09
-                - acpr.banque-france.fr - Assurance de Responsabilité Civile
-                Professionnelle et Garantie Financière conformes au Code des
-                assurances.
+          </div>
+        ) : pdfUrl ? (
+          <iframe
+            src={pdfUrl}
+            className="w-full"
+            style={{ height: "calc(100vh - 300px)", minHeight: "800px" }}
+            title="Lettre d'intention PDF"
+          />
+        ) : (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-center">
+              <p className="text-gray-500 mb-2">Aucun document disponible</p>
+              <p className="text-sm text-gray-400">
+                {!calculationResult
+                  ? "Le calcul de prime est requis pour générer le document"
+                  : "Erreur lors du chargement du document"}
               </p>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1380,7 +1380,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                             >
                               Voir détails
                             </button>
-                            {(quote.status === "SUBMITTED" ||
+                            {/* {(quote.status === "SUBMITTED" ||
                               quote.status === "IN_PROGRESS") && (
                               <>
                                 <button className="text-green-600 hover:text-green-900">
@@ -1390,7 +1390,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                   Rejeter
                                 </button>
                               </>
-                            )}
+                            )} */}
                           </td>
                         </tr>
                       ))

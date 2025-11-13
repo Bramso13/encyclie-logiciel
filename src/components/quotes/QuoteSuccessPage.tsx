@@ -65,6 +65,7 @@ export default function QuoteSuccessPage({
           quote={quote}
           calculationResult={calculationResult || null}
           user={{ ...session?.user, brokerCode }}
+          baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
         />
       );
       console.log("pdfLetter", pdfLetter);
@@ -80,6 +81,7 @@ export default function QuoteSuccessPage({
           "companyName",
           quote.formData.companyName || quote.companyData.companyName
         );
+        formData.append("brokerName", session?.user?.name || "");
         formData.append("clientEmail", session.user.email);
         formData.append(
           "pdf",

@@ -63,8 +63,8 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#dcfce7",
-    borderBottom: "1px solid #22c55e",
+    backgroundColor: "#F39200",
+    borderBottom: "1px solid #C36C0B",
   },
   th: {
     flex: 1,
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#374151",
     textAlign: "center",
-    borderRight: "1px solid #22c55e",
+    borderRight: "1px solid #C36C0B",
   },
   row: {
     flexDirection: "row",
@@ -429,20 +429,25 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           </Text>
           <Text>
             La précédente assurance a été souscrite le :{" "}
-            {datePrecedenteAssurance}
+            {!formData?.assureurDefaillant
+              ? datePrecedenteAssurance
+              : "Assureur défaillant"}
           </Text>
           <Text>
             Le contrat d'assurance de l'entreprise est-il encore en cours :{" "}
             {contratEnCours}
           </Text>
-          <Text>
+          {/* <Text>
             Le contrat a été résilié : {contratResilie ? "OUI" : "NON"}
             {formData?.previousInsurer
               ? `, autre contrat chez ${formData.previousInsurer}`
               : ""}
-          </Text>
+          </Text> */}
           <Text>
-            Par l'assuré : motif de la résiliation : {motifResiliation}
+            Par l'assuré : motif de la résiliation :{" "}
+            {!formData?.assureurDefaillant
+              ? motifResiliation
+              : "Assureur défaillant"}
           </Text>
           <Text>
             Par l'assureur : motif de la résiliation :{" "}
@@ -805,9 +810,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           <Text style={styles.title}>CHAPITRE 4 – CLAUSES SPÉCIALES</Text>
           <Text style={styles.strong}>
             - La garantie s'applique pour des marchés de travaux dont le montant
-            n'excède pas 500.000 EUR et pour des opérations de construction dont
-            le coût total (Tous corps d'état et y compris honoraires) n'excède
-            pas 15.000.000 EUR pour les ouvrages soumis à l'obligation
+            n'excède pas 1 000 000 EUR et pour des opérations de construction
+            dont le coût total (Tous corps d'état et y compris honoraires)
+            n'excède pas 15.000.000 EUR pour les ouvrages soumis à l'obligation
             d'assurance. De même, la garantie s'applique pour des marchés dont
             le montant n'excède pas 350 000 EUR et pour des opérations de
             construction dont le coût total (Tous corps d'état et y compris
