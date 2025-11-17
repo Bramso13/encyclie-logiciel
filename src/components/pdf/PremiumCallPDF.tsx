@@ -251,7 +251,38 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
 }) => {
   const currentDate = new Date().toLocaleDateString("fr-FR");
   const logoSrc = `${baseUrl ? baseUrl : ""}/couleur_1.png`;
-
+  const PageFooter = () => (
+    <View
+      style={{
+        fontSize: 6,
+        color: "#374151",
+        textAlign: "center",
+        lineHeight: 1.3,
+        paddingTop: 8,
+        borderTop: "1px solid #d1d5db",
+        marginBottom: 20,
+        marginTop: 20,
+      }}
+    >
+      <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
+        Distribué et géré par :
+      </Text>
+      <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
+        ENCYCLIE CONSTRUCTION – 42 Rue Notre-Dame des Victoire, 75002 PARIS -
+        SAS au capital de 1 000 € - SIREN 897 796 785 – RCS ST NAZAIRE – N°
+        ORIAS : 21 004 564 –
+      </Text>
+      <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
+        www.orias.fr – Sous le contrôle de l'ACPR, Autorité de Contrôle
+        Prudentiel et de Résolution – 4 Place de Budapest, CS 92459, 75436 PARIS
+        CEDEX 09 – acpr.banque-france.fr –
+      </Text>
+      <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
+        Assurance de Responsabilité Civile Professionnelle et Garantie
+        Financière conformes au Code des assurances.
+      </Text>
+    </View>
+  );
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -495,6 +526,7 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
             cotisation.encycliebat@encyclie-construction.fr
           </Text>
         </View>
+        <PageFooter />
       </Page>
     </Document>
   );

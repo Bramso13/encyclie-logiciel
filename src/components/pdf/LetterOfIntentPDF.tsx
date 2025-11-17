@@ -925,17 +925,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
         {renderPricingTable(echeances2026, 2026)}
 
         {/* Pied de page */}
-        <View style={styles.footer}>
-          <Text>
-            ENCYCLIE CONSTRUCTION - 42 Rue Notre-Dame des Victoire, 75002 PARIS
-            - SAS au capital de 1 000 € - SIREN 897 796 785 - RCS ST NAZAIRE -
-            N° ORIAS : 21 004 564 - www.orias.fr - Sous le contrôle de l'ACPR,
-            Autorité de Contrôle Prudentiel et de Résolution - 4 Place de
-            Budapest, CS 92459, 75436 PARIS CEDEX 09 - acpr.banque-france.fr -
-            Assurance de Responsabilité Civile Professionnelle et Garantie
-            Financière conformes au Code des assurances.
-          </Text>
-        </View>
+
         <PageFooter />
       </Page>
     </Document>
