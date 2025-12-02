@@ -1083,7 +1083,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
   let premierPaiementDeLAnnee = true;
   let totalPaiement = 0;
 
-  if (nbJoursDepuisDateDebut > 1) {
+  if (nbJoursDepuisDateDebut >= 0) {
     const nbAnneeAEcheance = 2;
     console.log("nbAnneeAEcheance :", nbAnneeAEcheance);
 
@@ -1239,7 +1239,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       premierPaiementDeLAnnee = false;
     }
   }
-
+  console.log("echeances", echeances);
   return {
     echeances,
     nbEcheances: nbEcheancesParAn,
