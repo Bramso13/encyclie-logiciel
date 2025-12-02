@@ -723,6 +723,10 @@ export function calculPrimeRCD(params: {
       1
     );
 
+  const tableauTax = getTableauTaxByYear(
+    new Date(dateEffet ?? new Date()).getFullYear()
+  );
+
   activites.forEach((activite) => {
     const degMax = tableauDeg.find(
       (deg) => deg.code === activite.code
