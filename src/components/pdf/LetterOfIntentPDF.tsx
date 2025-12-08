@@ -715,7 +715,13 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
           <Text style={[styles.tableCell, styles.tableCellAmount]}>
             {financial(totals.taxe) || ""} €
           </Text>
-          <Text style={[styles.tableCell, styles.tableCellAmount]}>
+          <Text
+            style={[
+              styles.tableCell,
+              styles.tableCellAmount,
+              { fontWeight: "bold" },
+            ]}
+          >
             {financial(primeTotaleTTC) || ""} €
           </Text>
         </View>
@@ -913,16 +919,18 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
 
         {/* Échéancier détaillé - 2025 */}
         <PageFooter />
-        {renderScheduleTable(echeances2025, 2025)}
-
-        {/* Échéancier détaillé - 2026 */}
-        {renderScheduleTable(echeances2026, 2026)}
 
         {/* Tableau de tarification - 2025 */}
-        {renderPricingTable(echeances2025, 2025)}
+        <div style={{ marginTop: 80 }}>
+          {renderPricingTable(echeances2025, 2025)}
 
-        {/* Tableau de tarification - 2026 */}
-        {renderPricingTable(echeances2026, 2026)}
+          {/* Tableau de tarification - 2026 */}
+          {renderPricingTable(echeances2026, 2026)}
+          {renderScheduleTable(echeances2025, 2025)}
+
+          {/* Échéancier détaillé - 2026 */}
+          {renderScheduleTable(echeances2026, 2026)}
+        </div>
 
         {/* Pied de page */}
 

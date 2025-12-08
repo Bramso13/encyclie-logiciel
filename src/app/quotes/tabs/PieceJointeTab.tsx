@@ -314,7 +314,7 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
   return (
     <div className="space-y-6">
       {/* Documents requis du produit */}
-      {requiredDocTypes.length > 0 && (
+      {/* {requiredDocTypes.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <h3 className="font-medium text-yellow-800 mb-3">
             Documents obligatoires pour ce produit
@@ -367,7 +367,7 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
             })}
           </div>
         </div>
-      )}
+      )} */}
 
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Gestion des documents</h2>
