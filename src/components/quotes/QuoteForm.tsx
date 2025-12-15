@@ -184,7 +184,10 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
           // Validate specific field types
           if (formData[fieldName]) {
             if (fieldName === "territory") {
-              if ((formData[fieldName] as string).toLowerCase() === "mayotte") {
+              if (
+                (formData[fieldName] as string).toLowerCase() === "mayotte" &&
+                session?.user.name.toLowerCase() !== "david gilles"
+              ) {
                 newErrors[
                   fieldName
                 ] = `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
