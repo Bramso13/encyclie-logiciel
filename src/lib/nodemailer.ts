@@ -559,6 +559,134 @@ L'équipe Encyclie Construction
   };
 };
 
+// Template d'email pour la réinitialisation de mot de passe
+export const getPasswordResetTemplate = (
+  email: string,
+  resetUrl: string
+) => {
+  return {
+    subject: "Réinitialisation de votre mot de passe - Encyclie Construction",
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Réinitialisation de mot de passe</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background: #f9fafb;
+              padding: 30px;
+              border-radius: 0 0 8px 8px;
+            }
+            .card {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .button {
+              display: inline-block;
+              background: #4f46e5;
+              color: white;
+              padding: 12px 24px;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: 600;
+              margin: 20px 0;
+            }
+            .warning {
+              background: #fef3c7;
+              border-left: 4px solid #f59e0b;
+              padding: 15px;
+              border-radius: 4px;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              color: #6b7280;
+              font-size: 14px;
+              margin-top: 30px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🔐 Réinitialisation de mot de passe</h1>
+          </div>
+          
+          <div class="content">
+            <h2>Bonjour,</h2>
+            
+            <p>Vous avez demandé à réinitialiser votre mot de passe pour votre compte Encyclie Construction.</p>
+            
+            <div class="card">
+              <h3>🔑 Réinitialiser votre mot de passe</h3>
+              <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+              
+              <a href="${resetUrl}" class="button">Réinitialiser mon mot de passe</a>
+              
+              <p><small>Ce lien est valable pendant 1 heure.</small></p>
+            </div>
+            
+            <div class="warning">
+              <p><strong>⚠️ Sécurité :</strong></p>
+              <ul>
+                <li>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email</li>
+                <li>Ne partagez jamais ce lien avec quelqu'un d'autre</li>
+                <li>Le lien expirera automatiquement après 1 heure</li>
+              </ul>
+            </div>
+            
+            <p>Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :</p>
+            <p style="word-break: break-all; color: #4f46e5;">${resetUrl}</p>
+            
+            <p>Cordialement,<br>L'équipe Encyclie Construction</p>
+          </div>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Encyclie Construction. Tous droits réservés.</p>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+Bonjour,
+
+Vous avez demandé à réinitialiser votre mot de passe pour votre compte Encyclie Construction.
+
+Pour réinitialiser votre mot de passe, visitez ce lien :
+${resetUrl}
+
+Ce lien est valable pendant 1 heure.
+
+⚠️ Sécurité :
+- Si vous n'avez pas demandé cette réinitialisation, ignorez cet email
+- Ne partagez jamais ce lien avec quelqu'un d'autre
+- Le lien expirera automatiquement après 1 heure
+
+Cordialement,
+L'équipe Encyclie Construction
+    `,
+  };
+};
+
 // Fonction d'envoi d'email
 export const sendEmail = async (
   to: string,

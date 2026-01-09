@@ -21,6 +21,10 @@ export default function LoginPage() {
       setSuccessMessage(
         "Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter."
       );
+    } else if (message === "password-reset") {
+      setSuccessMessage(
+        "Votre mot de passe a été réinitialisé avec succès ! Vous pouvez maintenant vous connecter avec votre nouveau mot de passe."
+      );
     }
   }, [searchParams]);
 
@@ -134,7 +138,14 @@ export default function LoginPage() {
             </button>
           </div>
 
-          
+          <div className="text-center">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Mot de passe oublié ?
+            </Link>
+          </div>
         </form>
       </div>
     </div>
