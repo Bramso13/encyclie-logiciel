@@ -19,6 +19,25 @@
   }
 }
 
+input,
+textarea,
+select {
+  color: black !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important; /* gray-400 pour les placeholders */
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: black !important;
+  color: black !important;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
