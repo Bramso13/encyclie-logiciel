@@ -127,7 +127,7 @@ function calculateMajorations(params: {
     etp: calculMajETP(etp, nbActivites),
     qualif: qualif ? -0.05 : 0,
     dateCreation: calculMajAnciennete(dateCreation),
-    tempsSansActivite: calculMajTempsSansActivite(tempsSansActivite),
+    tempsSansActivite: !enCreation ? calculMajTempsSansActivite(tempsSansActivite) : 0,
     anneeExperience: calculMajExp(anneeExperience),
     assureurDefaillant:
       !enCreation &&
@@ -140,11 +140,11 @@ function calculateMajorations(params: {
       : calculMajNAAC(nombreAnneeAssuranceContinue),
     nonFournitureBilanN_1: enCreation ? 0 : nonFournitureBilanN_1 ? 0.5 : 0,
     sansActiviteDepuisPlusDe12MoisSansFermeture:
-      sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" ? 0.2 : 0,
+      sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" && !enCreation ? 0.2 : 0,
     absenceDeSinistreSurLes5DernieresAnnees:
-      absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT"
+      absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT" && !enCreation
         ? 0.2
-        : absenceDeSinistreSurLes5DernieresAnnees === "OUI"
+        : absenceDeSinistreSurLes5DernieresAnnees === "OUI" && !enCreation
         ? -0.1
         : 0,
   };
@@ -784,6 +784,7 @@ export function calculPrimeRCD(params: {
       ? returnValue.nbEcheances * fraisFractionnementPrime
       : 0
   );
+  console.log("taxeasurance", taxeAssurance)
   returnValue.autres.taxeAssurance = roundToTwoDecimals(
     returnValue.primeTotal * taxeAssurance +
       returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance

@@ -12,6 +12,7 @@ import ProductConfigTab from "@/components/admin/ProductConfigTab";
 import QuoteForm from "@/components/quotes/QuoteForm";
 import QuoteSuccessPage from "@/components/quotes/QuoteSuccessPage";
 import CorrespondanceTab from "@/components/admin/CorrespondanceTab";
+import { importBrokers } from "@/scripts/import-brokers";
 
 // Types exacts de la fonction calculPrimeRCD
 interface SimulatorParams {
@@ -420,6 +421,19 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     } catch (error) {
       console.error("Error creating broker:", error);
       throw error;
+    }
+  };
+
+  const handleImportBrokers = async () => {
+    try {
+      const results = await importBrokers(handleCreateBroker);
+      await fetchBrokers();
+      alert(
+        `Import terminé: ${results.success} réussis, ${results.skipped} ignorés, ${results.failed} échecs`
+      );
+    } catch (error) {
+      console.error("Error importing brokers:", error);
+      alert(error instanceof Error ? error.message : "Erreur lors de l'import");
     }
   };
 
@@ -1116,6 +1130,12 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                     />
                   </svg>
                   Ajouter un courtier
+                </button>
+                <button
+                  onClick={() => handleImportBrokers()}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Importer des courtiers
                 </button>
               </div>
               <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
