@@ -185,8 +185,8 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
           if (formData[fieldName]) {
             if (fieldName === "territory") {
               if (
-                (formData[fieldName] as string).toLowerCase() === "mayotte" &&
-                session?.user.name.toLowerCase() !== "david gilles"
+                (formData[fieldName] as string).toLowerCase() === "mayotte" && session &&
+                session.user.email.toLowerCase().trim() !== "dg@dgac.re"
               ) {
                 newErrors[
                   fieldName
