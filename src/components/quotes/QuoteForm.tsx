@@ -949,8 +949,10 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="text"
             id="companyName"
             value={companyData.companyName}
-            disabled
-            readOnly
+            onChange={(e) => {
+              handleCompanyDataChange("companyName", e.target.value);
+              handleFormDataChange("companyName", e.target.value);
+            }}
             className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
               errors.companyName ? "border-red-300" : "border-gray-300"
             }`}
@@ -971,8 +973,10 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="text"
             id="address"
             value={companyData.address}
-            disabled
-            readOnly
+            onChange={(e) => {
+              handleCompanyDataChange("address", e.target.value);
+              handleFormDataChange("address", e.target.value);
+            }}
             className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
               errors.address ? "border-red-300" : "border-gray-300"
             }`}
@@ -993,10 +997,17 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="text"
             id="postalCode"
             value={companyData.postalCode}
-            disabled
-            readOnly
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            onChange={(e) => {
+              handleCompanyDataChange("postalCode", e.target.value);
+              handleFormDataChange("postalCode", e.target.value);
+            }}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.postalCode ? "border-red-300" : "border-gray-300"
+            }`}
           />
+          {errors.postalCode && (
+            <p className="mt-1 text-sm text-red-600">{errors.postalCode}</p>
+          )}
         </div>
 
         <div>
@@ -1010,10 +1021,17 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="text"
             id="city"
             value={companyData.city}
-            disabled
-            readOnly
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            onChange={(e) => {
+              handleCompanyDataChange("city", e.target.value);
+              handleFormDataChange("city", e.target.value);
+            }}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.city ? "border-red-300" : "border-gray-300"
+            }`}
           />
+          {errors.city && (
+            <p className="mt-1 text-sm text-red-600">{errors.city}</p>
+          )}
         </div>
 
         <div>
@@ -1027,11 +1045,18 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="text"
             id="legalForm"
             value={companyData.legalForm}
-            disabled
-            readOnly
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            onChange={(e) => {
+              handleCompanyDataChange("legalForm", e.target.value);
+              handleFormDataChange("legalForm", e.target.value);
+            }}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.legalForm ? "border-red-300" : "border-gray-300"
+            }`}
             required
           />
+          {errors.legalForm && (
+            <p className="mt-1 text-sm text-red-600">{errors.legalForm}</p>
+          )}
         </div>
 
         <div>
@@ -1045,9 +1070,13 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="date"
             id="creationDate"
             value={companyData.creationDate}
-            disabled
-            readOnly
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            onChange={(e) => {
+              handleCompanyDataChange("creationDate", e.target.value);
+              handleFormDataChange("creationDate", e.target.value);
+            }}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+              errors.creationDate ? "border-red-300" : "border-gray-300"
+            }`}
             required
           />
           {errors.creationDate && (
@@ -1066,8 +1095,10 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             type="text"
             id="directorName"
             value={companyData.directorName}
-            disabled
-            readOnly
+            onChange={(e) => {
+              handleCompanyDataChange("directorName", e.target.value);
+              handleFormDataChange("directorName", e.target.value);
+            }}
             className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
               errors.directorName ? "border-red-300" : "border-gray-300"
             }`}
