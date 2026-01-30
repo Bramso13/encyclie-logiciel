@@ -35,7 +35,6 @@ export default function CalculationTab({
   calculationResult,
   calculationError,
   originalCalculationResult,
-  setEditingSections,
   setCalculationResult,
   setOriginalCalculationResult,
   reprisePasseEnabled,
@@ -46,17 +45,12 @@ export default function CalculationTab({
   recalculating,
   handleRecalculate,
   session,
-  setCurrentEditingSection,
-  setShowModificationPopup,
+  onOpenParameterEditor,
 }: {
   quote: Quote;
   calculationResult: any;
   calculationError: string | null;
   originalCalculationResult: any | null;
-  setEditingSections: (sections: {
-    majorations: boolean;
-    fraisEtTaxes: boolean;
-  }) => void;
   setCalculationResult: (result: CalculationResult) => void;
   setOriginalCalculationResult: (result: CalculationResult | null) => void;
   reprisePasseEnabled: boolean;
@@ -67,16 +61,12 @@ export default function CalculationTab({
   recalculating: boolean;
   handleRecalculate: () => void;
   session: any;
-  setCurrentEditingSection: (
-    section: "majorations" | "fraisEtTaxes" | null
-  ) => void;
-  setShowModificationPopup: (show: boolean) => void;
+  onOpenParameterEditor: () => void;
 }) {
   // Fonction pour obtenir des labels lisibles pour les champs
 
-  // Fonctions pour la gestion de la modification des calculs
+  // Fonction pour restaurer le calcul original
   const resetCalculationEditing = () => {
-    setEditingSections({ majorations: false, fraisEtTaxes: false });
     if (originalCalculationResult) {
       setCalculationResult(originalCalculationResult);
       setOriginalCalculationResult(null);
@@ -803,8 +793,7 @@ export default function CalculationTab({
                             if (!originalCalculationResult) {
                               setOriginalCalculationResult(calculationResult);
                             }
-                            setCurrentEditingSection("majorations");
-                            setShowModificationPopup(true);
+                            onOpenParameterEditor();
                           }}
                           className="flex items-center px-3 py-1.5 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md transition-colors"
                         >
@@ -821,7 +810,7 @@ export default function CalculationTab({
                               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                             />
                           </svg>
-                          Modifier
+                          Modifier les paramètres
                         </button>
                       )}
                     </div>
@@ -885,8 +874,7 @@ export default function CalculationTab({
                           if (!originalCalculationResult) {
                             setOriginalCalculationResult(calculationResult);
                           }
-                          setCurrentEditingSection("fraisEtTaxes");
-                          setShowModificationPopup(true);
+                          onOpenParameterEditor();
                         }}
                         className="flex items-center px-3 py-1.5 text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-md transition-colors"
                       >
@@ -1187,36 +1175,26 @@ export default function CalculationTab({
             calculationResult.echeancier.echeances.length > 0 && (
               <div className="space-y-6">
                 {/* Résumé des primes par année */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="max-w-2xl mx-auto">
                   {(() => {
-                    // Calculer la prime pour l'année en cours et N+1
-                    const currentYear = new Date().getFullYear().toString();
-                    const nextYear = (new Date().getFullYear() + 1).toString();
+                    // Utiliser uniquement l'année 2026 (filtrer les échéances de 2027)
+                    const currentYear = "2026";
 
                     const primeAnneeEnCours =
                       calculationResult.echeancier.echeances
-                        .filter((echeance: any) =>
-                          echeance.date.startsWith(currentYear)
-                        )
+                        .filter((echeance: any) => {
+                          const year = new Date(echeance.finPeriode).getFullYear();
+                          return year === 2026;
+                        })
                         .reduce(
                           (sum: number, echeance: any) =>
                             sum + (echeance.totalTTC || 0),
                           0
                         );
 
-                    const primeAnneeN1 = calculationResult.echeancier.echeances
-                      .filter((echeance: any) =>
-                        echeance.date.startsWith(nextYear)
-                      )
-                      .reduce(
-                        (sum: number, echeance: any) =>
-                          sum + (echeance.totalTTC || 0),
-                        0
-                      );
-
                     return (
                       <>
-                        {/* Prime année en cours */}
+                        {/* Prime année 2026 uniquement */}
                         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg p-6 text-white">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1229,7 +1207,7 @@ export default function CalculationTab({
                               <p className="text-emerald-100 text-xs">
                                 {
                                   calculationResult.echeancier.echeances.filter(
-                                    (e: any) => e.date.startsWith(currentYear)
+                                    (e: any) => new Date(e.finPeriode).getFullYear() === 2026
                                   ).length
                                 }{" "}
                                 échéance(s)
@@ -1247,43 +1225,6 @@ export default function CalculationTab({
                                   strokeLinejoin="round"
                                   strokeWidth={2}
                                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Prime année N+1 */}
-                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-blue-100 text-sm font-medium mb-2">
-                                Prime {nextYear}
-                              </p>
-                              <div className="text-3xl font-bold mb-1">
-                                {primeAnneeN1.toLocaleString("fr-FR")} €
-                              </div>
-                              <p className="text-blue-100 text-xs">
-                                {
-                                  calculationResult.echeancier.echeances.filter(
-                                    (e: any) => e.date.startsWith(nextYear)
-                                  ).length
-                                }{" "}
-                                échéance(s)
-                              </p>
-                            </div>
-                            <div className="p-4 bg-white/20 rounded-full">
-                              <svg
-                                className="w-8 h-8"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                                 />
                               </svg>
                             </div>
@@ -1355,8 +1296,13 @@ export default function CalculationTab({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                          {calculationResult.echeancier.echeances.map(
-                            (echeance: any, index: number) => (
+                          {calculationResult.echeancier.echeances
+                            .filter((echeance: any) => {
+                              // Filtrer pour n'afficher que les échéances de 2026
+                              const year = new Date(echeance.finPeriode).getFullYear();
+                              return year === 2026;
+                            })
+                            .map((echeance: any, index: number) => (
                               <tr key={index} className="hover:bg-gray-50">
                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
                                   {echeance.date}
@@ -1565,40 +1511,47 @@ export default function CalculationTab({
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {(() => {
+                            // Filtrer d'abord pour ne garder que les échéances de 2026
+                            const echeances2026 = calculationResult.echeancier.echeances.filter(
+                              (echeance: any) => {
+                                const year = new Date(echeance.finPeriode).getFullYear();
+                                return year === 2026;
+                              }
+                            );
+
                             // Grouper les échéances par année
-                            const echeancesParAnnee =
-                              calculationResult.echeancier.echeances.reduce(
-                                (acc: any, echeance: any) => {
-                                  const annee = echeance.date.split("/")[0];
-                                  if (!acc[annee]) {
-                                    acc[annee] = {
-                                      annee,
-                                      rcd: 0,
-                                      rcdHT: 0,
-                                      taxe: 0,
-                                      pj: 0,
-                                      frais: 0,
-                                      fraisGestion: 0,
-                                      reprise: 0,
-                                      totalTTC: 0,
-                                      nbEcheances: 0,
-                                    };
-                                  }
-                                  acc[annee].rcd += echeance.rcd || 0;
-                                  acc[annee].pj += echeance.pj || 0;
-                                  acc[annee].frais += echeance.frais || 0;
-                                  acc[annee].fraisGestion +=
-                                    echeance.fraisGestion || 0;
-                                  acc[annee].reprise += echeance.reprise || 0;
-                                  acc[annee].taxe += echeance.taxe || 0;
-                                  acc[annee].rcdHT +=
-                                    (echeance.rcd || 0) - (echeance.taxe || 0);
-                                  acc[annee].totalTTC += echeance.totalTTC || 0;
-                                  acc[annee].nbEcheances += 1;
-                                  return acc;
-                                },
-                                {}
-                              );
+                            const echeancesParAnnee = echeances2026.reduce(
+                              (acc: any, echeance: any) => {
+                                const annee = new Date(echeance.finPeriode).getFullYear().toString();
+                                if (!acc[annee]) {
+                                  acc[annee] = {
+                                    annee,
+                                    rcd: 0,
+                                    rcdHT: 0,
+                                    taxe: 0,
+                                    pj: 0,
+                                    frais: 0,
+                                    fraisGestion: 0,
+                                    reprise: 0,
+                                    totalTTC: 0,
+                                    nbEcheances: 0,
+                                  };
+                                }
+                                acc[annee].rcd += echeance.rcd || 0;
+                                acc[annee].pj += echeance.pj || 0;
+                                acc[annee].frais += echeance.frais || 0;
+                                acc[annee].fraisGestion +=
+                                  echeance.fraisGestion || 0;
+                                acc[annee].reprise += echeance.reprise || 0;
+                                acc[annee].taxe += echeance.taxe || 0;
+                                acc[annee].rcdHT +=
+                                  (echeance.rcd || 0) - (echeance.taxe || 0);
+                                acc[annee].totalTTC += echeance.totalTTC || 0;
+                                acc[annee].nbEcheances += 1;
+                                return acc;
+                              },
+                              {}
+                            );
 
                             return Object.values(echeancesParAnnee)
                               .sort((a: any, b: any) =>

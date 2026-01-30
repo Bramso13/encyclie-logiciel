@@ -13,6 +13,13 @@ import QuoteForm from "@/components/quotes/QuoteForm";
 import QuoteSuccessPage from "@/components/quotes/QuoteSuccessPage";
 import CorrespondanceTab from "@/components/admin/CorrespondanceTab";
 import { importBrokers } from "@/scripts/import-brokers";
+import dynamic from "next/dynamic";
+
+// Dynamically import BordereauxPage to avoid SSR issues
+const BordereauxPage = dynamic(
+  () => import("@/app/admin/bordereaux/page"),
+  { ssr: false }
+);
 
 // Types exacts de la fonction calculPrimeRCD
 interface SimulatorParams {
@@ -972,6 +979,16 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                   {overdueCount}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab("bordereaux")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "bordereaux"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Bordereaux
             </button>
             {/* <button
               onClick={() => setActiveTab("underwriters")}
@@ -2667,6 +2684,8 @@ export default function AdminScreen({ user }: AdminScreenProps) {
               </div>
             </div>
           )}
+
+          {activeTab === "bordereaux" && <BordereauxPage />}
         </div>
       </div>
 

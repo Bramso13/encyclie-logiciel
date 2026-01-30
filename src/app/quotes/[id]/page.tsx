@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { calculPrimeRCD, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import { authClient } from "@/lib/auth-client";
 
 import useProductsStore, {
@@ -15,7 +14,7 @@ import { CalculationResult, Quote } from "@/lib/types";
 import CalculationTab from "../tabs/CalculationTab";
 import LetterTab from "../tabs/LetterTab";
 
-import ModificationForm from "../components/forms/ModificationForm";
+import SimpleParameterEditor from "../components/forms/SimpleParameterEditor";
 import { Calendar, MessageCircle } from "lucide-react";
 import ChatTab from "../tabs/ChatTab";
 
@@ -44,17 +43,9 @@ export default function QuoteDetailPage() {
     useState<InsuranceProduct | null>(null);
   const [originalCalculationResult, setOriginalCalculationResult] =
     useState<CalculationResult | null>(null);
-  const [editingSections, setEditingSections] = useState<{
-    majorations: boolean;
-    fraisEtTaxes: boolean;
-  }>({
-    majorations: false,
-    fraisEtTaxes: false,
-  });
-  const [showModificationPopup, setShowModificationPopup] = useState(false);
-  const [currentEditingSection, setCurrentEditingSection] = useState<
-    "majorations" | "fraisEtTaxes" | null
-  >(null);
+
+  // État simplifié pour l'éditeur de paramètres
+  const [showParameterEditor, setShowParameterEditor] = useState(false);
 
   // États pour l'édition
 
@@ -707,7 +698,6 @@ export default function QuoteDetailPage() {
             calculationResult={calculationResult}
             calculationError={calculationError}
             originalCalculationResult={originalCalculationResult}
-            setEditingSections={setEditingSections}
             setCalculationResult={setCalculationResult}
             setOriginalCalculationResult={setOriginalCalculationResult}
             reprisePasseEnabled={reprisePasseEnabled}
@@ -718,8 +708,7 @@ export default function QuoteDetailPage() {
             recalculating={recalculating}
             handleRecalculate={handleRecalculate}
             session={session}
-            setCurrentEditingSection={setCurrentEditingSection}
-            setShowModificationPopup={setShowModificationPopup}
+            onOpenParameterEditor={() => setShowParameterEditor(true)}
           />
         )}
 
@@ -877,98 +866,17 @@ export default function QuoteDetailPage() {
         </div>
       )}
 
-      {/* Popup de modification des calculs */}
-      {showModificationPopup && (
+      {/* Popup d'édition des paramètres */}
+      {showParameterEditor && quote && calculationResult && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Modifier les calculs -{" "}
-                  {currentEditingSection === "majorations"
-                    ? "Majorations"
-                    : "Frais et taxes"}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowModificationPopup(false);
-                    setCurrentEditingSection(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {calculationResult && (
-                <ModificationForm
-                  quote={quote}
-                  calculationResult={calculationResult}
-                  onUpdate={setCalculationResult}
-                  originalCalculationResult={originalCalculationResult}
-                  section={currentEditingSection}
-                />
-              )}
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    if (originalCalculationResult) {
-                      setCalculationResult(originalCalculationResult);
-                      setOriginalCalculationResult(null);
-                    }
-                    setShowModificationPopup(false);
-                    setCurrentEditingSection(null);
-                    setEditingSections({
-                      majorations: false,
-                      fraisEtTaxes: false,
-                    });
-                  }}
-                  className="px-4 py-2 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-md transition-colors"
-                >
-                  Restaurer l'original
-                </button>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    setShowModificationPopup(false);
-                    setCurrentEditingSection(null);
-                  }}
-                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
-                >
-                  Fermer
-                </button>
-                <button
-                  onClick={() => {
-                    // Ici vous pourrez ajouter la logique de sauvegarde
-                    alert("Modifications appliquées!");
-                    setShowModificationPopup(false);
-                    setCurrentEditingSection(null);
-                  }}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
-                >
-                  Appliquer les modifications
-                </button>
-              </div>
-            </div>
+          <div className="bg-white rounded-lg max-w-4xl w-full h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <SimpleParameterEditor
+              quote={quote}
+              calculationResult={calculationResult}
+              originalCalculationResult={originalCalculationResult}
+              onUpdate={setCalculationResult}
+              onClose={() => setShowParameterEditor(false)}
+            />
           </div>
         </div>
       )}
