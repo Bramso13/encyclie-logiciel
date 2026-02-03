@@ -1,8 +1,10 @@
-# Story bordereau-fidelidade.2: Build service to extract and transform contract data into FIDELIDADE CSV format
+# Story bordereau-fidelidade.2: Build service to extract and transform data into FIDELIDADE format (polices + quittances)
+
+> **Superseded by** bordereau-fidelidade-v2.2 et v2.3 (scope clarifié — deux CSV, polices + quittances, pas de filtre courtier). Voir stories v2.1–v2.6.
 
 ## Status
 
-Ready for Review
+Needs Update (scope clarifié — voir epic et docs/epics/bordereau-fidelidade-scope-clarifie.md)
 
 ## Story
 

@@ -1,5 +1,7 @@
 # Story bordereau-fidelidade.1: Add Bordereau schema and extend Quote/Contract models for FIDELIDADE data
 
+> **Superseded by** bordereau-fidelidade-v2.1 (scope clarifié — deux CSV, APPORTEUR constante). Voir `docs/epics/bordereau-fidelidade-scope-clarifie.md` et stories v2.1–v2.6.
+
 ## Status
 
 Ready for development

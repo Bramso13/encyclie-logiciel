@@ -2,7 +2,7 @@
 
 ## Epic Goal
 
-Enable admins to automatically generate monthly bordereau CSV files for FIDELIDADE insurer and brokers, replacing the current manual process and providing comprehensive filtering, editing, and audit trail capabilities.
+Enable admins to automatically generate **two** bordereau CSV files for FIDELIDADE (polices + quittances) from a **period** filter only, with correct mapping from system data and audit trail. No broker selection: APPORTEUR is a single configurable constant.
 
 ## Epic Description
 
@@ -33,19 +33,18 @@ Enable admins to automatically generate monthly bordereau CSV files for FIDELIDA
 1. **Database Schema Extensions:**
    - New `Bordereau` table for audit trail/history
    - Add `codeNAF` field to Quote/company data
-   - Add `identifiantPolice` field (format: ANNÉE+NUMÉRO+RCDFID)
+   - IDENTIFIANT_POLICE = Quote.reference (pas de champ dédié)
 
 2. **Admin UI - Bordereau Generation Module:**
-   - Filter interface (date range, broker, contract status, product type)
-   - Data preview table with full edit capability (all 36 CSV columns)
-   - CSV export functionality
-   - Historical bordereau listing with re-generation capability
+   - Filter: **period only** (date range). No broker selection; APPORTEUR = configurable constant.
+   - Data preview for both sheets (polices + quittances) with edit capability for correction.
+   - **Two CSV exports** (polices CSV + quittances CSV).
+   - Historical bordereau listing with re-download capability.
 
 3. **Data Transformation Engine:**
-   - Map Quote/Contract data to FIDELIDADE CSV format (36 columns)
-   - Support for multiple activities per contract (up to 8 with codes 1-20)
-   - Date filtering by payment schedule (échéance date)
-   - Handle partial data scenarios gracefully
+   - **Feuille 1 (Polices):** Contrats + quotes with status ACCEPTED; one row per policy; 8 pairs LIBELLÉ_ACTIVITÉ / POIDS_ACTIVITÉ; APPORTEUR = constant.
+   - **Feuille 2 (Quittances):** One row per échéance (PaymentInstallment) in period; IDENTIFIANT_QUITTANCE = IDENTIFIANT_POLICE + "Q" + numéro d’échéance (Q1, Q2…); GARANTIE = "RC_RCD"; APPORTEUR = same constant.
+   - Exhaustive mapping so all columns are correctly filled from system data; handle missing data with documented defaults.
 
 **How it integrates:**
 - Reads from existing Quote, InsuranceContract, BrokerProfile tables
@@ -55,15 +54,30 @@ Enable admins to automatically generate monthly bordereau CSV files for FIDELIDA
 - New admin UI pages under `/app/admin/bordereaux`
 
 **Success criteria:**
-- Admins can generate FIDELIDADE bordereau CSV in < 30 seconds
-- All 36 required columns populated correctly from system data
-- 100% of generated bordereaux saved with full audit trail
-- Zero manual data entry required for standard contracts
-- Edit capability allows manual override when needed
+- Admins generate **two** FIDELIDADE CSV files (polices + quittances) in < 30 seconds from a **period** only.
+- All columns of both CSVs populated correctly from system data (mapping exhaustif; pas de champs vides ou incorrects sans raison documentée).
+- 100% of generated bordereaux saved with full audit trail.
+- No broker filter in UI; APPORTEUR always the same configurable value.
+- Edit capability in preview for manual correction when needed.
 
 ## Stories
 
-### Story 1: Database Schema & Data Model
+**Nouvelles stories (scope clarifié — février 2025) :** Les stories v2 remplacent les stories 1–5 pour le bordereau FIDELIDADE (deux CSV, pas de filtre courtier, APPORTEUR constante). Référence : `docs/epics/bordereau-fidelidade-scope-clarifie.md`.
+
+| Story | Fichier | Titre |
+|-------|---------|--------|
+| v2.1 | bordereau-fidelidade-v2.1.schema-apporteur.md | Schéma Bordereau, identifiant police, constante APPORTEUR |
+| v2.2 | bordereau-fidelidade-v2.2.extraction-polices.md | Service extraction Feuille 1 Polices |
+| v2.3 | bordereau-fidelidade-v2.3.extraction-quittances.md | Service extraction Feuille 2 Quittances |
+| v2.4 | bordereau-fidelidade-v2.4.generation-export-deux-csv.md | Génération et export des deux CSV |
+| v2.5 | bordereau-fidelidade-v2.5.admin-ui-period-deux-previews.md | Admin UI — Période seule, deux préviews, deux CSV |
+| v2.6 | bordereau-fidelidade-v2.6.historique-audit.md | Historique et audit des bordereaux |
+
+**Stories 1–5 (anciennes)** : Superseded by v2.1–v2.6. L’implémentation existante (stories 2, 3, 4) repose sur l’ancien scope (un CSV, filtre courtiers) ; à adapter ou remplacer selon les stories v2.
+
+---
+
+### Story 1 (ancienne): Database Schema & Data Model
 **Title:** Add Bordereau schema and extend Quote/Contract models for FIDELIDADE data
 
 **Description:** Extend Prisma schema to support bordereau generation with audit trail, CODE_NAF tracking, and police identifier generation.
@@ -71,60 +85,48 @@ Enable admins to automatically generate monthly bordereau CSV files for FIDELIDA
 **Acceptance Criteria:**
 1. `Bordereau` model created with fields: id, generatedBy, generatedAt, periodStart, periodEnd, filterCriteria (JSON), csvData (JSON), fileName, filePath
 2. `codeNAF` field added to Quote model (companyData JSON or direct field)
-3. `identifiantPolice` field added to Quote/InsuranceContract with auto-generation logic (YYYY+NUMBER+RCDFID)
+3. IDENTIFIANT_POLICE = Quote.reference (champ existant ; pas de nouveau champ)
 4. Migration scripts created and tested
 5. Seed data updated to include sample CODE_NAF values
 
 ### Story 2: Bordereau Data Extraction & Transformation Service
-**Title:** Build service to extract and transform contract data into FIDELIDADE CSV format
+**Title:** Build service to extract and transform data into FIDELIDADE format (polices + quittances)
 
-**Description:** Create backend service that queries contracts, maps data to 36-column FIDELIDADE format, and handles edge cases.
+**Description:** Create backend service that queries contracts and quotes (ACCEPTED), and PaymentInstallments in period; outputs two datasets: polices (one row per policy) and quittances (one row per échéance).
 
 **Acceptance Criteria:**
-1. Service accepts filter parameters (dateRange, brokerIds, contractStatus, productType)
-2. Queries contracts filtered by payment schedule échéance dates (Option C)
-3. Transforms data to 36 FIDELIDADE columns:
-   - APPORTEUR from BrokerProfile.code
-   - IDENTIFIANT_POLICE from contract
-   - Dates from Quote.submittedAt, formData, echéancier
-   - SIREN, CA, effectif from companyData
-   - Activities (up to 8) from formData with codes 1-20 and weights
-   - All other required fields mapped correctly
-4. Handles missing data gracefully (empty strings for avenant fields)
-5. Returns structured data array ready for CSV conversion
-6. Unit tests cover all mapping scenarios
+1. Service accepts **period only** (dateRange). No brokerIds; APPORTEUR = configurable constant (env or config).
+2. **Feuille 1 (Polices):** Contrats + quotes with status ACCEPTED in scope; one row per policy; APPORTEUR constant; IDENTIFIANT_POLICE = Quote.reference; 8 pairs LIBELLÉ_ACTIVITÉ / POIDS_ACTIVITÉ; all polices columns mapped from Quote/Contract/companyData/formData.
+3. **Feuille 2 (Quittances):** One row per PaymentInstallment whose dueDate (or period) falls in date range; APPORTEUR same constant; IDENTIFIANT_QUITTANCE = IDENTIFIANT_POLICE + "Q" + installmentNumber (Q1, Q2…); GARANTIE = "RC_RCD"; PRIME_TTC/HT, TAXES, TAUX_COMMISSIONS, COMMISSIONS, MODE_PAIEMENT from installment/quote.
+4. Handles missing data with documented defaults (e.g. empty for avenant).
+5. Returns two structured arrays (polices rows + quittances rows) ready for CSV conversion.
+6. Unit tests cover mapping for both sheets.
 
 ### Story 3: CSV Generation & Export Functionality
-**Title:** Implement CSV file generation and download for bordereau data
+**Title:** Implement **two** CSV files generation and download (polices + quittances)
 
-**Description:** Create CSV generation utility that converts transformed data to FIDELIDADE format and enables download.
+**Description:** Create CSV utilities that convert the two transformed datasets to FIDELIDADE format and enable download of **two** files (or a ZIP containing both).
 
 **Acceptance Criteria:**
-1. CSV utility accepts transformed data array
-2. Generates CSV with exact 36-column structure matching FIDELIDADE format
-3. Proper CSV escaping for special characters in text fields
-4. File naming convention: `BORDEREAU_FIDELIDADE_[MONTH]_[YEAR].csv`
-5. Download triggered via API endpoint returns CSV file
-6. Generated CSV validated against sample FIDELIDADE file structure
+1. Two CSV utilities (or one with two modes): polices CSV and quittances CSV, each with exact column structure matching FIDELIDADE spec.
+2. Proper CSV escaping for special characters in text fields.
+3. File naming: e.g. `BORDEREAU_FIDELIDADE_POLICES_[MONTH]_[YEAR].csv` and `BORDEREAU_FIDELIDADE_QUITTANCES_[MONTH]_[YEAR].csv` (or ZIP with both).
+4. Download via API returns both files (e.g. ZIP or two separate downloads).
+5. Generated CSVs validated against FIDELIDADE structure (column names and count).
 
 ### Story 4: Admin UI - Filter & Preview Interface
-**Title:** Build admin interface for bordereau filtering and data preview
+**Title:** Build admin interface for bordereau (period filter only, two previews, two CSVs)
 
-**Description:** Create admin page with comprehensive filters and editable preview table before CSV generation.
+**Description:** Create admin page with **period filter only** (no broker selection), preview for polices and quittances, and generation of **two** CSV files.
 
 **Acceptance Criteria:**
-1. Admin navigation includes "Bordereaux" section
-2. Filter form includes:
-   - Date range picker (period start/end)
-   - Multi-select broker dropdown
-   - Contract status checkboxes (EN COURS, SOUSCRIPTION, etc.)
-   - Product type selector
-3. "Prévisualiser" button fetches matching contracts
-4. Preview table displays all 36 columns
-5. All table cells are editable inline (text inputs)
-6. Edit state persisted in component until generation/reset
-7. "Générer CSV" button triggers download with edited data
-8. Loading states and error handling implemented
+1. Admin navigation includes "Bordereaux" section.
+2. Filter form: **period only** (date range start/end). **No broker dropdown.** Optionally contract status / product type if needed for scope.
+3. "Prévisualiser" fetches polices + quittances for the period (quotes ACCEPTED + contrats; échéances in period).
+4. Preview: two tables (or two onglets) — polices (one row per policy) and quittances (one row per échéance). All columns displayed; cells editable for correction.
+5. Edit state persisted until "Générer CSV" or reset.
+6. "Générer CSV" triggers download of **two** CSV files (or one ZIP). APPORTEUR constant applied; no broker selection.
+7. Loading states and error handling.
 
 ### Story 5: Bordereau History & Audit Trail
 **Title:** Implement bordereau generation history with re-generation capability
@@ -142,9 +144,9 @@ Enable admins to automatically generate monthly bordereau CSV files for FIDELIDA
    - Generation date/time
    - Generated by (admin name)
    - Period covered
-   - Number of contracts
-   - Download button
-3. Re-download capability fetches saved CSV data
+   - Number of polices / number of quittances
+   - Download button (both CSVs or ZIP)
+3. Re-download capability fetches saved data (both polices + quittances CSVs)
 4. Optional: Re-generation with same filters button
 5. Pagination for large history lists (20 per page)
 
@@ -189,32 +191,28 @@ Enable admins to automatically generate monthly bordereau CSV files for FIDELIDA
 
 ## Technical Notes
 
-**CSV Column Structure (36 columns):**
-```
-APPORTEUR, IDENTIFIANT_POLICE, DATE_SOUSCRIPTION, DATE_EFFET_CONTRAT,
-DATE_FIN_CONTRAT, NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT,
-DATE_ECHEANCE, ETAT_POLICE, DATE_ETAT_POLICE, MOTIF_ETAT, FRANCTIONNEMENT,
-SIREN, ADRESSE_RISQUE, VILLE_RISQUE, CODE_POSTAL_RISQUE, CA_ENTREPRISE,
-EFFECTIF_ENTREPRISE, CODE_NAF,
-LIBELLE_ACTIVITE (x8), POID_ACTIVITE (x8)
-```
+**Scope clarifié:** Voir `docs/epics/bordereau-fidelidade-scope-clarifie.md`.
 
-**Data Sources:**
-- APPORTEUR: `BrokerProfile.code`
-- IDENTIFIANT_POLICE: New field (auto-generated)
-- DATE_SOUSCRIPTION: `Quote.submittedAt`
-- DATE_EFFET_CONTRAT: From `Quote.formData` (admin chooses)
-- DATE_FIN_CONTRAT: Admin chooses
-- DATE_ECHEANCE: From `calculPrimeRCD().echeancier`
-- ETAT_POLICE: Map from `ContractStatus`
-- SIREN, CA, effectif: From `Quote.companyData`
-- CODE_NAF: New field in Quote
-- Activities: From `Quote.formData.activites` (array of {code: 1-20, caSharePercent})
+**Feuille 1 — Polices (one row per policy):**
+- APPORTEUR: **configurable constant** (env/config), same for all rows.
+- IDENTIFIANT_POLICE: Quote.reference (champ existant).
+- Source: contrats + quotes with status ACCEPTED. Dates, SIREN, CA, effectif, CODE_NAF, adresse, NOM_ENTREPRISE_ASSURE, TYPE_CONTRAT, COMPAGNIE, STATUT_POLICE, etc. from Quote/Contract/companyData/formData.
+- LIBELLÉ_ACTIVITÉ / POIDS_ACTIVITÉ: **8 pairs** from formData.activites (codes 1–20, caSharePercent).
+- Avenant fields: empty for now.
+
+**Feuille 2 — Quittances (one row per échéance):**
+- APPORTEUR: same constant.
+- IDENTIFIANT_POLICE: Quote.reference.
+- IDENTIFIANT_QUITTANCE: **IDENTIFIANT_POLICE + "Q" + installmentNumber** (e.g. Q1, Q2, Q3, Q4).
+- DATE_EFFET_QUITTANCE / DATE_FIN_QUITTANCE: PaymentInstallment.periodStart / periodEnd.
+- DATE_EMISSION_QUITTANCE, DATE_ENCAISSEMENT: from installment/quote.
+- PRIME_TTC, PRIME_HT, TAXES: PaymentInstallment.amountTTC, amountHT, taxAmount.
+- TAUX_COMMISSIONS, COMMISSIONS: from quote/broker config or calculatedPremium.
+- GARANTIE: **"RC_RCD"** (fixed). MODE_PAIEMENT: PaymentInstallment.paymentMethod.
 
 **Edge Cases:**
-- Contracts with < 8 activities: Empty string for unused LIBELLE/POID columns
-- Missing CODE_NAF: Admin must fill manually in preview
-- Avenant fields: Empty for now (leave blank in CSV)
+- Polices: < 8 activities → empty for unused LIBELLÉ/POIDS; avenant → empty.
+- Quittances: only installments whose dueDate (or period) falls in selected period.
 
 ## Story Manager Handoff
 

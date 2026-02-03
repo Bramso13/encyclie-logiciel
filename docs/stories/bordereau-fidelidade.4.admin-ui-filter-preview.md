@@ -1,5 +1,7 @@
 # Story bordereau-fidelidade.4: Build admin interface for bordereau filtering and data preview
 
+> **Superseded by** bordereau-fidelidade-v2.5 (scope clarifié — filtre période seule, deux préviews, deux CSV, pas de courtiers). Voir stories v2.1–v2.6.
+
 ## Status
 
 Ready for Review

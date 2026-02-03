@@ -1,4 +1,9 @@
-import { ContractStatus, QuoteStatus } from "@prisma/client";
+import {
+  ContractStatus,
+  PaymentMethod,
+  PaymentScheduleStatus,
+  QuoteStatus,
+} from "@prisma/client";
 
 /**
  * Format a Date object to DD/MM/YYYY format for FIDELIDADE CSV
@@ -40,6 +45,13 @@ export function mapContractStatusToEtatPolice(status: ContractStatus): string {
  * Map QuoteStatus to FIDELIDADE ETAT_POLICE values for quote-only rows (devis)
  */
 export function mapQuoteStatusToEtatPolice(status: QuoteStatus): string {
+  return mapQuoteStatusToStatutPolice(status);
+}
+
+/**
+ * Map QuoteStatus to FIDELIDADE STATUT_POLICE (Feuille 1 v2)
+ */
+export function mapQuoteStatusToStatutPolice(status: QuoteStatus): string {
   const mapping: Record<QuoteStatus, string> = {
     DRAFT: "BROUILLON",
     INCOMPLETE: "INCOMPLET",
@@ -53,6 +65,40 @@ export function mapQuoteStatusToEtatPolice(status: QuoteStatus): string {
     EXPIRED: "EXPIRE",
   };
   return mapping[status] || "DEVIS";
+}
+
+/**
+ * Map PaymentScheduleStatus to FIDELIDADE STATUT_QUITTANCE (Feuille 2)
+ */
+export function mapPaymentStatusToStatutQuittance(
+  status: PaymentScheduleStatus,
+): string {
+  const mapping: Record<PaymentScheduleStatus, string> = {
+    PENDING: "EN_ATTENTE",
+    PAID: "ENCAISSE",
+    OVERDUE: "EN_RETARD",
+    CANCELLED: "ANNULE",
+    PARTIALLY_PAID: "PARTIEL",
+  };
+  return mapping[status] ?? "EN_ATTENTE";
+}
+
+/**
+ * Map PaymentMethod to FIDELIDADE MODE_PAIEMENT (Feuille 2)
+ */
+export function mapPaymentMethodToModePaiement(
+  method: PaymentMethod | null | undefined,
+): string {
+  if (!method) return "";
+  const mapping: Record<PaymentMethod, string> = {
+    CASH: "ESPECES",
+    CHECK: "CHEQUE",
+    BANK_TRANSFER: "VIREMENT",
+    CARD: "CARTE",
+    SEPA_DEBIT: "PRELEVEMENT",
+    OTHER: "AUTRE",
+  };
+  return mapping[method] ?? "";
 }
 
 /**

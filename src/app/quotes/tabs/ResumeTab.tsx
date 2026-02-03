@@ -1,14 +1,21 @@
+"use client";
+
+import { useState } from "react";
 import AdminWorkflowManager from "@/components/workflow/AdminWorkflowManager";
 import BrokerWorkflowExecutor from "@/components/workflow/BrokerWorkflowExecutor";
+import ApproveOfferModal from "@/components/modals/ApproveOfferModal";
 import { Quote } from "@/lib/types";
+
+type QuoteWithContract = Quote & { contract?: { id: string } | null };
 
 export default function ResumeTab({
   quote,
   isAdmin,
 }: {
-  quote: Quote;
+  quote: QuoteWithContract;
   isAdmin: boolean;
 }) {
+  const [showApproveModal, setShowApproveModal] = useState(false);
   const getStatusDotColor = (status: string) => {
     const colorMap: Record<string, string> = {
       DRAFT: "bg-gray-500",
@@ -251,13 +258,13 @@ export default function ResumeTab({
               </button>
 
               <button
-                onClick={() =>
-                  updateQuoteStatusAdmin(
-                    quote.id,
-                    "OFFER_READY",
-                    "Admin approved offer"
-                  )
-                }
+                onClick={() => {
+                  if (quote.contract) {
+                    alert("Un contrat existe déjà pour ce devis.");
+                    return;
+                  }
+                  setShowApproveModal(true);
+                }}
                 className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 <svg
@@ -273,8 +280,16 @@ export default function ResumeTab({
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                Approuver l'offre
+                Approuver l&apos;offre
               </button>
+              <ApproveOfferModal
+                isOpen={showApproveModal}
+                onClose={() => setShowApproveModal(false)}
+                quote={
+                  quote as Parameters<typeof ApproveOfferModal>[0]["quote"]
+                }
+                onSuccess={() => window.location.reload()}
+              />
 
               <button
                 onClick={() =>

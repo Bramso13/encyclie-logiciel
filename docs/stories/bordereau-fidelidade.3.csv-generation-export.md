@@ -1,5 +1,7 @@
 # Story bordereau-fidelidade.3: Implement CSV file generation and download for bordereau data
 
+> **Superseded by** bordereau-fidelidade-v2.4 (scope clarifié — deux CSV polices + quittances). Voir stories v2.1–v2.6.
+
 ## Status
 
 Draft

@@ -1,6 +1,17 @@
 import { ContractStatus } from "@prisma/client";
 
 /**
+ * Filtres v2 : période uniquement (pas de brokerIds).
+ * Utilisé par getPolicesV2 et extraction quittances v2.
+ */
+export interface BordereauFiltersV2 {
+  dateRange: {
+    startDate: Date;
+    endDate: Date;
+  };
+}
+
+/**
  * Filters for bordereau data extraction
  */
 export interface BordereauFilters {
@@ -70,6 +81,76 @@ export interface FidelidadeRow {
   POID_ACTIVITE_7: string;
   LIBELLE_ACTIVITE_8: string;
   POID_ACTIVITE_8: string;
+}
+
+/**
+ * Feuille 1 Polices — une ligne = une police (scope v2).
+ * Colonnes alignées sur docs/epics/bordereau-fidelidade-scope-clarifie.md §6.
+ * Données manquantes : chaîne vide (avenant, MOTIF_STATUT, etc.).
+ */
+export interface FidelidadePolicesRow {
+  APPORTEUR: string;
+  IDENTIFIANT_POLICE: string;
+  DATE_SOUSCRIPTION: string;
+  DATE_EFFET_CONTRAT: string;
+  DATE_FIN_CONTRAT: string;
+  NUMERO_AVENANT: string;
+  MOTIF_AVENANT: string;
+  DATE_EFFET_AVENANT: string;
+  DATE_DEMANDE: string;
+  STATUT_POLICE: string;
+  DATE_STAT_POLICE: string;
+  MOTIF_STATUT: string;
+  TYPE_CONTRAT: string;
+  COMPAGNIE: string;
+  NOM_ENTREPRISE_ASSURE: string;
+  SIREN: string;
+  ACTIVITE: string;
+  ADRESSE_RISQUE: string;
+  VILLE_RISQUE: string;
+  CODE_POSTAL_RISQUE: string;
+  CA_ENTREPRISE: string;
+  EFFECTIF_ENTREPRISE: string;
+  CODE_NAF: string;
+  LIBELLE_ACTIVITE_1: string;
+  POIDS_ACTIVITE_1: string;
+  LIBELLE_ACTIVITE_2: string;
+  POIDS_ACTIVITE_2: string;
+  LIBELLE_ACTIVITE_3: string;
+  POIDS_ACTIVITE_3: string;
+  LIBELLE_ACTIVITE_4: string;
+  POIDS_ACTIVITE_4: string;
+  LIBELLE_ACTIVITE_5: string;
+  POIDS_ACTIVITE_5: string;
+  LIBELLE_ACTIVITE_6: string;
+  POIDS_ACTIVITE_6: string;
+  LIBELLE_ACTIVITE_7: string;
+  POIDS_ACTIVITE_7: string;
+  LIBELLE_ACTIVITE_8: string;
+  POIDS_ACTIVITE_8: string;
+}
+
+/**
+ * Feuille 2 Quittances — une ligne = une échéance (scope v2).
+ * Colonnes alignées sur docs/epics/bordereau-fidelidade-scope-clarifie.md §6.
+ */
+export interface FidelidadeQuittancesRow {
+  APPORTEUR: string;
+  IDENTIFIANT_POLICE: string;
+  NUMERO_AVENANT: string;
+  IDENTIFIANT_QUITTANCE: string;
+  DATE_EMISSION_QUITTANCE: string;
+  DATE_EFFET_QUITTANCE: string;
+  DATE_FIN_QUITTANCE: string;
+  DATE_ENCAISSEMENT: string;
+  STATUT_QUITTANCE: string;
+  GARANTIE: string;
+  PRIME_TTC: string;
+  PRIME_HT: string;
+  TAXES: string;
+  TAUX_COMMISSIONS: string;
+  COMMISSIONS: string;
+  MODE_PAIEMENT: string;
 }
 
 /**

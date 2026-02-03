@@ -342,6 +342,7 @@ model Quote {
 
   // Client company information (dynamic based on product)
   companyData Json // All company-specific data (name, siret, address, etc.)
+  codeNAF    String? // Code NAF (ex. pour bordereau FIDELIDADE)
 
   // Quote specifics
   formData          Json // All form data specific to the product
@@ -1039,7 +1040,7 @@ model QuoteVersion {
 
 // Bordereau System - FIDELIDADE Reporting
 
-// Modèle pour les bordereaux générés
+// Modèle pour les bordereaux générés (FIDELIDADE v2 : deux feuilles polices + quittances)
 model Bordereau {
   id        String   @id @default(cuid())
 
@@ -1053,14 +1054,16 @@ model Bordereau {
   periodEnd   DateTime
 
   // Filtres appliqués pour générer le bordereau
-  filterCriteria Json // Ex: { productId: "...", brokerId: "...", status: "..." }
+  filterCriteria Json // Ex: { dateRange: { startDate, endDate } }
 
-  // Données CSV générées (stockées pour traçabilité)
-  csvData Json // Array d'objets avec les lignes du CSV
+  // Données CSV générées (stockées pour traçabilité et re-téléchargement)
+  csvDataPolices   Json // Array d'objets Feuille 1 Polices
+  csvDataQuittances Json // Array d'objets Feuille 2 Quittances
 
-  // Fichier généré
-  fileName String
-  filePath String? // Chemin vers le fichier CSV stocké
+  // Noms des fichiers générés
+  fileNamePolices   String
+  fileNameQuittances String
+  filePath String? // Chemin optionnel vers les fichiers stockés
 
   // Audit
   createdAt DateTime @default(now())

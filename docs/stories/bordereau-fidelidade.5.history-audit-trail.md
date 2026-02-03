@@ -1,5 +1,7 @@
 # Story bordereau-fidelidade.5: Implement bordereau generation history with re-generation capability
 
+> **Superseded by** bordereau-fidelidade-v2.6 (scope clarifié — deux CSV polices + quittances dans l’historique). Voir stories v2.1–v2.6.
+
 ## Status
 
 Draft

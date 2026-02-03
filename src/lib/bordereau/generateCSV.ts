@@ -1,4 +1,8 @@
-import { FidelidadeRow } from "./types";
+import type {
+  FidelidadeRow,
+  FidelidadePolicesRow,
+  FidelidadeQuittancesRow,
+} from "./types";
 
 /**
  * Generate CSV content from FIDELIDADE rows
@@ -68,12 +72,128 @@ export function generateCSV(rows: FidelidadeRow[], fileName?: string): string {
   return csvContent;
 }
 
+/** Colonnes Feuille 1 Polices (scope clarifié §6) — exporté pour l'UI */
+export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
+  "APPORTEUR",
+  "IDENTIFIANT_POLICE",
+  "DATE_SOUSCRIPTION",
+  "DATE_EFFET_CONTRAT",
+  "DATE_FIN_CONTRAT",
+  "NUMERO_AVENANT",
+  "MOTIF_AVENANT",
+  "DATE_EFFET_AVENANT",
+  "DATE_DEMANDE",
+  "STATUT_POLICE",
+  "DATE_STAT_POLICE",
+  "MOTIF_STATUT",
+  "TYPE_CONTRAT",
+  "COMPAGNIE",
+  "NOM_ENTREPRISE_ASSURE",
+  "SIREN",
+  "ACTIVITE",
+  "ADRESSE_RISQUE",
+  "VILLE_RISQUE",
+  "CODE_POSTAL_RISQUE",
+  "CA_ENTREPRISE",
+  "EFFECTIF_ENTREPRISE",
+  "CODE_NAF",
+  "LIBELLE_ACTIVITE_1",
+  "POIDS_ACTIVITE_1",
+  "LIBELLE_ACTIVITE_2",
+  "POIDS_ACTIVITE_2",
+  "LIBELLE_ACTIVITE_3",
+  "POIDS_ACTIVITE_3",
+  "LIBELLE_ACTIVITE_4",
+  "POIDS_ACTIVITE_4",
+  "LIBELLE_ACTIVITE_5",
+  "POIDS_ACTIVITE_5",
+  "LIBELLE_ACTIVITE_6",
+  "POIDS_ACTIVITE_6",
+  "LIBELLE_ACTIVITE_7",
+  "POIDS_ACTIVITE_7",
+  "LIBELLE_ACTIVITE_8",
+  "POIDS_ACTIVITE_8",
+];
+
+/** Colonnes Feuille 2 Quittances (scope clarifié §6) — exporté pour l'UI */
+export const QUITTANCES_COLUMNS: (keyof FidelidadeQuittancesRow)[] = [
+  "APPORTEUR",
+  "IDENTIFIANT_POLICE",
+  "NUMERO_AVENANT",
+  "IDENTIFIANT_QUITTANCE",
+  "DATE_EMISSION_QUITTANCE",
+  "DATE_EFFET_QUITTANCE",
+  "DATE_FIN_QUITTANCE",
+  "DATE_ENCAISSEMENT",
+  "STATUT_QUITTANCE",
+  "GARANTIE",
+  "PRIME_TTC",
+  "PRIME_HT",
+  "TAXES",
+  "TAUX_COMMISSIONS",
+  "COMMISSIONS",
+  "MODE_PAIEMENT",
+];
+
+/**
+ * Génère le CSV Feuille 1 Polices.
+ * @param rows - Lignes FidelidadePolicesRow
+ * @returns Contenu CSV
+ */
+export function generatePolicesCSV(rows: FidelidadePolicesRow[]): string {
+  return generateCSVFromHeaders(POLICES_COLUMNS, rows as unknown as Record<string, string>[]);
+}
+
+/**
+ * Génère le CSV Feuille 2 Quittances.
+ * @param rows - Lignes FidelidadeQuittancesRow
+ * @returns Contenu CSV
+ */
+export function generateQuittancesCSV(rows: FidelidadeQuittancesRow[]): string {
+  return generateCSVFromHeaders(QUITTANCES_COLUMNS, rows as unknown as Record<string, string>[]);
+}
+
+function generateCSVFromHeaders(
+  headers: string[],
+  rows: Record<string, string>[],
+): string {
+  const headerRow = headers.join(",");
+  const dataRows = rows.map((row) =>
+    headers.map((h) => escapeCsvValue(String(row[h] ?? ""))).join(","),
+  );
+  return [headerRow, ...dataRows].join("\n");
+}
+
+/**
+ * Valide que la structure CSV correspond au spec FIDELIDADE (noms et nombre de colonnes).
+ */
+export function validatePolicesCSVStructure(csvContent: string): boolean {
+  const firstLine = csvContent.split("\n")[0];
+  const headers = firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
+  return (
+    headers.length === POLICES_COLUMNS.length &&
+    headers.every((h, i) => h === POLICES_COLUMNS[i])
+  );
+}
+
+/**
+ * Valide que la structure CSV quittances correspond au spec FIDELIDADE.
+ */
+export function validateQuittancesCSVStructure(csvContent: string): boolean {
+  const firstLine = csvContent.split("\n")[0];
+  const headers = firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
+  return (
+    headers.length === QUITTANCES_COLUMNS.length &&
+    headers.every((h, i) => h === QUITTANCES_COLUMNS[i])
+  );
+}
+
 /**
  * Escape special characters in CSV values
  * @param value - The value to escape
  * @returns Escaped value
  */
-function escapeCsvValue(value: string): string {
+export function escapeCsvValue(value: string): string {
   // If value contains comma, quote, or newline, wrap in quotes and escape quotes
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
     return `"${value.replace(/"/g, '""')}"`;
@@ -82,17 +202,38 @@ function escapeCsvValue(value: string): string {
 }
 
 /**
- * Generate a default file name for the bordereau CSV
+ * Generate a default file name for the bordereau CSV (legacy single file)
  * Format: BORDEREAU_FIDELIDADE_MONTH_YEAR.csv
- * @param date - Optional date to use for file name (defaults to current date)
- * @returns File name string
  */
 export function generateFileName(date?: Date): string {
   const d = date || new Date();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = d.getFullYear();
-
   return `BORDEREAU_FIDELIDADE_${month}_${year}.csv`;
+}
+
+/**
+ * Nom du fichier CSV polices : BORDEREAU_FIDELIDADE_POLICES_MM_YYYY.csv
+ */
+export function getPolicesFileName(month: number, year: number): string {
+  const m = String(month).padStart(2, "0");
+  return `BORDEREAU_FIDELIDADE_POLICES_${m}_${year}.csv`;
+}
+
+/**
+ * Nom du fichier CSV quittances : BORDEREAU_FIDELIDADE_QUITTANCES_MM_YYYY.csv
+ */
+export function getQuittancesFileName(month: number, year: number): string {
+  const m = String(month).padStart(2, "0");
+  return `BORDEREAU_FIDELIDADE_QUITTANCES_${m}_${year}.csv`;
+}
+
+/**
+ * Nom du ZIP : BORDEREAU_FIDELIDADE_MM_YYYY.zip
+ */
+export function getBordereauZipFileName(month: number, year: number): string {
+  const m = String(month).padStart(2, "0");
+  return `BORDEREAU_FIDELIDADE_${m}_${year}.zip`;
 }
 
 /**
