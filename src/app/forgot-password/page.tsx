@@ -26,13 +26,17 @@ export default function ForgotPasswordPage() {
         redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password`,
       });
 
+      console.log("result", result);
+
       if (result.error) {
         setError(result.error.message || "Une erreur est survenue");
       } else {
         setSuccess(true);
       }
     } catch (err) {
-      setError("Une erreur est survenue lors de la demande de réinitialisation");
+      setError(
+        "Une erreur est survenue lors de la demande de réinitialisation",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -42,12 +46,19 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="flex flex-col items-center">
-          <Image src="/couleur_1.png" alt="Logo" className="h-12" width={100} height={100} />
+          <Image
+            src="/couleur_1.png"
+            alt="Logo"
+            className="h-12"
+            width={100}
+            height={100}
+          />
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Mot de passe oublié
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+            Entrez votre adresse email et nous vous enverrons un lien pour
+            réinitialiser votre mot de passe.
           </p>
         </div>
 
@@ -58,7 +69,8 @@ export default function ForgotPasswordPage() {
               <div>
                 <h3 className="text-green-800 font-medium">Email envoyé !</h3>
                 <p className="text-green-700 text-sm mt-1">
-                  Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation dans quelques instants.
+                  Si un compte existe avec cette adresse email, vous recevrez un
+                  lien de réinitialisation dans quelques instants.
                 </p>
                 <p className="text-green-700 text-sm mt-2">
                   Vérifiez votre boîte de réception et votre dossier spam.
@@ -108,7 +120,9 @@ export default function ForgotPasswordPage() {
                 disabled={isLoading}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Envoi en cours..." : "Envoyer le lien de réinitialisation"}
+                {isLoading
+                  ? "Envoi en cours..."
+                  : "Envoyer le lien de réinitialisation"}
               </button>
             </div>
 

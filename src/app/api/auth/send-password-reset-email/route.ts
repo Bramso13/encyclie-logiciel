@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Données manquantes pour l'envoi de l'email",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       {
         type: "PASSWORD_RESET" as any,
         relatedUserId: userId,
-      }
+      },
     );
 
     return NextResponse.json({
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: "Erreur lors de l'envoi de l'email de réinitialisation",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

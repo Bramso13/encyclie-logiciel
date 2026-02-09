@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminWorkflowManager from "@/components/workflow/AdminWorkflowManager";
 import BrokerWorkflowExecutor from "@/components/workflow/BrokerWorkflowExecutor";
 import ApproveOfferModal from "@/components/modals/ApproveOfferModal";
 import { Quote } from "@/lib/types";
 
 type QuoteWithContract = Quote & { contract?: { id: string } | null };
+
+type Broker = {
+  id: string;
+  name: string | null;
+  email: string;
+  companyName?: string | null;
+};
 
 export default function ResumeTab({
   quote,
@@ -16,6 +23,87 @@ export default function ResumeTab({
   isAdmin: boolean;
 }) {
   const [showApproveModal, setShowApproveModal] = useState(false);
+  const [brokers, setBrokers] = useState<Broker[]>([]);
+  const [loadingBrokers, setLoadingBrokers] = useState(false);
+  const [showBrokerConfirmModal, setShowBrokerConfirmModal] = useState(false);
+  const [selectedBrokerId, setSelectedBrokerId] = useState<string>("");
+
+  // Charger la liste des courtiers au montage (uniquement pour les admins)
+  useEffect(() => {
+    if (isAdmin) {
+      loadBrokers();
+    }
+  }, [isAdmin]);
+
+  const loadBrokers = async () => {
+    setLoadingBrokers(true);
+    try {
+      const response = await fetch("/api/users?role=BROKER&limit=1000");
+      const data = await response.json();
+
+      if (data.success && data.data.users) {
+        setBrokers(data.data.users);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des courtiers:", error);
+    } finally {
+      setLoadingBrokers(false);
+    }
+  };
+
+  const handleBrokerSelectChange = (newBrokerId: string) => {
+    if (newBrokerId && newBrokerId !== quote.broker?.id) {
+      setSelectedBrokerId(newBrokerId);
+      setShowBrokerConfirmModal(true);
+    }
+  };
+
+  const confirmBrokerAssignment = async () => {
+    try {
+      const response = await fetch(`/api/quotes/${quote.id}/assign-broker`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          brokerId: selectedBrokerId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Erreur lors de la réassignation du courtier"
+        );
+      }
+
+      // Success notification
+      alert(
+        data.message || "Courtier réassigné avec succès"
+      );
+
+      // Fermer le modal et recharger la page
+      setShowBrokerConfirmModal(false);
+      setSelectedBrokerId("");
+      window.location.reload();
+    } catch (error) {
+      console.error("Erreur lors de la réassignation du courtier:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la réassignation du courtier"
+      );
+      setShowBrokerConfirmModal(false);
+      setSelectedBrokerId("");
+    }
+  };
+
+  const cancelBrokerAssignment = () => {
+    setShowBrokerConfirmModal(false);
+    setSelectedBrokerId("");
+  };
+
   const getStatusDotColor = (status: string) => {
     const colorMap: Record<string, string> = {
       DRAFT: "bg-gray-500",
@@ -193,6 +281,61 @@ export default function ResumeTab({
                 <option value="ACCEPTED">Dossier souscrit</option>
                 <option value="REJECTED">Dossier refusé</option>
               </select>
+            </div>
+
+            {/* Courtier assigné et réassignation */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mb-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Courtier assigné :
+                </p>
+                <div className="inline-flex items-center px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <svg
+                    className="w-5 h-5 mr-2 text-indigo-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {quote.broker?.name || "Non renseigné"}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {quote.broker?.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <span className="text-sm font-medium text-gray-700">
+                  Réassigner à :
+                </span>
+                <select
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) => handleBrokerSelectChange(e.target.value)}
+                  value=""
+                  disabled={loadingBrokers}
+                >
+                  <option value="">
+                    {loadingBrokers
+                      ? "Chargement..."
+                      : "Sélectionner un courtier"}
+                  </option>
+                  {brokers.map((broker) => (
+                    <option key={broker.id} value={broker.id}>
+                      {broker.name || broker.email} ({broker.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -468,6 +611,96 @@ export default function ResumeTab({
         </div>
       </div> */}
         </>
+      )}
+
+      {/* Modal de confirmation pour la réassignation du courtier */}
+      {showBrokerConfirmModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-yellow-100 rounded-full mb-4">
+                <svg
+                  className="w-6 h-6 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+                Confirmer la réassignation
+              </h3>
+
+              <div className="text-sm text-gray-600 mb-4">
+                <p className="mb-3 text-center">
+                  Êtes-vous sûr de vouloir réassigner ce dossier ?
+                </p>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">
+                      Courtier actuel :
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {quote.broker?.name || "Non renseigné"} (
+                      {quote.broker?.email})
+                    </p>
+                  </div>
+                  <div className="flex items-center">
+                    <svg
+                      className="w-5 h-5 text-gray-400 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">
+                      Nouveau courtier :
+                    </p>
+                    <p className="text-sm font-semibold text-indigo-600">
+                      {brokers.find((b) => b.id === selectedBrokerId)?.name ||
+                        "Non renseigné"}{" "}
+                      (
+                      {
+                        brokers.find((b) => b.id === selectedBrokerId)?.email
+                      }
+                      )
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={cancelBrokerAssignment}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmBrokerAssignment}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
