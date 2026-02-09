@@ -249,7 +249,13 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     toggleProductStatus,
   } = useProductsStore();
 
-  const { quotes, loading: quotesLoading, fetchQuotes } = useQuotesStore();
+  const {
+    quotes,
+    loading: quotesLoading,
+    fetchQuotes,
+    pagination: quotesPagination,
+    setPagination: setQuotesPagination,
+  } = useQuotesStore();
 
   const {
     brokers,
@@ -1301,9 +1307,26 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                 </div>
                 {quotesSearchTerm && (
                   <div className="text-sm text-gray-500">
-                    {filteredQuotes.length} résultat(s) sur {quotes.length}
+                    {filteredQuotes.length} résultat(s) sur cette page
                   </div>
                 )}
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span>Par page :</span>
+                  <select
+                    value={quotesPagination.limit}
+                    onChange={(e) => {
+                      const limit = Number(e.target.value);
+                      setQuotesPagination({ limit, page: 1 });
+                      fetchQuotes();
+                    }}
+                    className="block rounded-md border-gray-300 py-1.5 pl-2 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
               </div>
               <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-300 ">
@@ -1435,6 +1458,69 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                   </tbody>
                 </table>
               </div>
+              {/* Pagination demandes de devis */}
+              {!quotesLoading && quotesPagination.totalPages > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 py-3 border-t border-gray-200">
+                  <p className="text-sm text-gray-700">
+                    Affichage de{" "}
+                    <span className="font-medium">
+                      {(quotesPagination.page - 1) * quotesPagination.limit + 1}
+                    </span>{" "}
+                    à{" "}
+                    <span className="font-medium">
+                      {Math.min(
+                        quotesPagination.page * quotesPagination.limit,
+                        quotesPagination.total
+                      )}
+                    </span>{" "}
+                    sur{" "}
+                    <span className="font-medium">
+                      {quotesPagination.total}
+                    </span>{" "}
+                    résultat(s)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (quotesPagination.page > 1) {
+                          setQuotesPagination({
+                            page: quotesPagination.page - 1,
+                          });
+                          fetchQuotes();
+                        }
+                      }}
+                      disabled={quotesPagination.page <= 1}
+                      className="relative inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      Précédent
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      Page {quotesPagination.page} sur{" "}
+                      {quotesPagination.totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          quotesPagination.page < quotesPagination.totalPages
+                        ) {
+                          setQuotesPagination({
+                            page: quotesPagination.page + 1,
+                          });
+                          fetchQuotes();
+                        }
+                      }}
+                      disabled={
+                        quotesPagination.page >= quotesPagination.totalPages
+                      }
+                      className="relative inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      Suivant
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
