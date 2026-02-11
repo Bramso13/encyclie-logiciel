@@ -1,4 +1,5 @@
 import { PrismaClient, QuoteStatus } from "@prisma/client";
+import { getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import type { BordereauFiltersV2, FidelidadeQuittancesRow } from "./types";
 import { getApporteur } from "./config";
 import {
@@ -10,13 +11,20 @@ import {
 const DEFAULT_STRING = "";
 const GARANTIE_RC_RCD = "RC_RCD";
 
+/** Commission = PrimeHT * 0.24 */
+const TAUX_COMMISSION = 0.24;
+
 /**
- * Taux de commission par défaut (10%) — aligné BrokerCommissionsTab.
- * Source : calcul (totalHT - fraisGestion - pj - reprise) * 0.1.
- * Sur PaymentInstallment on n'a pas le détail ; on utilise amountHT * 0.1.
- * Dev Notes: si calculatedPremium disponible, on pourrait matcher par installmentNumber.
+ * Taux de taxe selon la région (formData.territory) via getTaxeByRegion.
+ * Retourné multiplié par 100 (ex. 0.09 → "9").
  */
-const TAUX_COMMISSION_DEFAUT = 10;
+function computeTauxTaxe(formData: Record<string, unknown>): string {
+  const region = formData.territory ?? formData.region;
+  if (region == null || typeof region !== "string") return DEFAULT_STRING;
+  const rate = getTaxeByRegion(region);
+  if (rate == null) return DEFAULT_STRING;
+  return String(Math.round(rate * 100 * 100) / 100);
+}
 
 /**
  * Règle périmètre : PaymentInstallment dont dueDate OU (periodStart/periodEnd)
@@ -49,21 +57,35 @@ export async function getQuittancesV2(
         },
       ],
     },
-    include: {
+    select: {
+      periodStart: true,
+      periodEnd: true,
+      dueDate: true,
+      amountHT: true,
+      amountTTC: true,
+      taxAmount: true,
+      paidAt: true,
+      status: true,
+      installmentNumber: true,
+      paymentMethod: true,
       schedule: {
-        include: {
+        select: {
           quote: {
             select: {
               reference: true,
-              calculatedPremium: true,
+              formData: true,
             },
           },
         },
       },
+      transactions: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { method: true },
+      },
     },
   });
 
-  // Trier par reference quote puis numéro d'échéance
   installments.sort((a, b) => {
     const refA = a.schedule.quote.reference ?? "";
     const refB = b.schedule.quote.reference ?? "";
@@ -75,10 +97,21 @@ export async function getQuittancesV2(
 
   for (const inst of installments) {
     const quote = inst.schedule.quote;
+    const formData = (quote.formData ?? {}) as Record<string, unknown>;
     const identifiantPolice = quote.reference ?? DEFAULT_STRING;
     const identifiantQuittance = `${identifiantPolice}Q${inst.installmentNumber}`;
-
-    const commissions = computeCommissions(inst, quote.calculatedPremium);
+    const commission = Math.round(inst.amountHT * TAUX_COMMISSION * 100) / 100;
+    const tauxTaxe = computeTauxTaxe(formData);
+    const fromTransaction = inst.transactions?.[0]?.method;
+    let paymentMethod:
+      | import("@prisma/client").PaymentMethod
+      | null
+      | undefined =
+      inst.paymentMethod ??
+      (fromTransaction as import("@prisma/client").PaymentMethod | undefined);
+    if (inst.status === "PAID" && !paymentMethod) {
+      paymentMethod = "OTHER";
+    }
 
     rows.push(
       mapInstallmentToQuittancesRow({
@@ -86,39 +119,14 @@ export async function getQuittancesV2(
         identifiantPolice,
         identifiantQuittance,
         apporteur,
-        commissions,
+        commission: String(commission),
+        tauxTaxe,
+        paymentMethod,
       }),
     );
   }
 
   return rows;
-}
-
-function computeCommissions(
-  inst: {
-    installmentNumber: number;
-    amountHT: number;
-  },
-  calculatedPremium: unknown,
-): { taux: string; montant: string } {
-  // Essayer calculatedPremium.echeancier.echeances[installmentNumber-1]
-  const calc = calculatedPremium as Record<string, unknown> | null;
-  const echeances = calc?.echeancier as { echeances?: Array<{ totalHT?: number; fraisGestion?: number; pj?: number; reprise?: number }> } | undefined;
-  const echeance = echeances?.echeances?.[inst.installmentNumber - 1];
-
-  if (echeance && typeof echeance.totalHT === "number") {
-    const base =
-      echeance.totalHT -
-      (echeance.fraisGestion ?? 0) -
-      (echeance.pj ?? 0) -
-      (echeance.reprise ?? 0);
-    const montant = Math.round(base * 0.1 * 100) / 100;
-    return { taux: String(TAUX_COMMISSION_DEFAUT), montant: String(montant) };
-  }
-
-  // Fallback : 10% de amountHT
-  const montant = Math.round(inst.amountHT * 0.1 * 100) / 100;
-  return { taux: String(TAUX_COMMISSION_DEFAUT), montant: String(montant) };
 }
 
 function mapInstallmentToQuittancesRow(params: {
@@ -130,33 +138,41 @@ function mapInstallmentToQuittancesRow(params: {
     taxAmount: number;
     paidAt: Date | null;
     status: import("@prisma/client").PaymentScheduleStatus;
-    paymentMethod: import("@prisma/client").PaymentMethod | null;
-    createdAt: Date;
     dueDate: Date;
   };
   identifiantPolice: string;
   identifiantQuittance: string;
   apporteur: string;
-  commissions: { taux: string; montant: string };
+  commission: string;
+  tauxTaxe: string;
+  paymentMethod: import("@prisma/client").PaymentMethod | null | undefined;
 }): FidelidadeQuittancesRow {
-  const { inst, identifiantPolice, identifiantQuittance, apporteur, commissions } =
-    params;
+  const {
+    inst,
+    identifiantPolice,
+    identifiantQuittance,
+    apporteur,
+    commission,
+    tauxTaxe,
+    paymentMethod,
+  } = params;
 
   const dateEffet = formatDate(inst.periodStart);
   const dateFin = formatDate(inst.periodEnd);
   const dateEncaissement = inst.paidAt
     ? formatDate(inst.paidAt)
     : DEFAULT_STRING;
-  const dateEmission = inst.paidAt
-    ? formatDate(inst.paidAt)
-    : formatDate(inst.dueDate);
+
+  let modePaiement = mapPaymentMethodToModePaiement(paymentMethod);
+  if (inst.status === "PAID" && (!modePaiement || modePaiement.length < 2)) {
+    modePaiement = "VIREMENT";
+  }
 
   return {
     APPORTEUR: apporteur,
     IDENTIFIANT_POLICE: identifiantPolice,
     NUMERO_AVENANT: DEFAULT_STRING,
     IDENTIFIANT_QUITTANCE: identifiantQuittance,
-    DATE_EMISSION_QUITTANCE: dateEmission,
     DATE_EFFET_QUITTANCE: dateEffet,
     DATE_FIN_QUITTANCE: dateFin,
     DATE_ENCAISSEMENT: dateEncaissement,
@@ -165,8 +181,8 @@ function mapInstallmentToQuittancesRow(params: {
     PRIME_TTC: String(inst.amountTTC),
     PRIME_HT: String(inst.amountHT),
     TAXES: String(inst.taxAmount),
-    TAUX_COMMISSIONS: commissions.taux,
-    COMMISSIONS: commissions.montant,
-    MODE_PAIEMENT: mapPaymentMethodToModePaiement(inst.paymentMethod),
+    TAUX_TAXE: tauxTaxe,
+    COMMISSIONS: commission,
+    MODE_PAIEMENT: modePaiement,
   };
 }

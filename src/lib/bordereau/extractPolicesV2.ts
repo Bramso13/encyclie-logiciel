@@ -19,8 +19,9 @@ function getActiviteTitleByCode(code: string | number): string {
 }
 
 /**
- * Règle périmètre : contrat dont la période (startDate, endDate) chevauche la période filtre.
- * Quote ACCEPTED sans contrat : retenue si acceptedAt dans la période (devis accepté seul).
+ * Règle périmètre : une ligne par échéance (PaymentInstallment), comme le tableau quittances.
+ * Évite les doublons contrat/devis : on part des échéances (schedule → quote), pas des contrats.
+ * DATE_SOUSCRIPTION = formData.dateDeffet ; DATE_FIN_CONTRAT = date fin période de l'échéance.
  */
 export async function getPolicesV2(
   filters: BordereauFiltersV2,
@@ -29,63 +30,60 @@ export async function getPolicesV2(
   const { dateRange } = filters;
   const apporteur = getApporteur();
 
-  const includeQuoteProduct = {
-    quote: {
-      include: {
-        product: true,
+  const installments = await prisma.paymentInstallment.findMany({
+    where: {
+      schedule: {
+        quote: { status: QuoteStatus.ACCEPTED },
+      },
+      OR: [
+        {
+          dueDate: {
+            gte: dateRange.startDate,
+            lte: dateRange.endDate,
+          },
+        },
+        {
+          AND: [
+            { periodStart: { lte: dateRange.endDate } },
+            { periodEnd: { gte: dateRange.startDate } },
+          ],
+        },
+      ],
+    },
+    include: {
+      schedule: {
+        include: {
+          quote: {
+            include: {
+              product: true,
+              contract: true,
+            },
+          },
+        },
       },
     },
-    product: true,
-  } as const;
+  });
 
-  // 1) Contrats dont la quote est ACCEPTED et période contrat chevauche la période filtre
-  const contracts = await prisma.insuranceContract.findMany({
-    where: {
-      quote: { status: QuoteStatus.ACCEPTED },
-      startDate: { lte: dateRange.endDate },
-      endDate: { gte: dateRange.startDate },
-    },
-    include: includeQuoteProduct,
+  installments.sort((a, b) => {
+    const refA = a.schedule.quote.reference ?? "";
+    const refB = b.schedule.quote.reference ?? "";
+    if (refA !== refB) return refA.localeCompare(refB);
+    return a.installmentNumber - b.installmentNumber;
   });
 
   const rows: FidelidadePolicesRow[] = [];
 
-  for (const contract of contracts) {
-    const quote = contract.quote;
+  for (const inst of installments) {
+    const quote = inst.schedule.quote;
+    const contract = quote.contract;
     const companyData = (quote.companyData ?? {}) as Record<string, unknown>;
     const formData = (quote.formData ?? {}) as Record<string, unknown>;
-    const productName = contract.product?.name ?? quote.product?.name ?? "";
+
     rows.push(
-      mapContractToPolicesRow({
+      mapInstallmentToPolicesRow({
+        inst,
         quote,
         contract,
-        companyData,
-        formData,
-        apporteur,
-        productName,
-      })
-    );
-  }
-
-  // 2) Quotes ACCEPTED sans contrat (devis accepté seul) dont acceptedAt dans la période
-  const standaloneQuotes = await prisma.quote.findMany({
-    where: {
-      status: QuoteStatus.ACCEPTED,
-      contract: null,
-      acceptedAt: {
-        gte: dateRange.startDate,
-        lte: dateRange.endDate,
-      },
-    },
-    include: { product: true },
-  });
-
-  for (const quote of standaloneQuotes) {
-    const companyData = (quote.companyData ?? {}) as Record<string, unknown>;
-    const formData = (quote.formData ?? {}) as Record<string, unknown>;
-    rows.push(
-      mapQuoteOnlyToPolicesRow({
-        quote,
         companyData,
         formData,
         apporteur,
@@ -96,22 +94,28 @@ export async function getPolicesV2(
   return rows;
 }
 
-function mapContractToPolicesRow(params: {
+function mapInstallmentToPolicesRow(params: {
+  inst: { periodEnd: Date };
   quote: {
     reference: string;
     submittedAt: Date | null;
     codeNAF: string | null;
     status: QuoteStatus;
     updatedAt: Date;
+    acceptedAt: Date | null;
+    product?: { name?: string } | null;
   };
-  contract: { startDate: Date; endDate: Date; status: string; updatedAt: Date };
+  contract: {
+    startDate: Date;
+    endDate: Date;
+    status: string;
+    updatedAt: Date;
+  } | null;
   companyData: Record<string, unknown>;
   formData: Record<string, unknown>;
   apporteur: string;
-  productName: string;
 }): FidelidadePolicesRow {
-  const { quote, contract, companyData, formData, apporteur, productName } =
-    params;
+  const { inst, quote, contract, companyData, formData, apporteur } = params;
   const activityCols = buildActivityColumnsFromFormData(formData);
   const formFields = getFormDataFieldsForPolices(
     formData,
@@ -119,27 +123,46 @@ function mapContractToPolicesRow(params: {
     quote.codeNAF
   );
 
-  const dateSouscription = quote.submittedAt
+  // date_souscription = formData.dateDeffet
+  const dateDeffetRaw =
+    formData.dateDeffet ??
+    formData.dateEffet ??
+    formData.dateDebut ??
+    formData.startDate;
+  const dateSouscription =
+    dateDeffetRaw != null ? formatDate(dateDeffetRaw as Date | string) : DEFAULT_STRING;
+
+  const dateEffet = contract
+    ? formatDate(contract.startDate)
+    : dateDeffetRaw != null
+      ? formatDate(dateDeffetRaw as Date | string)
+      : DEFAULT_STRING;
+
+  // Date fin contrat = date fin période de l'échéance
+  const dateFin = formatDate(inst.periodEnd);
+
+  const dateDemande = quote.submittedAt
     ? formatDate(quote.submittedAt)
     : DEFAULT_STRING;
-  const dateEffet = contract.startDate
-    ? formatDate(contract.startDate)
-    : DEFAULT_STRING;
-  const dateFin = contract.endDate
-    ? formatDate(contract.endDate)
-    : DEFAULT_STRING;
-  const dateDemande = dateSouscription;
-  const statutPolice = mapContractStatusToEtatPolice(
-    contract.status as
-      | "ACTIVE"
-      | "SUSPENDED"
-      | "EXPIRED"
-      | "CANCELLED"
-      | "PENDING_RENEWAL"
+
+  const statutPolice = contract
+    ? mapContractStatusToEtatPolice(
+        contract.status as
+          | "ACTIVE"
+          | "SUSPENDED"
+          | "EXPIRED"
+          | "CANCELLED"
+          | "PENDING_RENEWAL"
+      )
+    : mapQuoteStatusToStatutPolice(quote.status);
+
+  // DATE_STAT_POLICE = dateDeffet
+  const dateStatPolice =
+    dateDeffetRaw != null ? formatDate(dateDeffetRaw as Date | string) : DEFAULT_STRING;
+
+  const fractionnement = toStr(
+    formData.periodicity ?? formData.periodicite ?? formData.fractionnementPrime
   );
-  const dateStatPolice = contract.updatedAt
-    ? formatDate(contract.updatedAt)
-    : DEFAULT_STRING;
 
   return {
     APPORTEUR: apporteur,
@@ -154,81 +177,9 @@ function mapContractToPolicesRow(params: {
     STATUT_POLICE: statutPolice,
     DATE_STAT_POLICE: dateStatPolice,
     MOTIF_STATUT: DEFAULT_STRING,
-    TYPE_CONTRAT: productName,
-    COMPAGNIE: productName,
+    FRACTIONNEMENT: fractionnement,
     NOM_ENTREPRISE_ASSURE: formFields.nomEntrepriseAssure,
     SIREN: formFields.siren,
-    ACTIVITE: DEFAULT_STRING,
-    ADRESSE_RISQUE: formFields.adresseRisque,
-    VILLE_RISQUE: formFields.villeRisque,
-    CODE_POSTAL_RISQUE: formFields.codePostalRisque,
-    CA_ENTREPRISE: formFields.caEntreprise,
-    EFFECTIF_ENTREPRISE: formFields.effectifEntreprise,
-    CODE_NAF: formFields.codeNaf,
-    ...activityCols,
-  } as FidelidadePolicesRow;
-}
-
-function mapQuoteOnlyToPolicesRow(params: {
-  quote: {
-    reference: string;
-    submittedAt: Date | null;
-    acceptedAt: Date | null;
-    codeNAF: string | null;
-    status: QuoteStatus;
-    updatedAt: Date;
-    product?: { name?: string };
-  };
-  companyData: Record<string, unknown>;
-  formData: Record<string, unknown>;
-  apporteur: string;
-}): FidelidadePolicesRow {
-  const { quote, companyData, formData, apporteur } = params;
-  const activityCols = buildActivityColumnsFromFormData(formData);
-  const formFields = getFormDataFieldsForPolices(
-    formData,
-    companyData,
-    quote.codeNAF
-  );
-
-  const dateSouscription = quote.submittedAt
-    ? formatDate(quote.submittedAt)
-    : DEFAULT_STRING;
-  const dateEffet =
-    formData.dateEffet ??
-    formData.dateDeffet ??
-    formData.dateDebut ??
-    formData.startDate;
-  const dateFin =
-    formData.dateFin ?? formData.dateFinContrat ?? formData.endDate;
-  const dateDemande = dateSouscription;
-  const statutPolice = mapQuoteStatusToStatutPolice(quote.status);
-  const dateStatPolice = quote.updatedAt
-    ? formatDate(quote.updatedAt)
-    : quote.acceptedAt
-    ? formatDate(quote.acceptedAt)
-    : DEFAULT_STRING;
-
-  return {
-    APPORTEUR: apporteur,
-    IDENTIFIANT_POLICE: quote.reference ?? DEFAULT_STRING,
-    DATE_SOUSCRIPTION: dateSouscription,
-    DATE_EFFET_CONTRAT:
-      dateEffet != null ? formatDate(dateEffet as Date) : DEFAULT_STRING,
-    DATE_FIN_CONTRAT:
-      dateFin != null ? formatDate(dateFin as Date) : DEFAULT_STRING,
-    NUMERO_AVENANT: DEFAULT_STRING,
-    MOTIF_AVENANT: DEFAULT_STRING,
-    DATE_EFFET_AVENANT: DEFAULT_STRING,
-    DATE_DEMANDE: dateDemande,
-    STATUT_POLICE: statutPolice,
-    DATE_STAT_POLICE: dateStatPolice,
-    MOTIF_STATUT: DEFAULT_STRING,
-    TYPE_CONTRAT: quote.product?.name ?? DEFAULT_STRING,
-    COMPAGNIE: quote.product?.name ?? DEFAULT_STRING,
-    NOM_ENTREPRISE_ASSURE: formFields.nomEntrepriseAssure,
-    SIREN: formFields.siren,
-    ACTIVITE: DEFAULT_STRING,
     ADRESSE_RISQUE: formFields.adresseRisque,
     VILLE_RISQUE: formFields.villeRisque,
     CODE_POSTAL_RISQUE: formFields.codePostalRisque,
@@ -264,8 +215,6 @@ function buildActivityColumnsFromFormData(
 
 /**
  * Champs Polices remplis depuis formData (priorité) puis companyData.
- * Aligné sur la structure formData réelle : city, postalCode, address, companyName, siret,
- * chiffreAffaires, nombreSalaries, codeNaf, activities.
  */
 function getFormDataFieldsForPolices(
   formData: Record<string, unknown>,

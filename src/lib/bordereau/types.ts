@@ -84,9 +84,9 @@ export interface FidelidadeRow {
 }
 
 /**
- * Feuille 1 Polices — une ligne = une police (scope v2).
- * Colonnes alignées sur docs/epics/bordereau-fidelidade-scope-clarifie.md §6.
- * Données manquantes : chaîne vide (avenant, MOTIF_STATUT, etc.).
+ * Feuille 1 Polices — une ligne = une échéance (scope v2, aligné quittances).
+ * date_souscription = formData.dateDeffet, date_fin_contrat = date fin période échéance.
+ * Colonnes type contrat, compagnie, activité supprimées ; fractionnement ajouté.
  */
 export interface FidelidadePolicesRow {
   APPORTEUR: string;
@@ -101,11 +101,9 @@ export interface FidelidadePolicesRow {
   STATUT_POLICE: string;
   DATE_STAT_POLICE: string;
   MOTIF_STATUT: string;
-  TYPE_CONTRAT: string;
-  COMPAGNIE: string;
+  FRACTIONNEMENT: string;
   NOM_ENTREPRISE_ASSURE: string;
   SIREN: string;
-  ACTIVITE: string;
   ADRESSE_RISQUE: string;
   VILLE_RISQUE: string;
   CODE_POSTAL_RISQUE: string;
@@ -132,14 +130,14 @@ export interface FidelidadePolicesRow {
 
 /**
  * Feuille 2 Quittances — une ligne = une échéance (scope v2).
- * Colonnes alignées sur docs/epics/bordereau-fidelidade-scope-clarifie.md §6.
+ * Colonnes DATE_EMISSION_QUITTANCE et TAUX_COMMISSIONS supprimées ; TAUX_TAXE ajouté.
+ * Commission = PrimeHT * 0.24.
  */
 export interface FidelidadeQuittancesRow {
   APPORTEUR: string;
   IDENTIFIANT_POLICE: string;
   NUMERO_AVENANT: string;
   IDENTIFIANT_QUITTANCE: string;
-  DATE_EMISSION_QUITTANCE: string;
   DATE_EFFET_QUITTANCE: string;
   DATE_FIN_QUITTANCE: string;
   DATE_ENCAISSEMENT: string;
@@ -148,7 +146,7 @@ export interface FidelidadeQuittancesRow {
   PRIME_TTC: string;
   PRIME_HT: string;
   TAXES: string;
-  TAUX_COMMISSIONS: string;
+  TAUX_TAXE: string;
   COMMISSIONS: string;
   MODE_PAIEMENT: string;
 }

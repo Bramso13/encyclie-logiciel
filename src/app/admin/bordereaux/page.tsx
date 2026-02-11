@@ -241,10 +241,23 @@ export default function BordereauxPage() {
         throw new Error(data.error || "Erreur lors de la prévisualisation");
       }
 
-      setPolices(data.polices ?? []);
-      setQuittances(data.quittances ?? []);
-      setEditedPolices(JSON.parse(JSON.stringify(data.polices ?? [])));
-      setEditedQuittances(JSON.parse(JSON.stringify(data.quittances ?? [])));
+      const rawPolices = data.polices ?? [];
+      const rawQuittances = (data.quittances ?? []) as FidelidadeQuittancesRow[];
+      const normalizeQuittanceRow = (row: FidelidadeQuittancesRow) =>
+        QUITTANCES_COLUMNS.reduce(
+          (acc, col) => {
+            const v = row[col];
+            acc[col] =
+              v !== undefined && v !== null ? String(v) : "";
+            return acc;
+          },
+          {} as Record<string, string>
+        ) as unknown as FidelidadeQuittancesRow;
+      const normalizedQuittances = rawQuittances.map(normalizeQuittanceRow);
+      setPolices(rawPolices);
+      setQuittances(normalizedQuittances);
+      setEditedPolices(JSON.parse(JSON.stringify(rawPolices)));
+      setEditedQuittances(JSON.parse(JSON.stringify(normalizedQuittances)));
       setShowPreview(true);
     } catch (err) {
       setError(

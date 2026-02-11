@@ -60,7 +60,18 @@ export default function PaymentTrackingTab({
   const [generatingAttestation, setGeneratingAttestation] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
+  const [referenceInput, setReferenceInput] = useState(quote?.reference ?? "");
+  const [savingReference, setSavingReference] = useState(false);
+  const [bulkHT, setBulkHT] = useState("");
+  const [bulkTax, setBulkTax] = useState("");
+  const [bulkTTC, setBulkTTC] = useState("");
+  const [savingBulk, setSavingBulk] = useState(false);
+
   const { data: session } = useSession();
+
+  useEffect(() => {
+    setReferenceInput(quote?.reference ?? "");
+  }, [quote?.id, quote?.reference]);
 
   const isAdmin = session?.user?.role === "ADMIN";
 
@@ -123,6 +134,90 @@ export default function PaymentTrackingTab({
       }
     } catch (error) {
       console.error("Erreur lors de la création de l'échéancier:", error);
+    }
+  };
+
+  // Enregistrer la référence du devis (et du contrat si présent)
+  const handleSaveReference = async () => {
+    if (!quote?.id || !referenceInput.trim()) return;
+    setSavingReference(true);
+    try {
+      const resQuote = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: referenceInput.trim() }),
+      });
+      if (!resQuote.ok) {
+        const data = await resQuote.json();
+        alert(data?.error ?? "Erreur lors de la mise à jour de la référence.");
+        return;
+      }
+      const resContract = await fetch(`/api/quotes/${quote.id}/contract`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: referenceInput.trim() }),
+      });
+      if (resContract.ok) {
+        alert("Référence du devis et du contrat (si présent) enregistrée.");
+      } else if (resContract.status !== 404) {
+        const data = await resContract.json();
+        alert(data?.error ?? "Erreur lors de la mise à jour du contrat.");
+      } else {
+        alert("Référence du devis enregistrée.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de l'enregistrement.");
+    } finally {
+      setSavingReference(false);
+    }
+  };
+
+  // Appliquer les mêmes montants à toutes les échéances de ce devis
+  const handleApplyBulkToAll = async () => {
+    if (!quote?.id) return;
+    const installmentsForQuote = allInstallments.filter(
+      (i) => i.schedule?.quote?.id === quote.id
+    );
+    if (installmentsForQuote.length === 0) {
+      alert("Aucune échéance pour ce devis.");
+      return;
+    }
+    const ht = parseFloat(bulkHT);
+    const tax = parseFloat(bulkTax);
+    const ttc = parseFloat(bulkTTC);
+    if (Number.isNaN(ht) || Number.isNaN(tax) || Number.isNaN(ttc)) {
+      alert("Veuillez saisir des montants valides (HT, Taxe, TTC).");
+      return;
+    }
+    setSavingBulk(true);
+    try {
+      const payments = installmentsForQuote.map((p) => ({
+        id: p.id,
+        amountHT: ht,
+        taxAmount: tax,
+        amountTTC: ttc,
+      }));
+      const res = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payments }),
+      });
+      if (res.ok) {
+        await refreshData();
+        setBulkHT("");
+        setBulkTax("");
+        setBulkTTC("");
+        alert(`${installmentsForQuote.length} échéance(s) mises à jour.`);
+      } else {
+        const data = await res.json();
+        alert(data?.error ?? "Erreur lors de la mise à jour des échéances.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de la mise à jour.");
+    } finally {
+      setSavingBulk(false);
     }
   };
 
@@ -401,6 +496,80 @@ export default function PaymentTrackingTab({
               ? "Toutes les échéances de paiement"
               : "Vos échéances de paiement"}
           </p>
+        </div>
+      </div>
+
+      {/* Modification rapide : référence + appliquer montants à toutes les échéances */}
+      <div className="bg-white rounded-lg shadow p-4 space-y-4">
+        <h3 className="text-sm font-semibold text-gray-900">
+          Modification rapide
+        </h3>
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Référence (devis et contrat)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={referenceInput}
+                onChange={(e) => setReferenceInput(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm w-48"
+                placeholder="Ex: RCD-2025-001"
+              />
+              <button
+                type="button"
+                onClick={handleSaveReference}
+                disabled={savingReference}
+                className="px-3 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {savingReference ? "Enregistrement…" : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-end gap-4 pt-2 border-t border-gray-100">
+          <span className="text-xs text-gray-500 mr-2">
+            Appliquer à toutes les échéances de ce devis :
+          </span>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">HT (€)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={bulkHT}
+              onChange={(e) => setBulkHT(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-24"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Taxe (€)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={bulkTax}
+              onChange={(e) => setBulkTax(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-24"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">TTC (€)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={bulkTTC}
+              onChange={(e) => setBulkTTC(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-24"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleApplyBulkToAll}
+            disabled={savingBulk}
+            className="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50"
+          >
+            {savingBulk ? "Application…" : "Appliquer à toutes"}
+          </button>
         </div>
       </div>
 

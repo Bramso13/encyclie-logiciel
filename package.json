@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "update-quotes": "tsx src/scripts/update-quotes-from-file.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

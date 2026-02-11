@@ -16,10 +16,9 @@ import { importBrokers } from "@/scripts/import-brokers";
 import dynamic from "next/dynamic";
 
 // Dynamically import BordereauxPage to avoid SSR issues
-const BordereauxPage = dynamic(
-  () => import("@/app/admin/bordereaux/page"),
-  { ssr: false }
-);
+const BordereauxPage = dynamic(() => import("@/app/admin/bordereaux/page"), {
+  ssr: false,
+});
 
 // Types exacts de la fonction calculPrimeRCD
 interface SimulatorParams {
@@ -129,6 +128,52 @@ interface AdminScreenProps {
   };
 }
 
+// Produit utilisé pour "Créer à partir d'un JSON" (devis RCD)
+const DEFAULT_QUOTE_JSON_PRODUCT_ID = "cmdw8d0js0001yx04kbtrri2o";
+
+// Exemple de JSON pour créer un devis (produit RCD) — structure alignée sur les vrais formulaires
+const EXAMPLE_QUOTE_JSON = {
+  companyData: {
+    siret: "81404561300019",
+    address: "10 RUE ECOLES BONOVO, MTSAPERE, 97600, MAMOUDZOU, France",
+    legalForm: "Entrepreneur individuel",
+    companyName: "MAJANI ZAIDOU",
+    creationDate: "2015-10-12",
+  },
+  formData: {
+    city: "MAMOUDZOU",
+    address: "10 RUE ECOLES BONOVO, MTSAPERE, 97600, MAMOUDZOU, France",
+    includePJ: true,
+    legalForm: "Entrepreneur individuel",
+    territory: "MAYOTTE",
+    activities: [{ code: "20", caSharePercent: 100 }],
+    dateDeffet: "2026-01-01",
+    enCreation: false,
+    mailAdress: "vk@encyclie-construction.com",
+    postalCode: "97600",
+    companyName: "MAJANI ZAIDOU",
+    periodicity: "trimestriel",
+    phoneNumber: "06.39.69.56.47",
+    creationDate: "2015-10-12",
+    directorName: "ZAIDOU MAJANI",
+    nombreSalaries: "2",
+    tradingPercent: "0",
+    chiffreAffaires: "90000",
+    previousInsurer: "AUTRES",
+    experienceMetier: "5",
+    honoraireCourtier: "0",
+    previousRcdStatus: "RESILIE",
+    resiliationReason: "INITIATIVE_ASSURE",
+    tempsSansActivite: "NON",
+    assureurDefaillant: true,
+    subContractingPercent: "0",
+    dateFinCouverturePrecedente: "2024-12-31",
+    nombreAnneeAssuranceContinue: "-1",
+    absenceDeSinistreSurLes5DernieresAnnees: "ASSUREUR_DEFAILLANT",
+    sansActiviteDepuisPlusDe12MoisSansFermeture: "NON",
+  } as Record<string, unknown>,
+};
+
 export default function AdminScreen({ user }: AdminScreenProps) {
   const [activeTab, setActiveTab] = useState("brokers");
   const [showProductForm, setShowProductForm] = useState(false);
@@ -138,6 +183,23 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showSuccessPage, setShowSuccessPage] = useState(false);
   const [createdQuote, setCreatedQuote] = useState<any>(null);
+  const [showCreateFromJsonModal, setShowCreateFromJsonModal] = useState(false);
+  const [createFromJsonInput, setCreateFromJsonInput] = useState("");
+  const [createFromJsonError, setCreateFromJsonError] = useState<string | null>(
+    null,
+  );
+  const [quoteToDelete, setQuoteToDelete] = useState<{
+    id: string;
+    reference: string;
+    companyName: string;
+  } | null>(null);
+  const [deleteQuoteError, setDeleteQuoteError] = useState<string | null>(null);
+  const [selectedQuoteIds, setSelectedQuoteIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // States pour l'historique des versions
   const [selectedQuoteForVersions, setSelectedQuoteForVersions] =
@@ -203,7 +265,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
 
   const updateRcdForm = <K extends keyof RcdFormInput>(
     field: K,
-    value: RcdFormInput[K]
+    value: RcdFormInput[K],
   ) => {
     setRcdForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -220,7 +282,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
         year: Number(l.year),
         numClaims: Number(l.numClaims),
         totalCost: Number(l.totalCost),
-      })
+      }),
     );
 
     setSimulatorData((prev) => ({
@@ -253,6 +315,8 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     quotes,
     loading: quotesLoading,
     fetchQuotes,
+    createQuote,
+    deleteQuote,
     pagination: quotesPagination,
     setPagination: setQuotesPagination,
   } = useQuotesStore();
@@ -290,7 +354,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     } catch (error) {
       console.error(
         "Erreur lors de la récupération des paiements en retard:",
-        error
+        error,
       );
     } finally {
       setLoadingOverduePayments(false);
@@ -302,7 +366,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     paymentId: string,
     paymentMethod?: string,
     paymentReference?: string,
-    adminNotes?: string
+    adminNotes?: string,
   ) => {
     try {
       const response = await fetch(
@@ -317,14 +381,14 @@ export default function AdminScreen({ user }: AdminScreenProps) {
             paymentReference,
             adminNotes,
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!data.success) {
         throw new Error(
-          data.error || "Erreur lors de la mise à jour du paiement"
+          data.error || "Erreur lors de la mise à jour du paiement",
         );
       }
 
@@ -333,7 +397,9 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     } catch (error) {
       console.error("Erreur:", error);
       alert(
-        error instanceof Error ? error.message : "Erreur lors de la mise à jour"
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la mise à jour",
       );
     }
   };
@@ -349,7 +415,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
         `/api/payment-installments/${paymentId}/send-reminder`,
         {
           method: "POST",
-        }
+        },
       );
 
       const data = await response.json();
@@ -365,7 +431,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
       alert(
         error instanceof Error
           ? error.message
-          : "Erreur lors de l'envoi du rappel"
+          : "Erreur lors de l'envoi du rappel",
       );
     }
   };
@@ -401,6 +467,47 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     setShowSuccessPage(true);
   };
 
+  const handleCreateQuoteFromJson = async () => {
+    setCreateFromJsonError(null);
+    let data: {
+      productId?: string;
+      companyData?: Record<string, any>;
+      formData?: Record<string, any>;
+      status?: string;
+    };
+    try {
+      data = JSON.parse(createFromJsonInput);
+    } catch {
+      setCreateFromJsonError("JSON invalide. Vérifiez la syntaxe.");
+      return;
+    }
+    const productId = data.productId ?? DEFAULT_QUOTE_JSON_PRODUCT_ID;
+    if (!data.companyData || !data.formData) {
+      setCreateFromJsonError(
+        "Le JSON doit contenir au minimum: companyData et formData (productId est optionnel, ce produit est utilisé par défaut).",
+      );
+      return;
+    }
+    const payload = {
+      productId,
+      companyData: data.companyData,
+      formData: data.formData,
+      status: data.status ?? "INCOMPLETE",
+    };
+    const quote = await createQuote(payload);
+    if (quote) {
+      setShowCreateFromJsonModal(false);
+      setCreateFromJsonInput("");
+      setCreateFromJsonError(null);
+      handleQuoteCreated(quote);
+    } else {
+      const err = useQuotesStore.getState().error;
+      setCreateFromJsonError(
+        err || "Erreur lors de la création du devis. Vérifiez les données.",
+      );
+    }
+  };
+
   const handleBackToDashboard = () => {
     setShowSuccessPage(false);
     setCreatedQuote(null);
@@ -423,7 +530,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
 
       if (!result.success) {
         throw new Error(
-          result.error || "Erreur lors de la création du courtier"
+          result.error || "Erreur lors de la création du courtier",
         );
       }
 
@@ -442,7 +549,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
       const results = await importBrokers(handleCreateBroker);
       await fetchBrokers();
       alert(
-        `Import terminé: ${results.success} réussis, ${results.skipped} ignorés, ${results.failed} échecs`
+        `Import terminé: ${results.success} réussis, ${results.skipped} ignorés, ${results.failed} échecs`,
       );
     } catch (error) {
       console.error("Error importing brokers:", error);
@@ -491,7 +598,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   // Function to update simulator data
   const updateSimulatorData = <K extends keyof SimulatorParams>(
     field: K,
-    value: SimulatorParams[K]
+    value: SimulatorParams[K],
   ) => {
     setSimulatorData((prev) => ({ ...prev, [field]: value }));
   };
@@ -520,12 +627,12 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   const updateActivity = (
     index: number,
     field: keyof { code: number; caSharePercent: number },
-    value: number
+    value: number,
   ) => {
     setSimulatorData((prev) => ({
       ...prev,
       activites: prev.activites.map((act, i) =>
-        i === index ? { ...act, [field]: value } : act
+        i === index ? { ...act, [field]: value } : act,
       ),
     }));
   };
@@ -541,7 +648,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
 
       if (!data.success) {
         throw new Error(
-          data.error || "Erreur lors de la récupération des versions"
+          data.error || "Erreur lors de la récupération des versions",
         );
       }
 
@@ -551,7 +658,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
       alert(
         error instanceof Error
           ? error.message
-          : "Erreur lors de la récupération des versions"
+          : "Erreur lors de la récupération des versions",
       );
     } finally {
       setLoadingVersions(false);
@@ -609,7 +716,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     setSimulatorData((prev) => ({
       ...prev,
       sinistresPrecedents: (prev.sinistresPrecedents ?? []).filter(
-        (_, i) => i !== index
+        (_, i) => i !== index,
       ),
     }));
   };
@@ -617,12 +724,12 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   const updateLossEntry = (
     index: number,
     field: keyof SinistrePasse,
-    value: number
+    value: number,
   ) => {
     setSimulatorData((prev) => ({
       ...prev,
       sinistresPrecedents: (prev.sinistresPrecedents ?? []).map((s, i) =>
-        i === index ? { ...s, [field]: value } : s
+        i === index ? { ...s, [field]: value } : s,
       ),
     }));
   };
@@ -656,7 +763,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
     activeProducts: products.filter((p) => p.isActive).length,
     totalQuotes: quotes.length,
     pendingQuotes: quotes.filter(
-      (q) => q.status === "SUBMITTED" || q.status === "IN_PROGRESS"
+      (q) => q.status === "SUBMITTED" || q.status === "IN_PROGRESS",
     ).length,
   };
 
@@ -1102,7 +1209,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {new Date(product.createdAt).toLocaleDateString(
-                              "fr-FR"
+                              "fr-FR",
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -1256,26 +1363,138 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                 <h3 className="text-lg font-medium text-gray-900">
                   Gestion des Demandes de Devis
                 </h3>
-                <button
-                  onClick={handleNewQuote}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setShowCreateFromJsonModal(true);
+                      setCreateFromJsonError(null);
+                      setCreateFromJsonInput("");
+                    }}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Nouvelle demande de devis
-                </button>
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+                      />
+                    </svg>
+                    Créer à partir d'un JSON
+                  </button>
+                  <button
+                    onClick={handleNewQuote}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Nouvelle demande de devis
+                  </button>
+                </div>
               </div>
+
+              {/* Modal Créer devis depuis JSON */}
+              {showCreateFromJsonModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                  <div className="flex min-h-full items-center justify-center p-4">
+                    <div
+                      className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+                      onClick={() => {
+                        setShowCreateFromJsonModal(false);
+                        setCreateFromJsonError(null);
+                      }}
+                    />
+                    <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">
+                        Créer un devis à partir d'un JSON
+                      </h4>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Produit utilisé : <strong>RC Décennale</strong> (id
+                        fixe). Collez un JSON avec{" "}
+                        <code className="bg-gray-100 px-1 rounded">
+                          companyData
+                        </code>{" "}
+                        et{" "}
+                        <code className="bg-gray-100 px-1 rounded">
+                          formData
+                        </code>{" "}
+                        (
+                        <code className="bg-gray-100 px-1 rounded">
+                          productId
+                        </code>{" "}
+                        et{" "}
+                        <code className="bg-gray-100 px-1 rounded">status</code>{" "}
+                        optionnels).
+                      </p>
+                      <textarea
+                        value={createFromJsonInput}
+                        onChange={(e) => {
+                          setCreateFromJsonInput(e.target.value);
+                          setCreateFromJsonError(null);
+                        }}
+                        placeholder='{"companyData":{...},"formData":{...}}'
+                        rows={12}
+                        className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCreateFromJsonInput(
+                              JSON.stringify(EXAMPLE_QUOTE_JSON, null, 2),
+                            );
+                            setCreateFromJsonError(null);
+                          }}
+                          className="text-sm text-indigo-600 hover:text-indigo-800"
+                        >
+                          Utiliser l'exemple complet
+                        </button>
+                      </div>
+                      {createFromJsonError && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {createFromJsonError}
+                        </p>
+                      )}
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCreateFromJsonModal(false);
+                            setCreateFromJsonError(null);
+                          }}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCreateQuoteFromJson}
+                          disabled={quotesLoading}
+                          className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                          {quotesLoading ? "Création..." : "Créer le devis"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Barre de recherche */}
               <div className="flex items-center space-x-4">
@@ -1328,10 +1547,59 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                   </select>
                 </div>
               </div>
+              {/* Barre d'action suppression multiple */}
+              {selectedQuoteIds.size > 0 && !quotesLoading && (
+                <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+                  <span className="text-sm font-medium text-gray-700">
+                    {selectedQuoteIds.size} devis sélectionné
+                    {selectedQuoteIds.size > 1 ? "s" : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedQuoteIds(new Set())}
+                    className="text-sm text-indigo-600 hover:text-indigo-800"
+                  >
+                    Tout désélectionner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkDeleteIds(Array.from(selectedQuoteIds));
+                      setBulkDeleteError(null);
+                    }}
+                    className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                  >
+                    Supprimer la sélection
+                  </button>
+                </div>
+              )}
               <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-300 ">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-4 py-3">
+                        {filteredQuotes.length > 0 && (
+                          <input
+                            type="checkbox"
+                            checked={
+                              filteredQuotes.length > 0 &&
+                              filteredQuotes.every((q) =>
+                                selectedQuoteIds.has(q.id),
+                              )
+                            }
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedQuoteIds(
+                                  new Set(filteredQuotes.map((q) => q.id)),
+                                );
+                              } else {
+                                setSelectedQuoteIds(new Set());
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                        )}
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
                         Référence
                       </th>
@@ -1356,7 +1624,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {quotesLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center">
+                        <td colSpan={7} className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                           </div>
@@ -1365,7 +1633,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                     ) : filteredQuotes.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-6 py-4 text-center text-gray-500"
                         >
                           {quotesSearchTerm
@@ -1376,6 +1644,22 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                     ) : (
                       filteredQuotes.map((quote) => (
                         <tr key={quote.id}>
+                          <td className="px-4 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedQuoteIds.has(quote.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setSelectedQuoteIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(quote.id)) next.delete(quote.id);
+                                  else next.add(quote.id);
+                                  return next;
+                                });
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {quote.reference}
                           </td>
@@ -1399,36 +1683,36 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                 quote.status === "DRAFT"
                                   ? "bg-gray-100 text-gray-800"
                                   : quote.status === "SUBMITTED"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : quote.status === "IN_PROGRESS"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : quote.status === "OFFER_READY"
-                                  ? "bg-green-100 text-green-800"
-                                  : quote.status === "ACCEPTED"
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : quote.status === "REJECTED"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-800"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : quote.status === "IN_PROGRESS"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : quote.status === "OFFER_READY"
+                                        ? "bg-green-100 text-green-800"
+                                        : quote.status === "ACCEPTED"
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : quote.status === "REJECTED"
+                                            ? "bg-red-100 text-red-800"
+                                            : "bg-gray-100 text-gray-800"
                               }`}
                             >
                               {quote.status === "DRAFT"
                                 ? "Brouillon"
                                 : quote.status === "SUBMITTED"
-                                ? "Soumis"
-                                : quote.status === "IN_PROGRESS"
-                                ? "En cours"
-                                : quote.status === "OFFER_READY"
-                                ? "Offre prête"
-                                : quote.status === "ACCEPTED"
-                                ? "Accepté"
-                                : quote.status === "REJECTED"
-                                ? "Rejeté"
-                                : quote.status}
+                                  ? "Soumis"
+                                  : quote.status === "IN_PROGRESS"
+                                    ? "En cours"
+                                    : quote.status === "OFFER_READY"
+                                      ? "Offre prête"
+                                      : quote.status === "ACCEPTED"
+                                        ? "Accepté"
+                                        : quote.status === "REJECTED"
+                                          ? "Rejeté"
+                                          : quote.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {new Date(quote.createdAt).toLocaleDateString(
-                              "fr-FR"
+                              "fr-FR",
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -1439,6 +1723,19 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                               className="text-indigo-600 hover:text-indigo-900"
                             >
                               Voir détails
+                            </button>
+                            <button
+                              onClick={() => {
+                                setQuoteToDelete({
+                                  id: quote.id,
+                                  reference: quote.reference,
+                                  companyName: quote.formData.companyName,
+                                });
+                                setDeleteQuoteError(null);
+                              }}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Supprimer
                             </button>
                             {/* {(quote.status === "SUBMITTED" ||
                               quote.status === "IN_PROGRESS") && (
@@ -1470,7 +1767,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                     <span className="font-medium">
                       {Math.min(
                         quotesPagination.page * quotesPagination.limit,
-                        quotesPagination.total
+                        quotesPagination.total,
                       )}
                     </span>{" "}
                     sur{" "}
@@ -1518,6 +1815,142 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                     >
                       Suivant
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal confirmation suppression devis */}
+              {quoteToDelete && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                  <div className="flex min-h-full items-center justify-center p-4">
+                    <div
+                      className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+                      onClick={() => {
+                        setQuoteToDelete(null);
+                        setDeleteQuoteError(null);
+                      }}
+                    />
+                    <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">
+                        Supprimer le devis
+                      </h4>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Êtes-vous sûr de vouloir supprimer le devis{" "}
+                        <strong>{quoteToDelete.reference}</strong> (
+                        {quoteToDelete.companyName}) ? Cette action est
+                        irréversible.
+                      </p>
+                      {deleteQuoteError && (
+                        <p className="mb-4 text-sm text-red-600">
+                          {deleteQuoteError}
+                        </p>
+                      )}
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuoteToDelete(null);
+                            setDeleteQuoteError(null);
+                          }}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              setDeleteQuoteError(null);
+                              await deleteQuote(quoteToDelete.id);
+                              setQuoteToDelete(null);
+                              fetchQuotes();
+                            } catch {
+                              setDeleteQuoteError(
+                                "Erreur lors de la suppression du devis.",
+                              );
+                            }
+                          }}
+                          disabled={quotesLoading}
+                          className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {quotesLoading ? "Suppression..." : "Supprimer"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal confirmation suppression multiple */}
+              {bulkDeleteIds && bulkDeleteIds.length > 0 && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                  <div className="flex min-h-full items-center justify-center p-4">
+                    <div
+                      className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+                      onClick={() => {
+                        if (!bulkDeleting) {
+                          setBulkDeleteIds(null);
+                          setBulkDeleteError(null);
+                        }
+                      }}
+                    />
+                    <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">
+                        Supprimer les devis
+                      </h4>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Êtes-vous sûr de vouloir supprimer{" "}
+                        <strong>{bulkDeleteIds.length} devis</strong> ? Cette
+                        action est irréversible.
+                      </p>
+                      {bulkDeleteError && (
+                        <p className="mb-4 text-sm text-red-600">
+                          {bulkDeleteError}
+                        </p>
+                      )}
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!bulkDeleting) {
+                              setBulkDeleteIds(null);
+                              setBulkDeleteError(null);
+                            }
+                          }}
+                          disabled={bulkDeleting}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              setBulkDeleteError(null);
+                              setBulkDeleting(true);
+                              for (const id of bulkDeleteIds) {
+                                await deleteQuote(id);
+                              }
+                              setSelectedQuoteIds(new Set());
+                              setBulkDeleteIds(null);
+                              fetchQuotes();
+                            } catch {
+                              setBulkDeleteError(
+                                "Erreur lors de la suppression. Certains devis n'ont peut-être pas été supprimés.",
+                              );
+                            } finally {
+                              setBulkDeleting(false);
+                            }
+                          }}
+                          disabled={bulkDeleting}
+                          className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {bulkDeleting
+                            ? "Suppression..."
+                            : `Supprimer (${bulkDeleteIds.length})`}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1634,7 +2067,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {new Date(message.createdAt).toLocaleDateString(
-                              "fr-FR"
+                              "fr-FR",
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -1731,7 +2164,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "caDeclared",
-                              parseInt(e.target.value) || 0
+                              parseInt(e.target.value) || 0,
                             )
                           }
                           className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1747,7 +2180,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "etp",
-                              parseInt(e.target.value) || 0
+                              parseInt(e.target.value) || 0,
                             )
                           }
                           className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1766,7 +2199,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "anneeExperience",
-                              parseInt(e.target.value) || 0
+                              parseInt(e.target.value) || 0,
                             )
                           }
                           className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1786,7 +2219,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "dateCreation",
-                              new Date(e.target.value)
+                              new Date(e.target.value),
                             )
                           }
                           className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1816,7 +2249,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                               updateActivity(
                                 index,
                                 "code",
-                                parseInt(e.target.value)
+                                parseInt(e.target.value),
                               )
                             }
                             className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1838,7 +2271,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                               updateActivity(
                                 index,
                                 "caSharePercent",
-                                parseInt(e.target.value) || 0
+                                parseInt(e.target.value) || 0,
                               )
                             }
                             className="w-20 border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1891,7 +2324,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                 updateLossEntry(
                                   index,
                                   "year",
-                                  parseInt(e.target.value) || 0
+                                  parseInt(e.target.value) || 0,
                                 )
                               }
                               className="border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1904,7 +2337,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                 updateLossEntry(
                                   index,
                                   "numClaims",
-                                  parseInt(e.target.value) || 0
+                                  parseInt(e.target.value) || 0,
                                 )
                               }
                               className="border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1918,7 +2351,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                   updateLossEntry(
                                     index,
                                     "totalCost",
-                                    parseInt(e.target.value) || 0
+                                    parseInt(e.target.value) || 0,
                                   )
                                 }
                                 className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1933,7 +2366,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                               </button>
                             </div>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
 
@@ -1948,7 +2381,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "nombreAnneeAssuranceContinue",
-                              parseInt(e.target.value) || 0
+                              parseInt(e.target.value) || 0,
                             )
                           }
                           className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1963,7 +2396,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "ancienneAssurance",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -1997,7 +2430,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "tempsSansActivite12mois",
-                              e.target.checked
+                              e.target.checked,
                             )
                           }
                           className="mr-2"
@@ -2013,7 +2446,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                           onChange={(e) =>
                             updateSimulatorData(
                               "activiteSansEtreAssure",
-                              e.target.checked
+                              e.target.checked,
                             )
                           }
                           className="mr-2"
@@ -2093,7 +2526,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                             <div className="text-center">
                               <div className="text-2xl font-bold text-green-800">
                                 {simulationResult.PrimeHT.toLocaleString(
-                                  "fr-FR"
+                                  "fr-FR",
                                 )}{" "}
                                 € HT
                               </div>
@@ -2104,7 +2537,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                 <div className="mt-2 text-sm text-orange-600">
                                   +{" "}
                                   {simulationResult.reprisePasseResult.primeReprisePasseTTC.toLocaleString(
-                                    "fr-FR"
+                                    "fr-FR",
                                   )}{" "}
                                   € TTC (Reprise du passé)
                                 </div>
@@ -2158,9 +2591,9 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                       .anneeExperience ?? 0) < 0
                                       ? "text-green-600"
                                       : (simulationResult.majorations
-                                          .anneeExperience ?? 0) > 0
-                                      ? "text-red-600"
-                                      : "text-gray-600"
+                                            .anneeExperience ?? 0) > 0
+                                        ? "text-red-600"
+                                        : "text-gray-600"
                                   }
                                 >
                                   {(
@@ -2205,13 +2638,13 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                       </span>
                                       <span>
                                         {activity.Prime100Min.toLocaleString(
-                                          "fr-FR"
+                                          "fr-FR",
                                         )}{" "}
                                         €
                                       </span>
                                     </div>
                                   </div>
-                                )
+                                ),
                               )}
                             </div>
                           </div>
@@ -2227,7 +2660,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                   <span>Prime reprise TTC:</span>
                                   <span className="font-medium text-orange-800">
                                     {simulationResult.reprisePasseResult.primeReprisePasseTTC.toLocaleString(
-                                      "fr-FR"
+                                      "fr-FR",
                                     )}{" "}
                                     €
                                   </span>
@@ -2412,7 +2845,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {new Date(payment.dueDate).toLocaleDateString(
-                                "fr-FR"
+                                "fr-FR",
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -2421,8 +2854,8 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                   payment.daysOverdue > 30
                                     ? "bg-red-100 text-red-800"
                                     : payment.daysOverdue > 15
-                                    ? "bg-orange-100 text-orange-800"
-                                    : "bg-yellow-100 text-yellow-800"
+                                      ? "bg-orange-100 text-orange-800"
+                                      : "bg-yellow-100 text-yellow-800"
                                 }`}
                               >
                                 {payment.daysOverdue} jour
@@ -2439,7 +2872,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                   <span className="text-xs text-gray-500">
                                     Dernier :{" "}
                                     {new Date(
-                                      payment.lastReminderSent
+                                      payment.lastReminderSent,
                                     ).toLocaleDateString("fr-FR")}
                                   </span>
                                 )}
@@ -2589,14 +3022,14 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                                   version.status === "DRAFT"
                                     ? "bg-gray-100 text-gray-800"
                                     : version.status === "SUBMITTED"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : version.status === "IN_PROGRESS"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : version.status === "OFFER_READY"
-                                    ? "bg-green-100 text-green-800"
-                                    : version.status === "ACCEPTED"
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : "bg-gray-100 text-gray-800"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : version.status === "IN_PROGRESS"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : version.status === "OFFER_READY"
+                                          ? "bg-green-100 text-green-800"
+                                          : version.status === "ACCEPTED"
+                                            ? "bg-emerald-100 text-emerald-800"
+                                            : "bg-gray-100 text-gray-800"
                                 }`}
                               >
                                 {getStatusLabel(version.status)}
@@ -2619,7 +3052,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(version.createdAt).toLocaleString(
-                                "fr-FR"
+                                "fr-FR",
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -2907,7 +3340,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                       <span className="text-gray-500">Date :</span>
                       <span className="ml-2 font-medium">
                         {new Date(selectedVersion.createdAt).toLocaleString(
-                          "fr-FR"
+                          "fr-FR",
                         )}
                       </span>
                     </div>
@@ -2960,7 +3393,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                               </span>
                             </div>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   </div>
@@ -2989,7 +3422,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
                         {JSON.stringify(
                           selectedVersion.calculatedPremium,
                           null,
-                          2
+                          2,
                         )}
                       </pre>
                     </div>

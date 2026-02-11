@@ -72,7 +72,7 @@ export function generateCSV(rows: FidelidadeRow[], fileName?: string): string {
   return csvContent;
 }
 
-/** Colonnes Feuille 1 Polices (scope clarifié §6) — exporté pour l'UI */
+/** Colonnes Feuille 1 Polices (une ligne = une échéance, sans type contrat/compagnie/activité, avec fractionnement) */
 export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
   "APPORTEUR",
   "IDENTIFIANT_POLICE",
@@ -86,11 +86,9 @@ export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
   "STATUT_POLICE",
   "DATE_STAT_POLICE",
   "MOTIF_STATUT",
-  "TYPE_CONTRAT",
-  "COMPAGNIE",
+  "FRACTIONNEMENT",
   "NOM_ENTREPRISE_ASSURE",
   "SIREN",
-  "ACTIVITE",
   "ADRESSE_RISQUE",
   "VILLE_RISQUE",
   "CODE_POSTAL_RISQUE",
@@ -115,13 +113,12 @@ export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
   "POIDS_ACTIVITE_8",
 ];
 
-/** Colonnes Feuille 2 Quittances (scope clarifié §6) — exporté pour l'UI */
+/** Colonnes Feuille 2 Quittances (sans DATE_EMISSION_QUITTANCE ni TAUX_COMMISSIONS, avec TAUX_TAXE) */
 export const QUITTANCES_COLUMNS: (keyof FidelidadeQuittancesRow)[] = [
   "APPORTEUR",
   "IDENTIFIANT_POLICE",
   "NUMERO_AVENANT",
   "IDENTIFIANT_QUITTANCE",
-  "DATE_EMISSION_QUITTANCE",
   "DATE_EFFET_QUITTANCE",
   "DATE_FIN_QUITTANCE",
   "DATE_ENCAISSEMENT",
@@ -130,7 +127,7 @@ export const QUITTANCES_COLUMNS: (keyof FidelidadeQuittancesRow)[] = [
   "PRIME_TTC",
   "PRIME_HT",
   "TAXES",
-  "TAUX_COMMISSIONS",
+  "TAUX_TAXE",
   "COMMISSIONS",
   "MODE_PAIEMENT",
 ];

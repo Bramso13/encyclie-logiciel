@@ -21,11 +21,9 @@ const POLICES_ROW_KEYS: (keyof FidelidadePolicesRow)[] = [
   "STATUT_POLICE",
   "DATE_STAT_POLICE",
   "MOTIF_STATUT",
-  "TYPE_CONTRAT",
-  "COMPAGNIE",
+  "FRACTIONNEMENT",
   "NOM_ENTREPRISE_ASSURE",
   "SIREN",
-  "ACTIVITE",
   "ADRESSE_RISQUE",
   "VILLE_RISQUE",
   "CODE_POSTAL_RISQUE",
@@ -61,8 +59,7 @@ describe("getPolicesV2", () => {
   describe("structure de sortie", () => {
     it("retourne un tableau d’objets FidelidadePolicesRow", async () => {
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(Array.isArray(result)).toBe(true);
@@ -70,31 +67,35 @@ describe("getPolicesV2", () => {
     });
 
     it("chaque ligne contient toutes les colonnes Feuille 1 (ordre et noms)", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RC Décennale" },
-        quote: {
-          reference: "Q-REF-001",
-          submittedAt: new Date("2024-12-01"),
-          codeNAF: "4120A",
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: { companyName: "Société A", siret: "12345678901234", address: "1 rue X", city: "Paris", postalCode: "75001", revenue: 100000, employeeCount: 5 },
-          formData: {
-            activites: [
-              { code: 1, caSharePercent: 60 },
-              { code: 2, caSharePercent: 40 },
-            ],
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q-REF-001",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: "4120A",
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: new Date("2025-01-05"),
+            product: { name: "RC Décennale" },
+            companyData: { companyName: "Société A", siret: "12345678901234", address: "1 rue X", city: "Paris", postalCode: "75001", revenue: 100000, employeeCount: 5 },
+            formData: {
+              dateDeffet: new Date("2025-01-01"),
+              periodicity: "trimestriel",
+              activites: [
+                { code: 1, caSharePercent: 60 },
+                { code: 2, caSharePercent: 40 },
+              ],
+            },
+            contract: { startDate: new Date("2025-01-01"), endDate: new Date("2025-12-31"), status: "ACTIVE", updatedAt: new Date("2025-01-15") },
           },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result).toHaveLength(1);
@@ -107,52 +108,86 @@ describe("getPolicesV2", () => {
     });
 
     it("IDENTIFIANT_POLICE = Quote.reference", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RC Décennale" },
-        quote: {
-          reference: "REF-POL-123",
-          submittedAt: new Date("2024-12-01"),
-          codeNAF: null,
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: {},
-          formData: {},
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "REF-POL-123",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: {},
+            formData: { dateDeffet: new Date("2025-01-01") },
+            contract: null,
+          },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].IDENTIFIANT_POLICE).toBe("REF-POL-123");
     });
 
-    it("NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT, MOTIF_STATUT sont vides", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RC Décennale" },
-        quote: {
-          reference: "Q1",
-          submittedAt: new Date("2024-12-01"),
-          codeNAF: null,
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: {},
-          formData: {},
+    it("DATE_SOUSCRIPTION = formData.dateDeffet, DATE_FIN_CONTRAT = periodEnd échéance, FRACTIONNEMENT = periodicity", async () => {
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q1",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: {},
+            formData: { dateDeffet: new Date("2025-01-15"), periodicity: "trimestriel" },
+            contract: null,
+          },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+      } as unknown as PrismaClient;
+      const result = await getPolicesV2(baseFilters, mockPrisma);
+      expect(result[0].DATE_SOUSCRIPTION).toBe("15/01/2025");
+      expect(result[0].DATE_FIN_CONTRAT).toBe("31/03/2025");
+      expect(result[0].FRACTIONNEMENT).toBe("trimestriel");
+    });
+
+    it("NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT, MOTIF_STATUT sont vides", async () => {
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q1",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: {},
+            formData: { dateDeffet: new Date("2025-01-01") },
+            contract: null,
+          },
+        },
+      };
+      const mockPrisma = {
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].NUMERO_AVENANT).toBe("");
@@ -164,75 +199,70 @@ describe("getPolicesV2", () => {
 
   describe("moins de 8 activités", () => {
     it("complète à 8 paires avec chaînes vides pour les activités manquantes", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RCD" },
-        quote: {
-          reference: "Q2",
-          submittedAt: new Date("2024-12-01"),
-          codeNAF: null,
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: {},
-          formData: {
-            activites: [
-              { code: 1, caSharePercent: 70 },
-              { code: 2, caSharePercent: 30 },
-            ],
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q2",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: {},
+            formData: {
+              dateDeffet: new Date("2025-01-01"),
+              activites: [
+                { code: 1, caSharePercent: 70 },
+                { code: 2, caSharePercent: 30 },
+              ],
+            },
+            contract: null,
           },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       const row = result[0];
-      expect(row.LIBELLE_ACTIVITE_1).toBe("1");
       expect(row.POIDS_ACTIVITE_1).toBe("70");
-      expect(row.LIBELLE_ACTIVITE_2).toBe("2");
       expect(row.POIDS_ACTIVITE_2).toBe("30");
       expect(row.LIBELLE_ACTIVITE_3).toBe("");
       expect(row.POIDS_ACTIVITE_3).toBe("");
       expect(row.LIBELLE_ACTIVITE_4).toBe("");
       expect(row.POIDS_ACTIVITE_4).toBe("");
-      expect(row.LIBELLE_ACTIVITE_5).toBe("");
-      expect(row.POIDS_ACTIVITE_5).toBe("");
-      expect(row.LIBELLE_ACTIVITE_6).toBe("");
-      expect(row.POIDS_ACTIVITE_6).toBe("");
-      expect(row.LIBELLE_ACTIVITE_7).toBe("");
-      expect(row.POIDS_ACTIVITE_7).toBe("");
-      expect(row.LIBELLE_ACTIVITE_8).toBe("");
-      expect(row.POIDS_ACTIVITE_8).toBe("");
     });
   });
 
   describe("companyData partiel", () => {
     it("retourne chaîne vide pour champs manquants (SIREN, CA_ENTREPRISE, etc.)", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RCD" },
-        quote: {
-          reference: "Q3",
-          submittedAt: new Date("2024-12-01"),
-          codeNAF: null,
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: { companyName: "Only Name" },
-          formData: {},
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q3",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: { companyName: "Only Name" },
+            formData: { dateDeffet: new Date("2025-01-01") },
+            contract: null,
+          },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       const row = result[0];
@@ -248,52 +278,56 @@ describe("getPolicesV2", () => {
 
   describe("pas de codeNAF", () => {
     it("retourne chaîne vide pour CODE_NAF si quote.codeNAF et formData.codeNaf absents", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RCD" },
-        quote: {
-          reference: "Q4",
-          submittedAt: new Date("2024-12-01"),
-          codeNAF: null,
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: {},
-          formData: {},
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q4",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: {},
+            formData: { dateDeffet: new Date("2025-01-01") },
+            contract: null,
+          },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].CODE_NAF).toBe("");
     });
 
     it("utilise quote.codeNAF si présent", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RCD" },
-        quote: {
-          reference: "Q5",
-          submittedAt: new Date("2024-12-01"),
-          codeNAF: "6201Z",
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: {},
-          formData: {},
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q5",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: "6201Z",
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: {},
+            formData: { dateDeffet: new Date("2025-01-01") },
+            contract: null,
+          },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].CODE_NAF).toBe("6201Z");
@@ -302,26 +336,28 @@ describe("getPolicesV2", () => {
 
   describe("pas de valeurs undefined", () => {
     it("tous les champs sont des chaînes (pas undefined)", async () => {
-      const mockContract = {
-        id: "c1",
-        startDate: new Date("2025-01-01"),
-        endDate: new Date("2025-12-31"),
-        status: "ACTIVE",
-        updatedAt: new Date("2025-01-15"),
-        product: { name: "RCD" },
-        quote: {
-          reference: "Q6",
-          submittedAt: null,
-          codeNAF: null,
-          status: QuoteStatus.ACCEPTED,
-          updatedAt: new Date("2025-01-10"),
-          companyData: null,
-          formData: null,
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q6",
+            submittedAt: null,
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: null,
+            formData: null,
+            contract: null,
+          },
         },
       };
       const mockPrisma = {
-        insuranceContract: { findMany: vi.fn().mockResolvedValue([mockContract]) },
-        quote: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       const row = result[0];
