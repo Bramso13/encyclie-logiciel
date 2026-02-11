@@ -88,6 +88,7 @@ export async function PUT(
         where: { id: params.id },
         select: {
           id: true,
+          reference: true,
           brokerId: true,
           status: true,
           companyData: true,
@@ -129,6 +130,20 @@ export async function PUT(
       const updateData: any = {
         updatedAt: new Date(),
       };
+
+      // Reference: vérifier unicité si modification
+      if (validatedData.reference !== undefined) {
+        if (validatedData.reference !== existingQuote.reference) {
+          const existing = await prisma.quote.findUnique({
+            where: { reference: validatedData.reference },
+            select: { id: true },
+          });
+          if (existing) {
+            throw new ApiError(400, "Cette référence existe déjà");
+          }
+        }
+        updateData.reference = validatedData.reference;
+      }
 
       // Add validated fields to update data
       if (validatedData.status !== undefined) {

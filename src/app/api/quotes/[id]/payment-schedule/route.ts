@@ -89,7 +89,7 @@ export async function GET(
   }
 }
 
-// POST /api/quotes/[id]/payment-schedule - Create payment schedule from calculation result
+// POST /api/quotes/[id]/payment-schedule - Create payment schedule from calculation result or empty
 export async function POST(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -98,11 +98,7 @@ export async function POST(
   try {
     return await withAuth(async (userId, userRole) => {
       const body = await request.json();
-      const { calculationResult } = body;
-
-      if (!calculationResult?.echeancier?.echeances) {
-        throw new ApiError(400, "Données de calcul invalides");
-      }
+      const { calculationResult, createEmpty } = body;
 
       // Vérifier que le devis existe et que l'utilisateur y a accès
       const quote = await prisma.quote.findUnique({
@@ -121,6 +117,34 @@ export async function POST(
       // Contrôle d'accès basé sur les rôles
       if (userRole === "BROKER" && quote.brokerId !== userId) {
         throw new ApiError(403, "Accès refusé à ce devis");
+      }
+
+      if (createEmpty === true) {
+        const existingSchedule = await prisma.paymentSchedule.findUnique({
+          where: { quoteId: params.id },
+          include: { payments: { orderBy: { installmentNumber: "asc" } } },
+        });
+        if (existingSchedule) {
+          return createApiResponse(existingSchedule, "Échéancier existant");
+        }
+        const today = new Date();
+        const paymentSchedule = await prisma.paymentSchedule.create({
+          data: {
+            quoteId: params.id,
+            totalAmountHT: 0,
+            totalTaxAmount: 0,
+            totalAmountTTC: 0,
+            startDate: today,
+            endDate: today,
+            status: "PENDING",
+          },
+          include: { payments: { orderBy: { installmentNumber: "asc" } } },
+        });
+        return createApiResponse(paymentSchedule, "Échéancier vide créé");
+      }
+
+      if (!calculationResult?.echeancier?.echeances) {
+        throw new ApiError(400, "Données de calcul invalides ou indiquez createEmpty: true");
       }
 
       const echeances = calculationResult.echeancier.echeances;
@@ -177,6 +201,188 @@ export async function POST(
       });
 
       return createApiResponse(paymentSchedule, "Échéancier créé avec succès");
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+// PATCH /api/quotes/[id]/payment-schedule - Update payment schedule and installments
+export async function PATCH(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    return await withAuth(async (userId, userRole) => {
+      const quote = await prisma.quote.findUnique({
+        where: { id: params.id },
+        select: { id: true, brokerId: true },
+      });
+
+      if (!quote) {
+        throw new ApiError(404, "Devis non trouvé");
+      }
+
+      if (userRole === "BROKER" && quote.brokerId !== userId) {
+        throw new ApiError(403, "Accès refusé à ce devis");
+      }
+
+      const existing = await prisma.paymentSchedule.findUnique({
+        where: { quoteId: params.id },
+        include: { payments: { orderBy: { installmentNumber: "asc" } } },
+      });
+
+      if (!existing) {
+        throw new ApiError(404, "Échéancier non trouvé");
+      }
+
+      const body = await request.json();
+      const { payments } = body as {
+        payments?: Array<{
+          id?: string;
+          dueDate?: string;
+          amountHT?: number;
+          taxAmount?: number;
+          amountTTC?: number;
+          rcdAmount?: number;
+          pjAmount?: number;
+          feesAmount?: number;
+          resumeAmount?: number;
+          periodStart?: string;
+          periodEnd?: string;
+        }>;
+      };
+
+      if (!Array.isArray(payments)) {
+        throw new ApiError(400, "Tableau 'payments' requis");
+      }
+
+      const isNewPayment = (id: string | undefined) =>
+        !id || id.startsWith("new-");
+
+      const bodyIds = new Set(payments.map((p) => p.id).filter((id): id is string => !isNewPayment(id)));
+      const toDelete = existing.payments.filter((p) => !bodyIds.has(p.id));
+      for (const inst of toDelete) {
+        await prisma.paymentInstallment.delete({ where: { id: inst.id } });
+      }
+
+      if (payments.length === 0) {
+        const updated = await prisma.paymentSchedule.update({
+          where: { id: existing.id },
+          data: {
+            totalAmountHT: 0,
+            totalTaxAmount: 0,
+            totalAmountTTC: 0,
+          },
+          include: {
+            payments: { orderBy: { installmentNumber: "asc" } },
+          },
+        });
+        return createApiResponse(updated, "Échéancier mis à jour");
+      }
+
+      const defaultDate = existing.startDate;
+      let totalAmountHT = 0;
+      let totalTaxAmount = 0;
+      let totalAmountTTC = 0;
+      let minStart: Date | null = null;
+      let maxEnd: Date | null = null;
+
+      for (let i = 0; i < payments.length; i++) {
+        const p = payments[i];
+        const inst = !isNewPayment(p.id) ? existing.payments.find((x) => x.id === p.id) : null;
+        const dueDate = p.dueDate ? new Date(p.dueDate) : inst?.dueDate ?? defaultDate;
+        const periodStart = p.periodStart ? new Date(p.periodStart) : inst?.periodStart ?? defaultDate;
+        const periodEnd = p.periodEnd ? new Date(p.periodEnd) : inst?.periodEnd ?? defaultDate;
+        const amountHT = typeof p.amountHT === "number" ? p.amountHT : (inst?.amountHT ?? 0);
+        const taxAmount = typeof p.taxAmount === "number" ? p.taxAmount : (inst?.taxAmount ?? 0);
+        const amountTTC = typeof p.amountTTC === "number" ? p.amountTTC : (inst?.amountTTC ?? 0);
+        const rcdAmount = typeof p.rcdAmount === "number" ? p.rcdAmount : (inst?.rcdAmount ?? null);
+        const pjAmount = typeof p.pjAmount === "number" ? p.pjAmount : (inst?.pjAmount ?? null);
+        const feesAmount = typeof p.feesAmount === "number" ? p.feesAmount : (inst?.feesAmount ?? null);
+        const resumeAmount = typeof p.resumeAmount === "number" ? p.resumeAmount : (inst?.resumeAmount ?? null);
+
+        totalAmountHT += amountHT;
+        totalTaxAmount += taxAmount;
+        totalAmountTTC += amountTTC;
+        if (minStart === null || periodStart.getTime() < minStart.getTime()) {
+          minStart = periodStart;
+        }
+        if (maxEnd === null || periodEnd.getTime() > maxEnd.getTime()) {
+          maxEnd = periodEnd;
+        }
+
+        const data = {
+          scheduleId: existing.id,
+          installmentNumber: i + 1,
+          dueDate,
+          amountHT,
+          taxAmount,
+          amountTTC,
+          rcdAmount,
+          pjAmount,
+          feesAmount,
+          resumeAmount,
+          periodStart,
+          periodEnd,
+          status: "PENDING" as const,
+        };
+
+        if (inst) {
+          await prisma.paymentInstallment.update({
+            where: { id: inst.id },
+            data: {
+              installmentNumber: data.installmentNumber,
+              dueDate: data.dueDate,
+              amountHT: data.amountHT,
+              taxAmount: data.taxAmount,
+              amountTTC: data.amountTTC,
+              rcdAmount: data.rcdAmount,
+              pjAmount: data.pjAmount,
+              feesAmount: data.feesAmount,
+              resumeAmount: data.resumeAmount,
+              periodStart: data.periodStart,
+              periodEnd: data.periodEnd,
+            },
+          });
+        } else {
+          await prisma.paymentInstallment.create({
+            data,
+          });
+        }
+      }
+
+      const startDate = minStart ?? existing.startDate;
+      const endDate = maxEnd ?? existing.endDate;
+
+      const updated = await prisma.paymentSchedule.update({
+        where: { id: existing.id },
+        data: {
+          totalAmountHT,
+          totalTaxAmount,
+          totalAmountTTC,
+          startDate,
+          endDate,
+        },
+        include: {
+          payments: {
+            orderBy: { installmentNumber: "asc" },
+            include: {
+              validatedBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return createApiResponse(updated, "Échéancier enregistré");
     });
   } catch (error) {
     return handleApiError(error);

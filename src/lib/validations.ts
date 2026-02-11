@@ -20,7 +20,7 @@ export const CreateInsuranceProductSchema = InsuranceProductSchema;
 // Quote schemas
 export const QuoteCompanyDataSchema = z.object({
   companyName: z.string().min(1, "Raison sociale requise"),
-  siret: z.string().min(14, "SIRET invalide").max(14),
+  siret: z.string().min(1, "SIRET requis"),
   address: z.string().min(1, "Adresse requise"),
   legalForm: z.string().optional(),
   creationDate: z.string().optional(),
@@ -47,6 +47,7 @@ export const CreateQuoteSchema = z.object({
 });
 
 export const UpdateQuoteSchema = z.object({
+  reference: z.string().min(1).optional(),
   status: z
     .enum([
       "DRAFT",
@@ -76,6 +77,7 @@ export const CreateContractSchema = z.object({
 });
 
 export const UpdateContractSchema = z.object({
+  reference: z.string().min(1).optional(),
   status: z
     .enum(["ACTIVE", "SUSPENDED", "EXPIRED", "CANCELLED", "PENDING_RENEWAL"])
     .optional(),

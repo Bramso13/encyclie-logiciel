@@ -26,7 +26,7 @@ function formatFieldValue(value: any, fieldType: string): string {
           `${
             tableauTax.find((tax) => tax.code.toString() === activity.code)
               ?.title || "—"
-          }: ${activity.caSharePercent}%`
+          }: ${activity.caSharePercent}%`,
         );
       });
 
@@ -36,7 +36,7 @@ function formatFieldValue(value: any, fieldType: string): string {
         return value
           .map(
             (entry) =>
-              `${entry.year}: ${entry.numClaims} sinistre(s), ${entry.totalCost}€`
+              `${entry.year}: ${entry.numClaims} sinistre(s), ${entry.totalCost}€`,
           )
           .join(" | ");
       }
@@ -100,7 +100,7 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
       const territoryValue = editValue?.toString().toUpperCase();
       if (territoryValue === "MAYOTTE") {
         setFieldError(
-          "Ce territoire n'est pas disponible. Veuillez contacter l'administrateur pour faire le calcul."
+          "Ce territoire n'est pas disponible. Veuillez contacter l'administrateur pour faire le calcul.",
         );
         return;
       }
@@ -233,7 +233,7 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
                     newValue.toUpperCase() === "MAYOTTE"
                   ) {
                     setFieldError(
-                      "Ce territoire n'est pas disponible. Veuillez contacter l'administrateur pour faire le calcul."
+                      "Ce territoire n'est pas disponible. Veuillez contacter l'administrateur pour faire le calcul.",
                     );
                     return;
                   }

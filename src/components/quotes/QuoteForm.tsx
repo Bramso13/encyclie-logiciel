@@ -20,7 +20,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
   const { createQuote, saveDraft, loading } = useQuotesStore();
   const { activeProducts, fetchActiveProducts } = useProductsStore();
   const { data: session } = useSession();
-
+  const isAdmin = session?.user?.role === "ADMIN";
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -77,7 +77,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
         legalForm: data.legalForm || prev.legalForm,
         creationDate: (data.creationDate || prev.creationDate || "").slice(
           0,
-          10
+          10,
         ),
         directorName: data.directorName || prev.directorName,
         city: (data as any).city || prev.city,
@@ -90,7 +90,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
         legalForm: data.legalForm || prev.legalForm,
         creationDate: (data.creationDate || prev.creationDate || "").slice(
           0,
-          10
+          10,
         ),
         directorName: data.directorName || prev.directorName,
         city: (data as any).city || prev.city,
@@ -140,9 +140,9 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
     if (!companyData.siret.trim()) {
       console.log("companyData.siret", companyData.siret);
       newErrors.siret = "SIRET requis";
-    } else if (companyData.siret.length !== 14) {
+    } else if (companyData.siret.length <= 0) {
       console.log("companyData.siret.length", companyData.siret.length);
-      newErrors.siret = "SIRET doit contenir 14 chiffres";
+      newErrors.siret = "SIRET doit etre rempli";
     }
     if (!companyData.address.trim()) {
       console.log("companyData.address", companyData.address);
@@ -185,12 +185,13 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
           if (formData[fieldName]) {
             if (fieldName === "territory") {
               if (
-                (formData[fieldName] as string).toLowerCase() === "mayotte" && session &&
-                session.user.email.toLowerCase().trim() !== "dg@dgac.re"
+                (formData[fieldName] as string).toLowerCase() === "mayotte" &&
+                session &&
+                session.user.email.toLowerCase().trim() !== "dg@dgac.re" &&
+                !isAdmin
               ) {
-                newErrors[
-                  fieldName
-                ] = `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
+                newErrors[fieldName] =
+                  `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
               }
             }
             if (
@@ -246,12 +247,11 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
                 } else {
                   const totalPercent = activities.reduce(
                     (sum, activity) => sum + activity.caSharePercent,
-                    0
+                    0,
                   );
                   if (totalPercent !== 100) {
-                    newErrors[
-                      fieldName
-                    ] = `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
+                    newErrors[fieldName] =
+                      `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
                   }
                   // Check individual activity percentages
                   activities.forEach((activity, index) => {
@@ -297,7 +297,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
               }
             }
           }
-        }
+        },
       );
     }
 
@@ -332,10 +332,12 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
         if (formData[fieldName] && fieldConfig) {
           // Validate territory
           if (fieldName === "territory") {
-            if ((formData[fieldName] as string).toLowerCase() === "mayotte") {
-              newErrors[
-                fieldName
-              ] = `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
+            if (
+              (formData[fieldName] as string).toLowerCase() === "mayotte" &&
+              !isAdmin
+            ) {
+              newErrors[fieldName] =
+                `Ce territoire n'est pas disponible, veuillez contacter l'admin pour faire le calcul`;
             }
           }
           if (
@@ -437,12 +439,11 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
               } else {
                 const totalPercent = activities.reduce(
                   (sum, activity) => sum + activity.caSharePercent,
-                  0
+                  0,
                 );
                 if (totalPercent !== 100) {
-                  newErrors[
-                    fieldName
-                  ] = `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
+                  newErrors[fieldName] =
+                    `La somme des pourcentages doit être égale à 100% (actuellement ${totalPercent}%)`;
                 }
                 // Check individual activity percentages
                 activities.forEach((activity, index) => {
@@ -490,8 +491,8 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
       }
       if (!companyData.siret.trim()) {
         newErrors.siret = "SIRET requis";
-      } else if (companyData.siret.length !== 14) {
-        newErrors.siret = "SIRET doit contenir 14 chiffres";
+      } else if (companyData.siret.length <= 0) {
+        newErrors.siret = "SIRET doit etre rempli";
       }
       if (!companyData.address.trim()) {
         newErrors.address = "Adresse requise";
@@ -586,7 +587,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
       onChange: (
         e: React.ChangeEvent<
           HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-        >
+        >,
       ) => handleFormDataChange(fieldName, e.target.value),
       className: `mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
         errors[fieldName] ? "border-red-300" : "border-gray-300"
@@ -713,10 +714,10 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
                   index === currentStep
                     ? "bg-indigo-600 text-white"
                     : completedSteps.has(index)
-                    ? "bg-green-600 text-white cursor-pointer"
-                    : index < currentStep
-                    ? "bg-gray-300 text-gray-600 cursor-pointer"
-                    : "bg-gray-200 text-gray-400"
+                      ? "bg-green-600 text-white cursor-pointer"
+                      : index < currentStep
+                        ? "bg-gray-300 text-gray-600 cursor-pointer"
+                        : "bg-gray-200 text-gray-400"
                 }`}
               >
                 {completedSteps.has(index) ? "✓" : index + 1}
@@ -878,7 +879,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
                     </p>
                   )}
                 </div>
-              )
+              ),
             )}
           </div>
         </div>
@@ -904,11 +905,11 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
               onChange={(e) => {
                 handleCompanyDataChange(
                   "siret",
-                  e.target.value.replace(/\D/g, "")
+                  e.target.value.replace(/\D/g, ""),
                 );
                 handleFormDataChange(
                   "siret",
-                  e.target.value.replace(/\D/g, "")
+                  e.target.value.replace(/\D/g, ""),
                 );
               }}
               maxLength={14}

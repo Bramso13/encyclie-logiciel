@@ -46,31 +46,51 @@ export async function GET(request: NextRequest) {
       }
       // ADMIN can see all quotes
 
+      // Filtre optionnel : uniquement les devis qui ont un échéancier
+      const hasPaymentSchedule =
+        searchParams.get("hasPaymentSchedule") === "true";
+      if (hasPaymentSchedule) {
+        where.paymentSchedule = { isNot: null };
+      }
+
+      const includeBase = {
+        product: {
+          select: { name: true, code: true, requiredDocs: true },
+        },
+        broker: {
+          select: { name: true, companyName: true },
+        },
+        documents: {
+          select: {
+            id: true,
+            fileName: true,
+            documentType: true,
+            uploadedAt: true,
+          },
+        },
+        _count: {
+          select: { documents: true },
+        },
+      };
+
+      const includeWithSchedule = hasPaymentSchedule
+        ? {
+            ...includeBase,
+            paymentSchedule: {
+              include: {
+                payments: { orderBy: { installmentNumber: "asc" as const } },
+              },
+            },
+          }
+        : includeBase;
+
       // Get quotes with relations
       const [quotes, total] = await Promise.all([
         prisma.quote.findMany({
           where,
           skip,
           take,
-          include: {
-            product: {
-              select: { name: true, code: true, requiredDocs: true },
-            },
-            broker: {
-              select: { name: true, companyName: true },
-            },
-            documents: {
-              select: {
-                id: true,
-                fileName: true,
-                documentType: true,
-                uploadedAt: true,
-              },
-            },
-            _count: {
-              select: { documents: true },
-            },
-          },
+          include: includeWithSchedule,
           orderBy: { createdAt: "desc" },
         }),
         prisma.quote.count({ where }),

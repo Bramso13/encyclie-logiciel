@@ -54,6 +54,7 @@ function calculateMajorations(params: {
   nbActivites: number;
   qualif: boolean;
   dateCreation: Date;
+  dateEffet: Date;
   nonFournitureBilanN_1: boolean;
   anneeExperience: number;
   assureurDefaillant: boolean;
@@ -74,6 +75,7 @@ function calculateMajorations(params: {
     nbActivites,
     qualif,
     dateCreation,
+    dateEffet,
     tempsSansActivite,
     anneeExperience,
     assureurDefaillant,
@@ -83,7 +85,7 @@ function calculateMajorations(params: {
     absenceDeSinistreSurLes5DernieresAnnees,
   } = params;
   const calculMajTempsSansActivite = (
-    tempsSansActivite: Enum_Temps_sans_activite
+    tempsSansActivite: Enum_Temps_sans_activite,
   ) => {
     console.log("tempsSansActivite", tempsSansActivite);
     if (tempsSansActivite === "DE 6_A 12_MOIS") return 0.3;
@@ -103,10 +105,11 @@ function calculateMajorations(params: {
     if (etp >= 6 && etp <= 8) return 0;
     return 0;
   };
-  const calculMajAnciennete = (dateCreation: Date) => {
-    const today = new Date();
-    const diffMs = today.getTime() - dateCreation.getTime();
+  const calculMajAnciennete = (dateCreation: Date, dateEffet: Date) => {
+    const diffMs = dateEffet.getTime() - dateCreation.getTime();
+    console.log("diffMs", diffMs);
     const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
+    console.log("diffYears", diffYears);
     if (diffYears < 1) return 0.2;
     if (diffYears > 1 && diffYears < 3) return 0.1;
     return 0;
@@ -118,6 +121,7 @@ function calculateMajorations(params: {
   };
   const calculMajNAAC = (NAAC: number) => {
     if (!enCreation && !assureurDefaillant) {
+      if (NAAC < 0) return 0;
       if (NAAC <= 1) return 0.1;
       if (NAAC > 1 && NAAC <= 2) return 0.05;
     }
@@ -126,8 +130,10 @@ function calculateMajorations(params: {
   const majorations = {
     etp: calculMajETP(etp, nbActivites),
     qualif: qualif ? -0.05 : 0,
-    dateCreation: calculMajAnciennete(dateCreation),
-    tempsSansActivite: !enCreation ? calculMajTempsSansActivite(tempsSansActivite) : 0,
+    dateCreation: calculMajAnciennete(dateCreation, dateEffet),
+    tempsSansActivite: !enCreation
+      ? calculMajTempsSansActivite(tempsSansActivite)
+      : 0,
     anneeExperience: calculMajExp(anneeExperience),
     assureurDefaillant:
       !enCreation &&
@@ -140,13 +146,16 @@ function calculateMajorations(params: {
       : calculMajNAAC(nombreAnneeAssuranceContinue),
     nonFournitureBilanN_1: enCreation ? 0 : nonFournitureBilanN_1 ? 0.5 : 0,
     sansActiviteDepuisPlusDe12MoisSansFermeture:
-      sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" && !enCreation ? 0.2 : 0,
+      sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" && !enCreation
+        ? 0.2
+        : 0,
     absenceDeSinistreSurLes5DernieresAnnees:
-      absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT" && !enCreation
+      absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT" &&
+      !enCreation
         ? 0.2
         : absenceDeSinistreSurLes5DernieresAnnees === "OUI" && !enCreation
-        ? -0.1
-        : 0,
+          ? -0.1
+          : 0,
   };
 
   return majorations;
@@ -523,7 +532,7 @@ export function calculPrimeRCD(params: {
     return caDeclared;
   };
   const reformatedActivites = (
-    activites: { code: number; caSharePercent: number }[]
+    activites: { code: number; caSharePercent: number }[],
   ) =>
     activites.map((activite) => ({
       ...activite,
@@ -559,6 +568,7 @@ export function calculPrimeRCD(params: {
     nonFournitureBilanN_1,
     sansActiviteDepuisPlusDe12MoisSansFermeture,
     absenceDeSinistreSurLes5DernieresAnnees,
+    dateEffet: dateEffet ?? new Date(),
   });
 
   type returnTab = {
@@ -640,12 +650,12 @@ export function calculPrimeRCD(params: {
     refusReason: refus.experienceDirigeant
       ? "Expérience du dirigeant"
       : refus.sansAssuranceDepuisPlusDe12Mois
-      ? "Sans assurance depuis plus de 12 mois"
-      : refus.partSoutraitance
-      ? "Part de soutraitance"
-      : refus.partNegoce
-      ? "Part de négociation"
-      : "",
+        ? "Sans assurance depuis plus de 12 mois"
+        : refus.partSoutraitance
+          ? "Part de soutraitance"
+          : refus.partNegoce
+            ? "Part de négociation"
+            : "",
     returnTab: [],
     PminiHT: 0,
     primeMini: 0,
@@ -658,11 +668,11 @@ export function calculPrimeRCD(params: {
       Object.entries(majorations).map(([key, value]) => [
         key,
         typeof value === "number" ? roundToTwoDecimals(value) : value,
-      ])
+      ]),
     ) as typeof majorations,
     reprisePasseResult: undefined,
     protectionJuridique: roundToTwoDecimals(
-      protectionJuridique1an * (1 + taxeProtectionJuridique)
+      protectionJuridique1an * (1 + taxeProtectionJuridique),
     ),
     fraisGestion: 0,
     totalTTC: 0,
@@ -701,7 +711,7 @@ export function calculPrimeRCD(params: {
 
   const calculSommeTauxActPartCa = (
     activites: { code: number; caSharePercent: number }[],
-    tableauTax: { code: number; rate: number }[]
+    tableauTax: { code: number; rate: number }[],
   ) => {
     return activites.reduce((acc, activite) => {
       const rate = tableauTax.find((tax) => tax.code === activite.code)?.rate;
@@ -720,23 +730,23 @@ export function calculPrimeRCD(params: {
     .filter(([key]) => key !== "nonFournitureBilanN_1")
     .reduce(
       (acc: number, [, val]: [string, number | undefined]) => acc + (val ?? 0),
-      1
+      1,
     );
 
   const tableauTax = getTableauTaxByYear(
-    new Date(dateEffet ?? new Date()).getFullYear()
+    new Date(dateEffet ?? new Date()).getFullYear(),
   );
 
   activites.forEach((activite) => {
     const degMax = tableauDeg.find(
-      (deg) => deg.code === activite.code
+      (deg) => deg.code === activite.code,
     )?.degressivity;
     const deg400k = tableauDeg.find(
-      (deg) => deg.code === activite.code && deg.type === "CA"
+      (deg) => deg.code === activite.code && deg.type === "CA",
     )?.degressivity;
     const rate = tableauTax.find((tax) => tax.code === activite.code)?.rate;
     const tauxBase =
-      deg400k && caCalculee > 250000 ? (rate ?? 0) * deg400k : rate ?? 0;
+      deg400k && caCalculee > 250000 ? (rate ?? 0) * deg400k : (rate ?? 0);
     const primeMiniAct = (rate ?? 0) * plafond * activite.caSharePercent;
 
     const prime100Min =
@@ -748,7 +758,7 @@ export function calculPrimeRCD(params: {
       partCA: roundToTwoDecimals(activite.caSharePercent),
       tauxBase: roundToTwoDecimals(tauxBase),
       tauxApplique: roundToTwoDecimals(
-        tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1)
+        tauxBase * (caCalculee > 250000 ? (deg400k ?? 1) : 1),
       ),
       PrimeMiniAct: roundToTwoDecimals(primeMiniAct),
       DegMax: roundToTwoDecimals(degMax ?? 0),
@@ -760,48 +770,50 @@ export function calculPrimeRCD(params: {
   });
 
   returnValue.PminiHT = roundToTwoDecimals(
-    returnTab.reduce((acc, activite) => acc + activite.PrimeMiniAct, 0)
+    returnTab.reduce((acc, activite) => acc + activite.PrimeMiniAct, 0),
   );
   returnValue.primeMini = roundToTwoDecimals(
-    returnTab.reduce((acc, activite) => acc + activite.Prime100Min, 0)
+    returnTab.reduce((acc, activite) => acc + activite.Prime100Min, 0),
   );
   returnValue.primeMiniAvecMajorations = roundToTwoDecimals(
-    returnValue.PminiHT * totalMajorations
+    returnValue.PminiHT * totalMajorations,
   );
   returnValue.PrimeHTSansMajorations = roundToTwoDecimals(
-    returnValue.PminiHT + returnValue.primeMini
+    returnValue.PminiHT + returnValue.primeMini,
   );
   returnValue.totalMajorations = roundToTwoDecimals(totalMajorations);
 
   returnValue.primeTotal = roundToTwoDecimals(
-    returnValue.PrimeHTSansMajorations * totalMajorations
+    returnValue.PrimeHTSansMajorations * totalMajorations,
   );
   returnValue.fraisGestion = roundToTwoDecimals(
-    returnValue.primeTotal * txFraisGestion
+    returnValue.primeTotal * txFraisGestion,
   );
   returnValue.autres.fraisFractionnementPrimeHT = roundToTwoDecimals(
     returnValue.nbEcheances > 1
       ? returnValue.nbEcheances * fraisFractionnementPrime
-      : 0
+      : 0,
   );
-  console.log("taxeasurance", taxeAssurance)
+  console.log("taxeasurance", taxeAssurance);
   returnValue.autres.taxeAssurance = roundToTwoDecimals(
     returnValue.primeTotal * taxeAssurance +
-      returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance
+      returnValue.autres.fraisFractionnementPrimeHT * taxeAssurance,
   );
   returnValue.autres.protectionJuridiqueTTC = roundToTwoDecimals(
-    protectionJuridique1an * (1 + taxeProtectionJuridique)
+    protectionJuridique1an * (1 + taxeProtectionJuridique),
   );
   returnValue.autres.total = roundToTwoDecimals(
     returnValue.autres.taxeAssurance +
       returnValue.autres.protectionJuridiqueTTC +
-      returnValue.autres.fraisFractionnementPrimeHT
+      returnValue.autres.fraisFractionnementPrimeHT,
   );
   returnValue.primeAuDela = roundToTwoDecimals(
-    returnValue.primeTotal - returnValue.primeMiniAvecMajorations
+    returnValue.primeTotal - returnValue.primeMiniAvecMajorations,
   );
   returnValue.totalTTC = roundToTwoDecimals(
-    returnValue.primeTotal + returnValue.autres.total + returnValue.fraisGestion
+    returnValue.primeTotal +
+      returnValue.autres.total +
+      returnValue.fraisGestion,
   );
   returnValue.returnTab = returnTab;
 
@@ -811,14 +823,14 @@ export function calculPrimeRCD(params: {
 
   activites.forEach((activite) => {
     const degMax = tableauDeg.find(
-      (deg) => deg.code === activite.code
+      (deg) => deg.code === activite.code,
     )?.degressivity;
     const deg400k = tableauDeg.find(
-      (deg) => deg.code === activite.code && deg.type === "CA"
+      (deg) => deg.code === activite.code && deg.type === "CA",
     )?.degressivity;
     const rate = tableauTaxN1.find((tax) => tax.code === activite.code)?.rate;
     const tauxBase =
-      deg400k && caCalculee > 250000 ? (rate ?? 0) * deg400k : rate ?? 0;
+      deg400k && caCalculee > 250000 ? (rate ?? 0) * deg400k : (rate ?? 0);
     const primeMiniAct = (rate ?? 0) * plafond * activite.caSharePercent;
 
     const prime100Min =
@@ -830,7 +842,7 @@ export function calculPrimeRCD(params: {
       partCA: roundToTwoDecimals(activite.caSharePercent),
       tauxBase: roundToTwoDecimals(tauxBase),
       tauxApplique: roundToTwoDecimals(
-        tauxBase * (caCalculee > 250000 ? deg400k ?? 1 : 1)
+        tauxBase * (caCalculee > 250000 ? (deg400k ?? 1) : 1),
       ),
       PrimeMiniAct: roundToTwoDecimals(primeMiniAct),
       DegMax: roundToTwoDecimals(degMax ?? 0),
@@ -842,48 +854,48 @@ export function calculPrimeRCD(params: {
   });
 
   returnValue.PminiHTN1 = roundToTwoDecimals(
-    returnTabN1.reduce((acc, activite) => acc + activite.PrimeMiniAct, 0)
+    returnTabN1.reduce((acc, activite) => acc + activite.PrimeMiniAct, 0),
   );
   returnValue.primeMiniN1 = roundToTwoDecimals(
-    returnTabN1.reduce((acc, activite) => acc + activite.Prime100Min, 0)
+    returnTabN1.reduce((acc, activite) => acc + activite.Prime100Min, 0),
   );
   returnValue.primeMiniAvecMajorationsN1 = roundToTwoDecimals(
-    returnValue.PminiHTN1 * totalMajorations
+    returnValue.PminiHTN1 * totalMajorations,
   );
   returnValue.PrimeHTSansMajorationsN1 = roundToTwoDecimals(
-    returnValue.PminiHTN1 + returnValue.primeMiniN1
+    returnValue.PminiHTN1 + returnValue.primeMiniN1,
   );
 
   returnValue.primeTotalN1 = roundToTwoDecimals(
-    returnValue.PrimeHTSansMajorationsN1 * totalMajorations
+    returnValue.PrimeHTSansMajorationsN1 * totalMajorations,
   );
   returnValue.fraisGestionN1 = roundToTwoDecimals(
-    returnValue.primeTotalN1 * txFraisGestion
+    returnValue.primeTotalN1 * txFraisGestion,
   );
   returnValue.autresN1.fraisFractionnementPrimeHT = roundToTwoDecimals(
     returnValue.nbEcheances > 1
       ? returnValue.nbEcheances * fraisFractionnementPrime
-      : 0
+      : 0,
   );
   returnValue.autresN1.taxeAssurance = roundToTwoDecimals(
     returnValue.primeTotalN1 * taxeAssurance +
-      returnValue.autresN1.fraisFractionnementPrimeHT * taxeAssurance
+      returnValue.autresN1.fraisFractionnementPrimeHT * taxeAssurance,
   );
   returnValue.autresN1.protectionJuridiqueTTC = roundToTwoDecimals(
-    protectionJuridique1an * (1 + taxeProtectionJuridique)
+    protectionJuridique1an * (1 + taxeProtectionJuridique),
   );
   returnValue.autresN1.total = roundToTwoDecimals(
     returnValue.autresN1.taxeAssurance +
       returnValue.autresN1.protectionJuridiqueTTC +
-      returnValue.autresN1.fraisFractionnementPrimeHT
+      returnValue.autresN1.fraisFractionnementPrimeHT,
   );
   returnValue.primeAuDelaN1 = roundToTwoDecimals(
-    returnValue.primeTotalN1 - returnValue.primeMiniAvecMajorationsN1
+    returnValue.primeTotalN1 - returnValue.primeMiniAvecMajorationsN1,
   );
   returnValue.totalTTCN1 = roundToTwoDecimals(
     returnValue.primeTotalN1 +
       returnValue.autresN1.total +
-      returnValue.fraisGestionN1
+      returnValue.fraisGestionN1,
   );
   returnValue.returnTabN1 = returnTabN1;
 
@@ -892,7 +904,7 @@ export function calculPrimeRCD(params: {
       ? returnValue.primeTotal *
           returnValue.majorations.nonFournitureBilanN_1 *
           (1 + txFraisGestion + taxeAssurance)
-      : 0
+      : 0,
   );
 
   returnValue.primeAggravationBilanN_1NonFourniN1 = roundToTwoDecimals(
@@ -900,7 +912,7 @@ export function calculPrimeRCD(params: {
       ? returnValue.primeTotalN1 *
           returnValue.majorations.nonFournitureBilanN_1 *
           (1 + txFraisGestion + taxeAssurance)
-      : 0
+      : 0,
   );
 
   returnValue.echeancier = genererEcheancier({
@@ -1063,11 +1075,11 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
   // On calcule le nombre de jours entre le 1er janvier de l'année courante et la date de début
   const nbJoursDepuisDateDebut = Math.floor(
     (dateDebut.getTime() - new Date(year, 0, 1).getTime()) /
-      (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24),
   );
   console.log(
     "Nombre de jours depuis le 1er janvier :",
-    nbJoursDepuisDateDebut
+    nbJoursDepuisDateDebut,
   );
 
   // Calculer le nombre de mois par période selon la périodicité
@@ -1085,7 +1097,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
   let totalPaiement = 0;
 
   if (nbJoursDepuisDateDebut >= 0) {
-    const nbAnneeAEcheance = 2;
+    const nbAnneeAEcheance = 1;
     console.log("nbAnneeAEcheance :", nbAnneeAEcheance);
 
     const formatDate = (date: Date) => {
@@ -1127,7 +1139,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       const dateEcheanceIPLus1 = formatDate(dateFinPeriode);
 
       console.log(
-        `Échéance ${j}: dateDebutPeriode = ${dateEcheance}, dateFinPeriode = ${dateEcheanceIPLus1}`
+        `Échéance ${j}: dateDebutPeriode = ${dateEcheance}, dateFinPeriode = ${dateEcheanceIPLus1}`,
       );
 
       // Vérifier si c'est le premier paiement de l'année
@@ -1142,7 +1154,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
           "Premier paiement de l'année détecté pour j =",
           j,
           "année =",
-          anneeCourante
+          anneeCourante,
         );
       }
 
@@ -1154,11 +1166,11 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
         const joursReel =
           Math.ceil(
             (dateFinPeriode.getTime() - dateDebutPeriode.getTime()) /
-              (1000 * 60 * 60 * 24)
+              (1000 * 60 * 60 * 24),
           ) + 1;
         ratio = Math.min(joursReel / joursTheorique, 1);
         console.log(
-          `ratio pour j=${j} (première période) : ${ratio} (jours réels: ${joursReel}, théorique: ${joursTheorique})`
+          `ratio pour j=${j} (première période) : ${ratio} (jours réels: ${joursReel}, théorique: ${joursTheorique})`,
         );
       } else {
         // Périodes complètes : ratio = 1
@@ -1190,7 +1202,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
         "année:",
         anneeEcheance,
         "estN+1:",
-        estAnneeN1
+        estAnneeN1,
       );
       const pjEcheance = premierPaiementDeLAnnee ? 106.0 : 0;
       const taxeEcheance =
@@ -1209,7 +1221,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       const totalTCHEcheance = totalHTEcheance + taxeEcheance;
 
       console.log(
-        `totalHTEcheance : ${totalHTEcheance}, taxeEcheance : ${taxeEcheance}, totalTCHEcheance : ${totalTCHEcheance}, rcdEcheance : ${rcdEcheance}, pjEcheance : ${pjEcheance}, fraisEcheance : ${fraisEcheance}, repriseEcheance : ${repriseEcheance}, fraisGestionEcheance : ${fraisGestionEcheance}`
+        `totalHTEcheance : ${totalHTEcheance}, taxeEcheance : ${taxeEcheance}, totalTCHEcheance : ${totalTCHEcheance}, rcdEcheance : ${rcdEcheance}, pjEcheance : ${pjEcheance}, fraisEcheance : ${fraisEcheance}, repriseEcheance : ${repriseEcheance}, fraisGestionEcheance : ${fraisGestionEcheance}`,
       );
 
       totalPaiement +=
@@ -1295,7 +1307,7 @@ type ReprisePasseResult = {
  * @returns Résultat détaillé du calcul de reprise du passé
  */
 export function calculReprisePasseRCD(
-  params: ReprisePasseParams
+  params: ReprisePasseParams,
 ): ReprisePasseResult {
   const {
     dateCreation,
@@ -1333,7 +1345,7 @@ export function calculReprisePasseRCD(
 
   console.log(
     "tableauCoefficientsAnciennete reprise passe",
-    tableauCoefficientsAnciennete
+    tableauCoefficientsAnciennete,
   );
 
   // Tableau principal de coefficients selon ancienneté, fréquence et ratio S/P
@@ -1457,7 +1469,7 @@ export function calculReprisePasseRCD(
     sinistresPrecedents.reduce((sum, s) => sum + s.totalCost, 0) /
     (primeAnnuelleHT *
       (tableauCoefficientsAnciennete.find(
-        (item) => item.anciennete === anciennete
+        (item) => item.anciennete === anciennete,
       )?.coefficient || 0));
 
   const frequence =
@@ -1468,34 +1480,34 @@ export function calculReprisePasseRCD(
 
   const categorieAnciennete =
     (tableauCoefficientsAnciennete.find(
-      (item) => item.anciennete === anciennete
+      (item) => item.anciennete === anciennete,
     )?.anciennete || 0) < 3
       ? "< 3ans"
       : (tableauCoefficientsAnciennete.find(
-          (item) => item.anciennete === anciennete
-        )?.anciennete || 0) <= 7
-      ? "3 à 7 ans"
-      : "> 7 ans";
+            (item) => item.anciennete === anciennete,
+          )?.anciennete || 0) <= 7
+        ? "3 à 7 ans"
+        : "> 7 ans";
   const categorieFrequence =
     frequence === 0
       ? "0"
       : frequence <= 0.5
-      ? "0 à 0.5"
-      : frequence <= 1
-      ? "0.5 à 1"
-      : frequence <= 2
-      ? "1 à 2"
-      : "> 2";
+        ? "0 à 0.5"
+        : frequence <= 1
+          ? "0.5 à 1"
+          : frequence <= 2
+            ? "1 à 2"
+            : "> 2";
   const categorieRatioSP =
     sP === 0
       ? "0"
       : sP <= 0.5
-      ? "0 à 0.5"
-      : sP <= 0.7
-      ? "0.5 à 0.7"
-      : sP <= 1
-      ? "0.7 à 1"
-      : "> 1";
+        ? "0 à 0.5"
+        : sP <= 0.7
+          ? "0.5 à 0.7"
+          : sP <= 1
+            ? "0.7 à 1"
+            : "> 1";
 
   console.log("categorieAnciennete reprise passe", categorieAnciennete);
   console.log("categorieFrequence reprise passe", categorieFrequence);
@@ -1537,12 +1549,12 @@ export function calculReprisePasseRCD(
       const finAnnee = new Date(annee, 11, 31);
       const totalJoursAnnee =
         Math.ceil(
-          (finAnnee.getTime() - debutAnnee.getTime()) / (1000 * 60 * 60 * 24)
+          (finAnnee.getTime() - debutAnnee.getTime()) / (1000 * 60 * 60 * 24),
         ) + 1;
       const joursDepuisDebutAnnee =
         Math.ceil(
           (dateFinCouverturePrecedente.getTime() - debutAnnee.getTime()) /
-            (1000 * 60 * 60 * 24)
+            (1000 * 60 * 60 * 24),
         ) + 1;
       pourcentageAnnee = Math.min(1, joursDepuisDebutAnnee / totalJoursAnnee);
     }
@@ -1574,7 +1586,7 @@ export function calculReprisePasseRCD(
         ? roundToTwoDecimals(tauxMajoration)
         : tauxMajoration,
     primeReprisePasseTTC: roundToTwoDecimals(
-      tableauAnnees.reduce((sum, item) => sum + item.primeRepriseAnnee, 0)
+      tableauAnnees.reduce((sum, item) => sum + item.primeRepriseAnnee, 0),
     ),
     primeApresSinistralite:
       typeof tauxMajoration === "number"
