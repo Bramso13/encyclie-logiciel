@@ -142,6 +142,7 @@ export interface PaymentForm {
   method: string;
   reference: string;
   notes: string;
+  paidAt?: string; // Date de paiement (ISO ou YYYY-MM-DD)
 }
 
 // Types pour les documents de devis

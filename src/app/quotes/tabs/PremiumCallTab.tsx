@@ -49,6 +49,7 @@ export default function PaymentTrackingTab({
     method: "",
     reference: "",
     notes: "",
+    paidAt: "",
   });
   const [showAttestationModal, setShowAttestationModal] = useState(false);
   const [
@@ -151,7 +152,12 @@ export default function PaymentTrackingTab({
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(paymentForm),
+          body: JSON.stringify({
+            paymentMethod: paymentForm.method,
+            paymentReference: paymentForm.reference,
+            adminNotes: paymentForm.notes,
+            paidAt: paymentForm.paidAt || undefined,
+          }),
         }
       );
 
@@ -159,7 +165,7 @@ export default function PaymentTrackingTab({
         await refreshData();
         setShowPaymentModal(false);
         setSelectedInstallment(null);
-        setPaymentForm({ amount: "", method: "", reference: "", notes: "" });
+        setPaymentForm({ amount: "", method: "", reference: "", notes: "", paidAt: "" });
         alert("Paiement validé avec succès !");
       } else {
         alert("Erreur lors de la validation du paiement");
@@ -174,11 +180,13 @@ export default function PaymentTrackingTab({
   const openPaymentModal = (installment: ExtendedPaymentInstallment) => {
     if (!installment) return;
     setSelectedInstallment(installment);
+    const today = new Date().toISOString().slice(0, 10);
     setPaymentForm({
       amount: (installment.amountTTC || 0).toString(),
       method: "BANK_TRANSFER",
       reference: "",
       notes: "",
+      paidAt: today,
     });
     setShowPaymentModal(true);
   };
@@ -432,6 +440,9 @@ export default function PaymentTrackingTab({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Paiement
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date de paiement
+                </th>
                 {isAdmin && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -510,6 +521,11 @@ export default function PaymentTrackingTab({
                         <span className="text-gray-400">Non payé</span>
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {installment?.paidAt
+                        ? new Date(installment.paidAt).toLocaleDateString("fr-FR")
+                        : "—"}
+                    </td>
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex flex-col space-y-1">
@@ -539,7 +555,7 @@ export default function PaymentTrackingTab({
               ) : (
                 <tr>
                   <td
-                    colSpan={isAdmin ? 8 : 6}
+                    colSpan={isAdmin ? 9 : 7}
                     className="px-6 py-12 text-center text-gray-500"
                   >
                     Aucune échéance trouvée
@@ -563,6 +579,23 @@ export default function PaymentTrackingTab({
               </h3>
 
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Date de paiement
+                  </label>
+                  <input
+                    type="date"
+                    value={paymentForm.paidAt ?? ""}
+                    onChange={(e) =>
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        paidAt: e.target.value,
+                      }))
+                    }
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Montant payé

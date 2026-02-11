@@ -16,7 +16,7 @@ export async function PATCH(
   try {
     return await withAuthAndRole(["ADMIN"], async (userId, userRole) => {
       const body = await request.json();
-      const { paymentMethod, paymentReference, adminNotes } = body;
+      const { paymentMethod, paymentReference, adminNotes, paidAt: paidAtInput } = body;
 
       // Get existing payment installment
       const existingPayment = await prisma.paymentInstallment.findUnique({
@@ -44,12 +44,16 @@ export async function PATCH(
         throw new ApiError(400, "Ce paiement est déjà marqué comme payé");
       }
 
+      const paidAtDate = paidAtInput
+        ? new Date(paidAtInput)
+        : new Date();
+
       // Update payment installment
       const updatedPayment = await prisma.paymentInstallment.update({
         where: { id: params.id },
         data: {
           status: "PAID",
-          paidAt: new Date(),
+          paidAt: paidAtDate,
           paidAmount: existingPayment.amountTTC,
           paymentMethod: paymentMethod || null,
           paymentReference: paymentReference || null,
