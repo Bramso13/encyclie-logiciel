@@ -27,7 +27,7 @@ export default function ActivityBreakdownField({
     setSelectedActivities((prev) =>
       prev.includes(activityCode)
         ? prev.filter((code) => code !== activityCode)
-        : [...prev, activityCode]
+        : [...prev, activityCode],
     );
   };
 
@@ -45,8 +45,8 @@ export default function ActivityBreakdownField({
   const handlePercentageChange = (code: string, percent: number) => {
     onChange(
       value.map((v) =>
-        v.code === code ? { ...v, caSharePercent: percent } : v
-      )
+        v.code === code ? { ...v, caSharePercent: percent } : v,
+      ),
     );
   };
 
@@ -55,30 +55,38 @@ export default function ActivityBreakdownField({
   };
 
   // Vérifie si les 8 premières activités représentent au moins 50% du total
+  // (uniquement lorsqu'il y a un mix entre activités 1-8 et activités 9-20)
   const checkMainActivitiesShare = (
-    activities: Array<{ code: string; caSharePercent: number }>
+    activities: Array<{ code: string; caSharePercent: number }>,
   ) => {
-    const mainActivitiesPercent = activities
-      .filter((a) => parseInt(a.code) <= 8)
-      .reduce((sum, act) => sum + act.caSharePercent, 0);
+    const mainActivities = activities.filter((a) => parseInt(a.code) <= 8);
+    const otherActivities = activities.filter((a) => parseInt(a.code) > 8);
+    const hasMix = mainActivities.length > 0 && otherActivities.length > 0;
 
-    return mainActivitiesPercent >= 50;
+    const mainActivitiesPercent = mainActivities.reduce(
+      (sum, act) => sum + act.caSharePercent,
+      0,
+    );
+
+    return !hasMix || mainActivitiesPercent >= 50;
   };
 
-  // Vérifie si au moins une activité parmi 1 à 5 est à 30% minimum
+  // Vérifie si au moins une activité parmi 1 à 8 est à 30% minimum
+  // (uniquement lorsqu'il y a au moins une activité 1 à 8)
   const checkMainActivityMinimum = (
-    activities: Array<{ code: string; caSharePercent: number }>
+    activities: Array<{ code: string; caSharePercent: number }>,
   ) => {
-    return activities.some(
-      (a) =>
-        parseInt(a.code) >= 1 && parseInt(a.code) <= 5 && a.caSharePercent >= 30
+    const activities1to8 = activities.filter(
+      (a) => parseInt(a.code) >= 1 && parseInt(a.code) <= 8,
     );
+    if (activities1to8.length === 0) return true; // pas d'activité 1-8, condition non applicable
+    return activities1to8.some((a) => a.caSharePercent >= 30);
   };
 
   const totalPercent = value.reduce((sum, v) => sum + v.caSharePercent, 0);
 
   const filteredOptions = options.filter((option) =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    option.label.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -127,8 +135,8 @@ export default function ActivityBreakdownField({
                 checkMainActivityMinimum(value)
                   ? "bg-green-100 text-green-700"
                   : totalPercent > 100
-                  ? "bg-red-100 text-red-700"
-                  : "bg-orange-100 text-orange-700"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-orange-100 text-orange-700"
               }`}
             >
               Total: {totalPercent}%
@@ -160,7 +168,7 @@ export default function ActivityBreakdownField({
                         const value = parseFloat(e.target.value) || 0;
                         handlePercentageChange(
                           activity.code,
-                          Math.min(100, Math.max(0, value))
+                          Math.min(100, Math.max(0, value)),
                         );
                       }}
                       className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -202,8 +210,8 @@ export default function ActivityBreakdownField({
               checkMainActivityMinimum(value)
                 ? "bg-green-50 text-green-700 border-green-200"
                 : totalPercent > 100
-                ? "bg-red-50 text-red-700 border-red-200"
-                : "bg-amber-50 text-amber-700 border-amber-200"
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -245,14 +253,14 @@ export default function ActivityBreakdownField({
                 checkMainActivityMinimum(value)
                   ? "✓ Répartition valide"
                   : totalPercent > 100
-                  ? "La somme des pourcentages ne peut pas dépasser 100%"
-                  : totalPercent < 100
-                  ? "La somme des pourcentages doit atteindre 100%"
-                  : !checkMainActivityMinimum(value)
-                  ? "Au moins une activité parmi 1 à 5 doit être à 30% minimum"
-                  : !checkMainActivitiesShare(value)
-                  ? "Les activités 1 à 8 doivent représenter au moins 50% du total"
-                  : ""}
+                    ? "La somme des pourcentages ne peut pas dépasser 100%"
+                    : totalPercent < 100
+                      ? "La somme des pourcentages doit atteindre 100%"
+                      : !checkMainActivityMinimum(value)
+                        ? "Au moins une activité parmi 1 à 5 doit être à 30% minimum"
+                        : !checkMainActivitiesShare(value)
+                          ? "Les activités 1 à 8 doivent représenter au moins 50% du total"
+                          : ""}
               </span>
             </div>
           </div>
