@@ -189,6 +189,17 @@ export async function PUT(
       let hasChanges = false;
 
       if (
+        validatedData.reference !== undefined &&
+        validatedData.reference !== existingQuote.reference
+      ) {
+        changes.reference = {
+          old: existingQuote.reference,
+          new: validatedData.reference,
+        };
+        hasChanges = true;
+      }
+
+      if (
         validatedData.status &&
         validatedData.status !== existingQuote.status
       ) {

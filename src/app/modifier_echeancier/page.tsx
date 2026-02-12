@@ -10,7 +10,10 @@ type QuoteWithSchedule = {
   id: string;
   reference: string;
   status: string;
-  formData?: { companyName?: string };
+  formData?: {
+    companyName?: string;
+    companyForm?: { companyName?: string };
+  };
   product?: { name: string; code: string };
   broker?: { name: string | null; companyName: string | null };
   paymentSchedule?: PaymentSchedule | null;
@@ -63,6 +66,7 @@ export default function ModifierEcheancierPage() {
     field: EditableColumn;
     value: string;
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!session && !isPending) router.push("/login");
@@ -77,9 +81,13 @@ export default function ModifierEcheancierPage() {
         const res = await fetch("/api/quotes?limit=500&page=1");
         const data = await res.json();
         if (data?.data?.quotes) {
-          setQuotes(data.data.quotes);
-          if (data.data.quotes.length > 0 && !selectedQuoteId) {
-            setSelectedQuoteId(data.data.quotes[0].id);
+          const rcdQuotes = data.data.quotes.filter((q: QuoteWithSchedule) =>
+            (q.reference || "").toUpperCase().startsWith("RCD")
+          );
+          setQuotes(rcdQuotes);
+          const currentInList = selectedQuoteId && rcdQuotes.some((q: QuoteWithSchedule) => q.id === selectedQuoteId);
+          if (rcdQuotes.length > 0 && (!selectedQuoteId || !currentInList)) {
+            setSelectedQuoteId(rcdQuotes[0].id);
           }
         }
       } finally {
@@ -93,6 +101,24 @@ export default function ModifierEcheancierPage() {
     () => quotes.find((q) => q.id === selectedQuoteId),
     [quotes, selectedQuoteId],
   );
+
+  const filteredQuotes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return quotes;
+    return quotes.filter((quote) => {
+      const name = (quote.formData?.companyName ?? "").toLowerCase();
+      const formName = (quote.formData?.companyForm?.companyName ?? "").toLowerCase();
+      return name.includes(q) || formName.includes(q);
+    });
+  }, [quotes, searchQuery]);
+
+  useEffect(() => {
+    if (filteredQuotes.length === 0) return;
+    const isSelectedInFiltered = filteredQuotes.some((q) => q.id === selectedQuoteId);
+    if (!isSelectedInFiltered) {
+      setSelectedQuoteId(filteredQuotes[0].id);
+    }
+  }, [filteredQuotes, selectedQuoteId]);
 
   // Charger les détails du devis (référence, statut, contrat)
   useEffect(() => {
@@ -541,54 +567,75 @@ export default function ModifierEcheancierPage() {
           <p className="text-gray-500">Aucun devis dans la base.</p>
         ) : (
           <>
-            <div className="mb-4 flex flex-wrap items-center gap-4">
-              <label className="font-medium text-gray-700">
-                Devis / contrat :
-              </label>
-              <select
-                value={selectedQuoteId}
-                onChange={(e) => setSelectedQuoteId(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 bg-white min-w-[320px]"
-              >
-                {quotes.map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {[q.formData?.companyName ?? "—", q.reference].filter(Boolean).join(" · ")}
-                    {q.product?.name ? ` — ${q.product.name}` : ""}
-                  </option>
-                ))}
-              </select>
-              {scheduleLoading && (
-                <span className="text-sm text-gray-500">Chargement échéancier…</span>
-              )}
-              {!scheduleLoading && selectedQuoteId && payments.length > 0 && (
-                <span className="text-sm text-gray-500">
-                  {payments.length} échéance(s)
-                </span>
-              )}
-              {!scheduleLoading && selectedQuoteId && payments.length === 0 && quotes.some((q) => q.id === selectedQuoteId) && (
-                <>
-                  <span className="text-sm text-amber-600">
-                    Aucun échéancier pour ce devis
+            <div className="mb-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor="search-company" className="font-medium text-gray-700">
+                  Recherche (société) :
+                </label>
+                <input
+                  id="search-company"
+                  type="search"
+                  placeholder="Nom de la société..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="border border-gray-300 rounded-md px-3 py-2 bg-white min-w-[240px] max-w-[320px]"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="font-medium text-gray-700">
+                  Devis / contrat :
+                </label>
+                {filteredQuotes.length === 0 ? (
+                  <span className="text-gray-500 text-sm">
+                    Aucun devis ne correspond à la recherche.
                   </span>
+                ) : (
+                  <select
+                    value={selectedQuoteId}
+                    onChange={(e) => setSelectedQuoteId(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-2 bg-white min-w-[320px]"
+                  >
+                    {filteredQuotes.map((q) => (
+                      <option key={q.id} value={q.id}>
+                        {[q.formData?.companyName ?? q.formData?.companyForm?.companyName ?? "—", q.reference].filter(Boolean).join(" · ")}
+                        {q.product?.name ? ` — ${q.product.name}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {scheduleLoading && (
+                  <span className="text-sm text-gray-500">Chargement échéancier…</span>
+                )}
+                {!scheduleLoading && selectedQuoteId && payments.length > 0 && (
+                  <span className="text-sm text-gray-500">
+                    {payments.length} échéance(s)
+                  </span>
+                )}
+                {!scheduleLoading && selectedQuoteId && payments.length === 0 && quotes.some((q) => q.id === selectedQuoteId) && (
+                  <>
+                    <span className="text-sm text-amber-600">
+                      Aucun échéancier pour ce devis
+                    </span>
+                    <button
+                      type="button"
+                      onClick={addPaymentLine}
+                      disabled={saving}
+                      className="text-sm px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                    >
+                      + Ajouter une échéance
+                    </button>
+                  </>
+                )}
+                {!scheduleLoading && selectedQuoteId && payments.length > 0 && (
                   <button
                     type="button"
                     onClick={addPaymentLine}
-                    disabled={saving}
-                    className="text-sm px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                    className="text-sm px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     + Ajouter une échéance
                   </button>
-                </>
-              )}
-              {!scheduleLoading && selectedQuoteId && payments.length > 0 && (
-                <button
-                  type="button"
-                  onClick={addPaymentLine}
-                  className="text-sm px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  + Ajouter une échéance
-                </button>
-              )}
+                )}
+              </div>
             </div>
 
             {message && (
