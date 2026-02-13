@@ -19,9 +19,8 @@ function getActiviteTitleByCode(code: string | number): string {
 }
 
 /**
- * Règle périmètre : une ligne par échéance (PaymentInstallment), comme le tableau quittances.
- * Évite les doublons contrat/devis : on part des échéances (schedule → quote), pas des contrats.
- * DATE_SOUSCRIPTION = formData.dateDeffet ; DATE_FIN_CONTRAT = date fin période de l'échéance.
+ * Règle périmètre : échéances (PaymentInstallment) puis déduplication par SIREN.
+ * Une seule ligne par SIRET/SIREN (même entreprise = une seule police). DATE_FIN_CONTRAT = max des dates fin période.
  */
 export async function getPolicesV2(
   filters: BordereauFiltersV2,
@@ -91,7 +90,49 @@ export async function getPolicesV2(
     );
   }
 
-  return rows;
+  return deduplicatePolicesBySiren(rows);
+}
+
+/** Une ligne par SIREN : garde la première occurrence, DATE_FIN_CONTRAT = max des periodEnd du même SIREN. */
+function deduplicatePolicesBySiren(
+  rows: FidelidadePolicesRow[]
+): FidelidadePolicesRow[] {
+  const bySiren = new Map<string, FidelidadePolicesRow[]>();
+  const periodEndBySiren = new Map<string, Date>();
+
+  for (const row of rows) {
+    const sirenKey = row.SIREN?.trim();
+    const key = sirenKey ? sirenKey : `_${row.IDENTIFIANT_POLICE}_${row.DATE_FIN_CONTRAT}`;
+    if (!bySiren.has(key)) bySiren.set(key, []);
+    bySiren.get(key)!.push(row);
+  }
+
+  for (const [key, group] of bySiren) {
+    const maxEnd = group.reduce((max, r) => {
+      const d = parseDateFidelidade(r.DATE_FIN_CONTRAT);
+      return d && (!max || d > max) ? d : max;
+    }, null as Date | null);
+    if (maxEnd) periodEndBySiren.set(key, maxEnd);
+  }
+
+  const out: FidelidadePolicesRow[] = [];
+  for (const [key, group] of bySiren) {
+    const first = { ...group[0] };
+    const maxEnd = periodEndBySiren.get(key);
+    if (maxEnd) first.DATE_FIN_CONTRAT = formatDate(maxEnd);
+    out.push(first);
+  }
+
+  out.sort((a, b) => (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""));
+  return out;
+}
+
+function parseDateFidelidade(s: string): Date | null {
+  if (!s) return null;
+  const [d, m, y] = s.split("/").map(Number);
+  if (!d || !m || !y) return null;
+  const date = new Date(y, m - 1, d);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function mapInstallmentToPolicesRow(params: {

@@ -423,14 +423,6 @@ export async function DELETE(
         throw new ApiError(403, "Accès refusé à ce devis");
       }
 
-      // Cannot delete if contract exists
-      if (quote.contract) {
-        throw new ApiError(
-          400,
-          "Impossible de supprimer un devis avec un contrat associé"
-        );
-      }
-
       // Cannot delete if not in draft status (except for admins)
       if (quote.status !== "DRAFT" && userRole !== "ADMIN") {
         throw new ApiError(
@@ -439,9 +431,18 @@ export async function DELETE(
         );
       }
 
-      // Delete quote (documents will be cascaded)
-      await prisma.quote.delete({
-        where: { id: params.id },
+      await prisma.$transaction(async (tx) => {
+        // Si un contrat est associé, le supprimer d'abord (commissions, documents, puis contrat)
+        if (quote.contract) {
+          const contractId = quote.contract.id;
+          await tx.commission.deleteMany({ where: { contractId } });
+          await tx.contractDocument.deleteMany({ where: { contractId } });
+          await tx.insuranceContract.delete({ where: { id: contractId } });
+        }
+        // Puis supprimer le devis (documents, échéancier, etc. en cascade)
+        await tx.quote.delete({
+          where: { id: params.id },
+        });
       });
 
       return createApiResponse(null, "Devis supprimé avec succès");

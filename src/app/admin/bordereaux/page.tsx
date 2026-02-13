@@ -11,6 +11,39 @@ type TabId = "polices" | "quittances";
 
 const HISTORY_PAGE_SIZE = 20;
 
+const MOIS: { value: number; label: string }[] = [
+  { value: 1, label: "Janvier" },
+  { value: 2, label: "Février" },
+  { value: 3, label: "Mars" },
+  { value: 4, label: "Avril" },
+  { value: 5, label: "Mai" },
+  { value: 6, label: "Juin" },
+  { value: 7, label: "Juillet" },
+  { value: 8, label: "Août" },
+  { value: 9, label: "Septembre" },
+  { value: 10, label: "Octobre" },
+  { value: 11, label: "Novembre" },
+  { value: 12, label: "Décembre" },
+];
+
+function getDateRangeForMonthYear(
+  month: number,
+  year: number,
+): { startDate: string; endDate: string } {
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const endDate = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+  return { startDate, endDate };
+}
+
+function getYears(): number[] {
+  const currentYear = new Date().getFullYear();
+  const from = currentYear - 5;
+  const to = currentYear + 1;
+  return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+}
+
 interface HistoryItem {
   id: string;
   generatedAt: string;
@@ -52,7 +85,7 @@ interface EditableTableProps<T> {
   onCellEdit: (
     rowIndex: number,
     field: keyof T & string,
-    value: string
+    value: string,
   ) => void;
   emptyMessage?: string;
 }
@@ -94,7 +127,7 @@ function EditableTable<T extends object>({
                       onCellEdit(
                         rowIndex,
                         col as keyof T & string,
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="block w-full min-w-[80px] max-w-[180px] rounded border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-2 py-1 border"
@@ -109,13 +142,17 @@ function EditableTable<T extends object>({
   );
 }
 
+const now = new Date();
+const defaultMonth = now.getMonth() + 1;
+const defaultYear = now.getFullYear();
+
 export default function BordereauxPage() {
-  const [periodStart, setPeriodStart] = useState("");
-  const [periodEnd, setPeriodEnd] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
   const [polices, setPolices] = useState<FidelidadePolicesRow[]>([]);
   const [quittances, setQuittances] = useState<FidelidadeQuittancesRow[]>([]);
   const [editedPolices, setEditedPolices] = useState<FidelidadePolicesRow[]>(
-    []
+    [],
   );
   const [editedQuittances, setEditedQuittances] = useState<
     FidelidadeQuittancesRow[]
@@ -138,7 +175,7 @@ export default function BordereauxPage() {
     setLoadingHistory(true);
     try {
       const res = await fetch(
-        `/api/admin/bordereaux/history?page=${page}&limit=${HISTORY_PAGE_SIZE}`
+        `/api/admin/bordereaux/history?page=${page}&limit=${HISTORY_PAGE_SIZE}`,
       );
       const data = await res.json();
       if (!data.success)
@@ -218,19 +255,18 @@ export default function BordereauxPage() {
     setLoading(true);
 
     try {
-      if (!periodStart || !periodEnd) {
-        setError("Veuillez sélectionner une période (début et fin)");
-        setLoading(false);
-        return;
-      }
+      const { startDate, endDate } = getDateRangeForMonthYear(
+        selectedMonth,
+        selectedYear,
+      );
 
       const response = await fetch("/api/admin/bordereaux/preview-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dateRange: {
-            startDate: periodStart,
-            endDate: periodEnd,
+            startDate,
+            endDate,
           },
         }),
       });
@@ -242,16 +278,16 @@ export default function BordereauxPage() {
       }
 
       const rawPolices = data.polices ?? [];
-      const rawQuittances = (data.quittances ?? []) as FidelidadeQuittancesRow[];
+      const rawQuittances = (data.quittances ??
+        []) as FidelidadeQuittancesRow[];
       const normalizeQuittanceRow = (row: FidelidadeQuittancesRow) =>
         QUITTANCES_COLUMNS.reduce(
           (acc, col) => {
             const v = row[col];
-            acc[col] =
-              v !== undefined && v !== null ? String(v) : "";
+            acc[col] = v !== undefined && v !== null ? String(v) : "";
             return acc;
           },
-          {} as Record<string, string>
+          {} as Record<string, string>,
         ) as unknown as FidelidadeQuittancesRow;
       const normalizedQuittances = rawQuittances.map(normalizeQuittanceRow);
       setPolices(rawPolices);
@@ -263,7 +299,7 @@ export default function BordereauxPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Erreur lors de la prévisualisation"
+          : "Erreur lors de la prévisualisation",
       );
     } finally {
       setLoading(false);
@@ -275,13 +311,18 @@ export default function BordereauxPage() {
     setError(null);
 
     try {
+      const { startDate, endDate } = getDateRangeForMonthYear(
+        selectedMonth,
+        selectedYear,
+      );
+
       const response = await fetch("/api/admin/bordereaux/export-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dateRange: {
-            startDate: periodStart,
-            endDate: periodEnd,
+            startDate,
+            endDate,
           },
           polices: editedPolices,
           quittances: editedQuittances,
@@ -297,13 +338,13 @@ export default function BordereauxPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const [, month, year] = periodEnd.split("-");
-      link.download = `BORDEREAU_FIDELIDADE_${month}_${year}.zip`;
+      const monthStr = String(selectedMonth).padStart(2, "0");
+      link.download = `BORDEREAU_FIDELIDADE_${monthStr}_${selectedYear}.zip`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Erreur lors de la génération"
+        err instanceof Error ? err.message : "Erreur lors de la génération",
       );
     } finally {
       setLoadingExport(false);
@@ -318,7 +359,7 @@ export default function BordereauxPage() {
   const handlePolicesCellEdit = (
     rowIndex: number,
     field: keyof FidelidadePolicesRow,
-    value: string
+    value: string,
   ) => {
     const next = [...editedPolices];
     next[rowIndex] = { ...next[rowIndex], [field]: value };
@@ -328,7 +369,7 @@ export default function BordereauxPage() {
   const handleQuittancesCellEdit = (
     rowIndex: number,
     field: keyof FidelidadeQuittancesRow,
-    value: string
+    value: string,
   ) => {
     const next = [...editedQuittances];
     next[rowIndex] = { ...next[rowIndex], [field]: value };
@@ -348,32 +389,43 @@ export default function BordereauxPage() {
           </p>
         </div>
 
-        {/* Filtres — période uniquement */}
+        {/* Filtres — mois et année (période = 1er du mois → 1er du mois suivant) */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filtres</h2>
           <div className="flex flex-wrap items-end gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Début période
+                Mois
               </label>
-              <input
-                type="date"
-                value={periodStart}
-                onChange={(e) => setPeriodStart(e.target.value)}
-                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border"
-              />
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border min-w-[140px]"
+              >
+                {MOIS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fin période
+                Année
               </label>
-              <input
-                type="date"
-                value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
-                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border"
-              />
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border min-w-[100px]"
+              >
+                {getYears().map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
             </div>
+
             <div className="flex gap-2">
               <button
                 onClick={handlePreview}
@@ -568,7 +620,7 @@ export default function BordereauxPage() {
                       type="button"
                       onClick={() =>
                         setHistoryPage((p) =>
-                          Math.min(historyTotalPages, p + 1)
+                          Math.min(historyTotalPages, p + 1),
                         )
                       }
                       disabled={historyPage >= historyTotalPages}

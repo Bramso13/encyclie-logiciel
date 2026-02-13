@@ -4,21 +4,70 @@ import { useSession, authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
+import { Copy, Trash2 } from "lucide-react";
 import type { PaymentInstallment, PaymentSchedule } from "@/lib/types";
 
 type QuoteWithSchedule = {
   id: string;
   reference: string;
   status: string;
+  createdAt?: string;
   formData?: {
     companyName?: string;
     companyForm?: { companyName?: string };
+    siret?: string;
   };
+  companyData?: { siret?: string; companyName?: string; [key: string]: unknown };
   product?: { name: string; code: string };
   broker?: { name: string | null; companyName: string | null };
   paymentSchedule?: PaymentSchedule | null;
   contract?: { id: string; reference: string; status: string } | null;
 };
+
+/** Chaîne unique pour la méga-recherche (SIRET, nom, référence, courtier, etc.) */
+function getQuoteSearchableText(q: QuoteWithSchedule): string {
+  const parts = [
+    q.reference ?? "",
+    getQuoteSiret(q),
+    getQuoteCompanyName(q),
+    (q.companyData as { companyName?: string } | undefined)?.companyName ?? "",
+    q.broker?.name ?? "",
+    q.broker?.companyName ?? "",
+    q.status ?? "",
+    q.product?.name ?? "",
+    q.product?.code ?? "",
+    q.contract?.reference ?? "",
+  ];
+  try {
+    if (q.formData && typeof q.formData === "object")
+      parts.push(JSON.stringify(q.formData));
+    if (q.companyData && typeof q.companyData === "object")
+      parts.push(JSON.stringify(q.companyData));
+  } catch {
+    // ignore
+  }
+  return parts.join(" ").toLowerCase();
+}
+
+function getQuoteSiret(q: QuoteWithSchedule): string {
+  const raw = (q.formData as { siret?: string } | undefined)?.siret ?? q.companyData?.siret;
+  if (raw != null && String(raw).trim() !== "") return String(raw).trim();
+  return "";
+}
+
+function getQuoteCompanyName(q: QuoteWithSchedule): string {
+  return q.formData?.companyName ?? q.formData?.companyForm?.companyName ?? "";
+}
+
+function formatCreatedAt(createdAt: string | undefined): string {
+  if (!createdAt) return "—";
+  try {
+    const d = new Date(createdAt);
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return "—";
+  }
+}
 
 const QUOTE_STATUSES = [
   "DRAFT", "INCOMPLETE", "SUBMITTED", "IN_PROGRESS", "COMPLEMENT_REQUIRED",
@@ -67,28 +116,82 @@ export default function ModifierEcheancierPage() {
     value: string;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"echeancier" | "doublons" | "doublonsNom" | "recherche">("echeancier");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
+  const [megaSearchQuery, setMegaSearchQuery] = useState("");
+  const [allQuotesForSearch, setAllQuotesForSearch] = useState<QuoteWithSchedule[]>([]);
+  const [megaSearchLoading, setMegaSearchLoading] = useState(false);
+
+  const copyCompanyName = (text: string, id: string) => {
+    const name = text.trim();
+    if (!name) return;
+    navigator.clipboard.writeText(name).then(() => {
+      setCopiedId(id);
+      window.setTimeout(() => setCopiedId(null), 1500);
+    });
+  };
+
+  const copyReference = (ref: string, id: string) => {
+    if (!ref?.trim()) return;
+    navigator.clipboard.writeText(ref.trim()).then(() => {
+      setCopiedId(`ref-${id}`);
+      window.setTimeout(() => setCopiedId(null), 1500);
+    });
+  };
+
+  const handleDeleteQuote = async (id: string) => {
+    if (!window.confirm("Supprimer ce devis ? Cette action est irréversible.")) return;
+    setDeletingQuoteId(id);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/quotes/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage({ type: "err", text: data?.error ?? "Impossible de supprimer le devis." });
+        return;
+      }
+      setQuotes((prev) => prev.filter((q) => q.id !== id));
+      setAllQuotesForSearch((prev) => prev.filter((q) => q.id !== id));
+      if (selectedQuoteId === id) {
+        const remaining = quotes.filter((q) => q.id !== id);
+        setSelectedQuoteId(remaining[0]?.id ?? "");
+      }
+      setMessage({ type: "ok", text: "Devis supprimé." });
+    } finally {
+      setDeletingQuoteId(null);
+    }
+  };
 
   useEffect(() => {
     if (!session && !isPending) router.push("/login");
   }, [session, isPending, router]);
 
-  // Charger tous les devis (sans filtre échéancier)
+  // Charger tous les devis du système (toutes les pages)
   useEffect(() => {
     if (!session) return;
     const fetchQuotes = async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/quotes?limit=500&page=1");
-        const data = await res.json();
-        if (data?.data?.quotes) {
-          const rcdQuotes = data.data.quotes.filter((q: QuoteWithSchedule) =>
-            (q.reference || "").toUpperCase().startsWith("RCD")
-          );
-          setQuotes(rcdQuotes);
-          const currentInList = selectedQuoteId && rcdQuotes.some((q: QuoteWithSchedule) => q.id === selectedQuoteId);
-          if (rcdQuotes.length > 0 && (!selectedQuoteId || !currentInList)) {
-            setSelectedQuoteId(rcdQuotes[0].id);
-          }
+        const allQuotes: QuoteWithSchedule[] = [];
+        let page = 1;
+        let totalPages = 1;
+        do {
+          const res = await fetch(`/api/quotes?limit=100&page=${page}`);
+          const data = await res.json();
+          const quotesPage = data?.data?.quotes ?? [];
+          const pagination = data?.data?.pagination;
+          totalPages = pagination?.totalPages ?? 1;
+          allQuotes.push(...(quotesPage as QuoteWithSchedule[]));
+          page++;
+        } while (page <= totalPages && allQuotes.length > 0);
+        const rcdQuotes = allQuotes.filter((q: QuoteWithSchedule) =>
+          (q.reference || "").toUpperCase().startsWith("RCD")
+        );
+        setQuotes(rcdQuotes);
+        const currentInList = selectedQuoteId && rcdQuotes.some((q: QuoteWithSchedule) => q.id === selectedQuoteId);
+        if (rcdQuotes.length > 0 && (!selectedQuoteId || !currentInList)) {
+          setSelectedQuoteId(rcdQuotes[0].id);
         }
       } finally {
         setLoading(false);
@@ -111,6 +214,81 @@ export default function ModifierEcheancierPage() {
       return name.includes(q) || formName.includes(q);
     });
   }, [quotes, searchQuery]);
+
+  /** Groupes de devis partageant le même SIRET (uniquement les doublons, nb > 1) */
+  const duplicateGroupsBySiret = useMemo(() => {
+    const bySiret = new Map<string, QuoteWithSchedule[]>();
+    for (const q of quotes) {
+      const siret = getQuoteSiret(q);
+      const key = siret || "__sans_siret__";
+      if (!bySiret.has(key)) bySiret.set(key, []);
+      bySiret.get(key)!.push(q);
+    }
+    const duplicates: { siret: string; quotes: QuoteWithSchedule[] }[] = [];
+    bySiret.forEach((quoteList, key) => {
+      if (quoteList.length > 1)
+        duplicates.push({
+          siret: key === "__sans_siret__" ? "(sans SIRET)" : key,
+          quotes: quoteList,
+        });
+    });
+    return duplicates.sort((a, b) => a.siret.localeCompare(b.siret));
+  }, [quotes]);
+
+  /** Groupes de devis partageant le même nom d'entreprise (normalisé, nb > 1) */
+  const duplicateGroupsByCompanyName = useMemo(() => {
+    const byName = new Map<string, QuoteWithSchedule[]>();
+    for (const q of quotes) {
+      const raw = getQuoteCompanyName(q).trim();
+      const key = raw.toLowerCase();
+      if (!key) continue; // ignorer les devis sans nom
+      if (!byName.has(key)) byName.set(key, []);
+      byName.get(key)!.push(q);
+    }
+    const duplicates: { companyName: string; quotes: QuoteWithSchedule[] }[] = [];
+    byName.forEach((quoteList, normalizedKey) => {
+      if (quoteList.length > 1) {
+        const displayName = quoteList[0] ? getQuoteCompanyName(quoteList[0]).trim() || normalizedKey : normalizedKey;
+        duplicates.push({ companyName: displayName, quotes: quoteList });
+      }
+    });
+    return duplicates.sort((a, b) => a.companyName.localeCompare(b.companyName, "fr"));
+  }, [quotes]);
+
+  // Charger TOUS les devis (sans filtre RCD) quand on ouvre l'onglet Recherche
+  useEffect(() => {
+    if (!session || activeTab !== "recherche" || allQuotesForSearch.length > 0) return;
+    const fetchAllForSearch = async () => {
+      setMegaSearchLoading(true);
+      try {
+        const list: QuoteWithSchedule[] = [];
+        let page = 1;
+        let totalPages = 1;
+        do {
+          const res = await fetch(`/api/quotes?limit=100&page=${page}`);
+          const data = await res.json();
+          const quotesPage = data?.data?.quotes ?? [];
+          const pagination = data?.data?.pagination;
+          totalPages = pagination?.totalPages ?? 1;
+          list.push(...(quotesPage as QuoteWithSchedule[]));
+          page++;
+        } while (page <= totalPages && list.length > 0);
+        setAllQuotesForSearch(list);
+      } finally {
+        setMegaSearchLoading(false);
+      }
+    };
+    fetchAllForSearch();
+  }, [session, activeTab, allQuotesForSearch.length]);
+
+  /** Résultats de la méga-recherche (tous les devis, filtrés par la requête) */
+  const megaSearchResults = useMemo(() => {
+    const q = megaSearchQuery.trim().toLowerCase();
+    if (!q) return allQuotesForSearch;
+    return allQuotesForSearch.filter((quote) =>
+      getQuoteSearchableText(quote).includes(q)
+    );
+  }, [allQuotesForSearch, megaSearchQuery]);
 
   useEffect(() => {
     if (filteredQuotes.length === 0) return;
@@ -567,6 +745,347 @@ export default function ModifierEcheancierPage() {
           <p className="text-gray-500">Aucun devis dans la base.</p>
         ) : (
           <>
+            <div className="flex gap-2 mb-4 border-b border-gray-200">
+              <button
+                type="button"
+                onClick={() => setActiveTab("echeancier")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px ${
+                  activeTab === "echeancier"
+                    ? "border-blue-600 text-blue-600 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Échéancier
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("doublons")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px ${
+                  activeTab === "doublons"
+                    ? "border-blue-600 text-blue-600 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Doublons SIRET
+                {duplicateGroupsBySiret.length > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 rounded">
+                    {duplicateGroupsBySiret.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("doublonsNom")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px ${
+                  activeTab === "doublonsNom"
+                    ? "border-blue-600 text-blue-600 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Doublons nom
+                {duplicateGroupsByCompanyName.length > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 rounded">
+                    {duplicateGroupsByCompanyName.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("recherche")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px ${
+                  activeTab === "recherche"
+                    ? "border-blue-600 text-blue-600 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Recherche
+              </button>
+            </div>
+
+            {activeTab === "doublons" ? (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-3 bg-gray-100 border-b">
+                  <h2 className="text-sm font-medium text-gray-700">
+                    Dossiers avec le même SIRET ({duplicateGroupsBySiret.length} groupe(s))
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cliquez sur un devis pour l’ouvrir dans l’onglet Échéancier.
+                  </p>
+                </div>
+                <div className="divide-y divide-gray-200 max-h-[70vh] overflow-y-auto">
+                  {duplicateGroupsBySiret.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-500">
+                      Aucun doublon de SIRET parmi les devis chargés.
+                    </div>
+                  ) : (
+                    duplicateGroupsBySiret.map(({ siret, quotes: groupQuotes }) => (
+                      <div key={siret} className="p-4">
+                        <div className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                          <span className="text-blue-600">SIRET : {siret}</span>
+                          <span className="text-xs font-normal text-gray-500">
+                            {groupQuotes.length} devis
+                          </span>
+                        </div>
+                        <ul className="space-y-1">
+                          {groupQuotes.map((q) => {
+                            const companyName = getQuoteCompanyName(q) || "—";
+                            return (
+                            <li key={q.id}>
+                              <div className="flex items-center gap-2 w-full px-3 py-2 rounded-md border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-sm group">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedQuoteId(q.id);
+                                    setActiveTab("echeancier");
+                                  }}
+                                  className="text-left flex-1 flex flex-wrap items-center gap-2 min-w-0"
+                                >
+                                  <span className="font-mono text-gray-700">{q.reference}</span>
+                                  <span className="text-gray-600 truncate">
+                                    {companyName}
+                                  </span>
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0">
+                                    {q.status}
+                                  </span>
+                                  <span className="text-xs text-gray-500 shrink-0" title="Créé le">
+                                    {formatCreatedAt(q.createdAt)}
+                                  </span>
+                                  {q.contract && (
+                                    <span className="text-xs text-gray-500 shrink-0">
+                                      Contrat : {q.contract.reference}
+                                    </span>
+                                  )}
+                                </button>
+                                {companyName !== "—" && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyCompanyName(companyName, q.id);
+                                    }}
+                                    className="p-1.5 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 shrink-0"
+                                    title="Copier le nom de l'entreprise"
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {copiedId === q.id && <span className="text-xs text-green-600 shrink-0">Copié !</span>}
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteQuote(q.id); }}
+                                  disabled={deletingQuoteId === q.id}
+                                  className="p-1.5 rounded text-gray-400 hover:bg-red-100 hover:text-red-600 shrink-0 disabled:opacity-50"
+                                  title="Supprimer le devis"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </li>
+                          ); })}
+                        </ul>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : activeTab === "doublonsNom" ? (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-3 bg-gray-100 border-b">
+                  <h2 className="text-sm font-medium text-gray-700">
+                    Dossiers avec le même nom d'entreprise ({duplicateGroupsByCompanyName.length} groupe(s))
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Regroupement insensible à la casse. Cliquez sur un devis pour l'ouvrir dans l'onglet Échéancier.
+                  </p>
+                </div>
+                <div className="divide-y divide-gray-200 max-h-[70vh] overflow-y-auto">
+                  {duplicateGroupsByCompanyName.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-500">
+                      Aucun doublon de nom d'entreprise parmi les devis chargés.
+                    </div>
+                  ) : (
+                    duplicateGroupsByCompanyName.map(({ companyName, quotes: groupQuotes }) => (
+                      <div key={companyName} className="p-4">
+                        <div className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                          <span className="text-blue-600">{companyName}</span>
+                          <span className="text-xs font-normal text-gray-500">
+                            {groupQuotes.length} devis
+                          </span>
+                        </div>
+                        <ul className="space-y-1">
+                          {groupQuotes.map((q) => {
+                            const name = getQuoteCompanyName(q) || "—";
+                            return (
+                              <li key={q.id}>
+                                <div className="flex items-center gap-2 w-full px-3 py-2 rounded-md border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-sm group">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedQuoteId(q.id);
+                                      setActiveTab("echeancier");
+                                    }}
+                                    className="text-left flex-1 flex flex-wrap items-center gap-2 min-w-0"
+                                  >
+                                    <span className="font-mono text-gray-700">{q.reference}</span>
+                                    <span className="text-gray-600 truncate">{name}</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0">
+                                      {q.status}
+                                    </span>
+                                    <span className="text-xs text-gray-500 shrink-0" title="Créé le">
+                                      {formatCreatedAt(q.createdAt)}
+                                    </span>
+                                    {getQuoteSiret(q) && (
+                                      <span className="text-xs text-gray-500 shrink-0">
+                                        SIRET : {getQuoteSiret(q)}
+                                      </span>
+                                    )}
+                                    {q.contract && (
+                                      <span className="text-xs text-gray-500 shrink-0">
+                                        Contrat : {q.contract.reference}
+                                      </span>
+                                    )}
+                                  </button>
+                                  {name !== "—" && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyCompanyName(name, q.id);
+                                      }}
+                                      className="p-1.5 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 shrink-0"
+                                      title="Copier le nom de l'entreprise"
+                                    >
+                                      <Copy className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                  {copiedId === q.id && <span className="text-xs text-green-600 shrink-0">Copié !</span>}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteQuote(q.id); }}
+                                    disabled={deletingQuoteId === q.id}
+                                    className="p-1.5 rounded text-gray-400 hover:bg-red-100 hover:text-red-600 shrink-0 disabled:opacity-50"
+                                    title="Supprimer le devis"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : activeTab === "recherche" ? (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-4 bg-gray-100 border-b">
+                  <h2 className="text-sm font-medium text-gray-700 mb-2">
+                    Recherche dans tous les devis
+                  </h2>
+                  <p className="text-xs text-gray-500 mb-3">
+                    SIRET, nom d'entreprise, nom du client, référence, courtier, statut, produit…
+                  </p>
+                  <input
+                    type="search"
+                    placeholder="Rechercher (SIRET, société, client, référence…)"
+                    value={megaSearchQuery}
+                    onChange={(e) => setMegaSearchQuery(e.target.value)}
+                    className="w-full max-w-2xl px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    autoFocus={activeTab === "recherche"}
+                  />
+                  {megaSearchLoading && (
+                    <p className="text-sm text-gray-500 mt-2">Chargement de tous les devis…</p>
+                  )}
+                  {!megaSearchLoading && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      {megaSearchQuery.trim() ? `${megaSearchResults.length} résultat(s)` : `${allQuotesForSearch.length} devis chargés`}
+                    </p>
+                  )}
+                </div>
+                <div className="divide-y divide-gray-200 max-h-[70vh] overflow-y-auto">
+                  {megaSearchLoading ? (
+                    <div className="px-4 py-8 text-center text-gray-500">
+                      Chargement…
+                    </div>
+                  ) : megaSearchResults.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-500">
+                      {allQuotesForSearch.length === 0
+                        ? "Aucun devis."
+                        : "Aucun résultat pour cette recherche."}
+                    </div>
+                  ) : (
+                    megaSearchResults.map((q) => {
+                      const companyName = getQuoteCompanyName(q) || (q.companyData as { companyName?: string } | undefined)?.companyName || "—";
+                      return (
+                        <div key={q.id} className="flex items-center gap-2 w-full px-4 py-3 border-b border-gray-100 hover:bg-gray-50 text-sm">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedQuoteId(q.id);
+                              setQuotes((prev) =>
+                                prev.some((qu) => qu.id === q.id) ? prev : [q, ...prev]
+                              );
+                              setActiveTab("echeancier");
+                            }}
+                            className="text-left flex-1 flex flex-wrap items-center gap-2 min-w-0"
+                          >
+                            <span className="font-mono text-gray-700 font-medium">{q.reference}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); copyReference(q.reference ?? "", q.id); }}
+                              className="text-xs px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50 text-gray-600 shrink-0"
+                              title="Copier la référence"
+                            >
+                              COPIER REFERENCE
+                            </button>
+                            {copiedId === `ref-${q.id}` && <span className="text-xs text-green-600 shrink-0">Copié !</span>}
+                            <span className="text-gray-600 truncate">{companyName}</span>
+                            {getQuoteSiret(q) && (
+                              <span className="text-xs text-gray-500 font-mono">{getQuoteSiret(q)}</span>
+                            )}
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0">
+                              {q.status}
+                            </span>
+                            <span className="text-xs text-gray-500 shrink-0">
+                              {formatCreatedAt(q.createdAt)}
+                            </span>
+                            {q.broker?.companyName && (
+                              <span className="text-xs text-gray-400 shrink-0">{q.broker.companyName}</span>
+                            )}
+                            {q.contract && (
+                              <span className="text-xs text-gray-500 shrink-0">Contrat : {q.contract.reference}</span>
+                            )}
+                          </button>
+                          {companyName !== "—" && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); copyCompanyName(companyName, q.id); }}
+                              className="p-1.5 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 shrink-0"
+                              title="Copier le nom"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          )}
+                          {copiedId === q.id && <span className="text-xs text-green-600 shrink-0">Copié !</span>}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteQuote(q.id); }}
+                            disabled={deletingQuoteId === q.id}
+                            className="p-1.5 rounded text-gray-400 hover:bg-red-100 hover:text-red-600 shrink-0 disabled:opacity-50"
+                            title="Supprimer le devis"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
             <div className="mb-4 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <label htmlFor="search-company" className="font-medium text-gray-700">
@@ -602,6 +1121,41 @@ export default function ModifierEcheancierPage() {
                       </option>
                     ))}
                   </select>
+                )}
+                {selectedQuote && (
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-gray-600 truncate max-w-[200px]" title={getQuoteCompanyName(selectedQuote)}>
+                      {getQuoteCompanyName(selectedQuote) || "—"}
+                    </span>
+                    {getQuoteSiret(selectedQuote) && (
+                      <span className="text-lg font-semibold text-gray-700 font-mono" title="SIRET">
+                        {getQuoteSiret(selectedQuote)}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-500" title="Créé le">
+                      {formatCreatedAt(selectedQuote.createdAt)}
+                    </span>
+                    {getQuoteCompanyName(selectedQuote) && (
+                      <button
+                        type="button"
+                        onClick={() => copyCompanyName(getQuoteCompanyName(selectedQuote!), "selected")}
+                        className="p-1.5 rounded text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+                        title="Copier le nom de l'entreprise"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    )}
+                    {copiedId === "selected" && <span className="text-xs text-green-600">Copié !</span>}
+                    <button
+                      type="button"
+                      onClick={() => selectedQuote && handleDeleteQuote(selectedQuote.id)}
+                      disabled={deletingQuoteId === selectedQuote?.id}
+                      className="p-1.5 rounded text-gray-500 hover:bg-red-100 hover:text-red-600 disabled:opacity-50"
+                      title="Supprimer le devis"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </span>
                 )}
                 {scheduleLoading && (
                   <span className="text-sm text-gray-500">Chargement échéancier…</span>
@@ -1098,6 +1652,8 @@ export default function ModifierEcheancierPage() {
                   </button>
                 </div>
               </div>
+            )}
+              </>
             )}
           </>
         )}

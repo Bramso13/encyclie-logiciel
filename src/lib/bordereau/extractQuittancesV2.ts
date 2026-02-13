@@ -14,6 +14,16 @@ const GARANTIE_RC_RCD = "RC_RCD";
 /** Commission = PrimeHT * 0.24 */
 const TAUX_COMMISSION = 0.24;
 
+/** SIREN = 9 premiers caractères du SIRET (formData.siret ou companyData.siret). */
+function getSiren(formData: Record<string, unknown>, companyData: Record<string, unknown> | null): string {
+  const siret =
+    (formData?.siret as string) ??
+    (companyData?.siret as string) ??
+    "";
+  const s = typeof siret === "string" ? siret.replace(/\D/g, "").slice(0, 9) : "";
+  return s;
+}
+
 /**
  * Taux de taxe selon la région (formData.territory) via getTaxeByRegion.
  * Retourné multiplié par 100 (ex. 0.09 → "9").
@@ -74,6 +84,7 @@ export async function getQuittancesV2(
             select: {
               reference: true,
               formData: true,
+              companyData: true,
             },
           },
         },
@@ -93,11 +104,13 @@ export async function getQuittancesV2(
     return a.installmentNumber - b.installmentNumber;
   });
 
-  const rows: FidelidadeQuittancesRow[] = [];
+  const withSiren: { siren: string; row: FidelidadeQuittancesRow; periodStart: Date; periodEnd: Date }[] = [];
 
   for (const inst of installments) {
     const quote = inst.schedule.quote;
     const formData = (quote.formData ?? {}) as Record<string, unknown>;
+    const companyData = (quote.companyData ?? null) as Record<string, unknown> | null;
+    const siren = getSiren(formData, companyData);
     const identifiantPolice = quote.reference ?? DEFAULT_STRING;
     const identifiantQuittance = `${identifiantPolice}Q${inst.installmentNumber}`;
     const commission = Math.round(inst.amountHT * TAUX_COMMISSION * 100) / 100;
@@ -113,20 +126,77 @@ export async function getQuittancesV2(
       paymentMethod = "OTHER";
     }
 
-    rows.push(
-      mapInstallmentToQuittancesRow({
-        inst,
-        identifiantPolice,
-        identifiantQuittance,
-        apporteur,
-        commission: String(commission),
-        tauxTaxe,
-        paymentMethod,
-      }),
-    );
+    const row = mapInstallmentToQuittancesRow({
+      inst,
+      identifiantPolice,
+      identifiantQuittance,
+      apporteur,
+      commission: String(commission),
+      tauxTaxe,
+      paymentMethod,
+    });
+    withSiren.push({
+      siren,
+      row,
+      periodStart: inst.periodStart,
+      periodEnd: inst.periodEnd,
+    });
   }
 
-  return rows;
+  return deduplicateQuittancesBySiren(withSiren);
+}
+
+/**
+ * Une ligne par SIREN : agrégation des montants (PRIME_HT, PRIME_TTC, TAXES, COMMISSIONS),
+ * DATE_EFFET_QUITTANCE = min(periodStart), DATE_FIN_QUITTANCE = max(periodEnd).
+ * IDENTIFIANT_POLICE / IDENTIFIANT_QUITTANCE = première occurrence du groupe.
+ */
+function deduplicateQuittancesBySiren(
+  withSiren: { siren: string; row: FidelidadeQuittancesRow; periodStart: Date; periodEnd: Date }[],
+): FidelidadeQuittancesRow[] {
+  const bySiren = new Map<string, typeof withSiren>();
+  for (const item of withSiren) {
+    const sirenKey = item.siren?.trim();
+    const key = sirenKey ? sirenKey : `_${item.row.IDENTIFIANT_QUITTANCE}`;
+    if (!bySiren.has(key)) bySiren.set(key, []);
+    bySiren.get(key)!.push(item);
+  }
+
+  const out: FidelidadeQuittancesRow[] = [];
+  for (const [, group] of bySiren) {
+    const first = group[0].row;
+    if (group.length === 1) {
+      out.push(first);
+      continue;
+    }
+    let primeHT = 0;
+    let primeTTC = 0;
+    let taxes = 0;
+    let commissions = 0;
+    let minStart: Date = group[0].periodStart;
+    let maxEnd: Date = group[0].periodEnd;
+    for (const { row, periodStart, periodEnd } of group) {
+      primeHT += Number(row.PRIME_HT) || 0;
+      primeTTC += Number(row.PRIME_TTC) || 0;
+      taxes += Number(row.TAXES) || 0;
+      commissions += Number(row.COMMISSIONS) || 0;
+      if (periodStart < minStart) minStart = periodStart;
+      if (periodEnd > maxEnd) maxEnd = periodEnd;
+    }
+    out.push({
+      ...first,
+      IDENTIFIANT_QUITTANCE: `${first.IDENTIFIANT_POLICE}QT`,
+      DATE_EFFET_QUITTANCE: formatDate(minStart),
+      DATE_FIN_QUITTANCE: formatDate(maxEnd),
+      PRIME_HT: String(Math.round(primeHT * 100) / 100),
+      PRIME_TTC: String(Math.round(primeTTC * 100) / 100),
+      TAXES: String(Math.round(taxes * 100) / 100),
+      COMMISSIONS: String(Math.round(commissions * 100) / 100),
+    });
+  }
+
+  out.sort((a, b) => (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""));
+  return out;
 }
 
 function mapInstallmentToQuittancesRow(params: {
