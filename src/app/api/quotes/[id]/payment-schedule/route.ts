@@ -251,6 +251,7 @@ export async function PATCH(
           resumeAmount?: number;
           periodStart?: string;
           periodEnd?: string;
+          paidAt?: string | null;
         }>;
       };
 
@@ -302,6 +303,9 @@ export async function PATCH(
         const pjAmount = typeof p.pjAmount === "number" ? p.pjAmount : (inst?.pjAmount ?? null);
         const feesAmount = typeof p.feesAmount === "number" ? p.feesAmount : (inst?.feesAmount ?? null);
         const resumeAmount = typeof p.resumeAmount === "number" ? p.resumeAmount : (inst?.resumeAmount ?? null);
+        const paidAt = p.paidAt !== undefined
+          ? (p.paidAt ? new Date(p.paidAt) : null)
+          : undefined;
 
         totalAmountHT += amountHT;
         totalTaxAmount += taxAmount;
@@ -330,21 +334,25 @@ export async function PATCH(
         };
 
         if (inst) {
+          const updateData: Record<string, unknown> = {
+            installmentNumber: data.installmentNumber,
+            dueDate: data.dueDate,
+            amountHT: data.amountHT,
+            taxAmount: data.taxAmount,
+            amountTTC: data.amountTTC,
+            rcdAmount: data.rcdAmount,
+            pjAmount: data.pjAmount,
+            feesAmount: data.feesAmount,
+            resumeAmount: data.resumeAmount,
+            periodStart: data.periodStart,
+            periodEnd: data.periodEnd,
+          };
+          if (paidAt !== undefined) {
+            updateData.paidAt = paidAt;
+          }
           await prisma.paymentInstallment.update({
             where: { id: inst.id },
-            data: {
-              installmentNumber: data.installmentNumber,
-              dueDate: data.dueDate,
-              amountHT: data.amountHT,
-              taxAmount: data.taxAmount,
-              amountTTC: data.amountTTC,
-              rcdAmount: data.rcdAmount,
-              pjAmount: data.pjAmount,
-              feesAmount: data.feesAmount,
-              resumeAmount: data.resumeAmount,
-              periodStart: data.periodStart,
-              periodEnd: data.periodEnd,
-            },
+            data: updateData,
           });
         } else {
           await prisma.paymentInstallment.create({

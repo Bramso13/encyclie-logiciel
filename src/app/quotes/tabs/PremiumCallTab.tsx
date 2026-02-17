@@ -57,6 +57,27 @@ export default function PaymentTrackingTab({
     setSelectedInstallmentForAttestation,
   ] = useState<ExtendedPaymentInstallment | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedInstallmentForEdit, setSelectedInstallmentForEdit] =
+    useState<ExtendedPaymentInstallment | null>(null);
+  const [editForm, setEditForm] = useState<{
+    dueDate: string;
+    amountHT: string;
+    taxAmount: string;
+    amountTTC: string;
+    periodStart: string;
+    periodEnd: string;
+    paidAt: string;
+  }>({
+    dueDate: "",
+    amountHT: "",
+    taxAmount: "",
+    amountTTC: "",
+    periodStart: "",
+    periodEnd: "",
+    paidAt: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
   const [generatingAttestation, setGeneratingAttestation] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
@@ -356,6 +377,114 @@ export default function PaymentTrackingTab({
     }
     setShowAttestationModal(false);
     setSelectedInstallmentForAttestation(null);
+  };
+
+  // Ouvrir le modal de modification d'échéance (admin)
+  const openEditModal = (installment: ExtendedPaymentInstallment) => {
+    if (!installment) return;
+    setSelectedInstallmentForEdit(installment);
+    setEditForm({
+      dueDate: installment.dueDate
+        ? new Date(installment.dueDate).toISOString().slice(0, 10)
+        : "",
+      amountHT: (installment.amountHT ?? 0).toString(),
+      taxAmount: (installment.taxAmount ?? 0).toString(),
+      amountTTC: (installment.amountTTC ?? 0).toString(),
+      periodStart: installment.periodStart
+        ? new Date(installment.periodStart).toISOString().slice(0, 10)
+        : "",
+      periodEnd: installment.periodEnd
+        ? new Date(installment.periodEnd).toISOString().slice(0, 10)
+        : "",
+      paidAt: installment.paidAt
+        ? new Date(installment.paidAt).toISOString().slice(0, 10)
+        : "",
+    });
+    setShowEditModal(true);
+  };
+
+  // Fermer le modal de modification
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setSelectedInstallmentForEdit(null);
+  };
+
+  // Enregistrer la modification d'une échéance (admin)
+  const handleSaveEdit = async () => {
+    if (!isAdmin || !selectedInstallmentForEdit || !quote?.id) return;
+
+    const ht = parseFloat(editForm.amountHT);
+    const tax = parseFloat(editForm.taxAmount);
+    const ttc = parseFloat(editForm.amountTTC);
+
+    if (
+      Number.isNaN(ht) ||
+      Number.isNaN(tax) ||
+      Number.isNaN(ttc) ||
+      !editForm.dueDate
+    ) {
+      alert("Veuillez remplir correctement tous les champs obligatoires.");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const installmentsForQuote = allInstallments.filter(
+        (i) => i.schedule?.quote?.id === quote.id
+      );
+      const payments = installmentsForQuote.map((p) => {
+        if (p.id === selectedInstallmentForEdit.id) {
+          const payload: Record<string, unknown> = {
+            id: p.id,
+            dueDate: editForm.dueDate,
+            amountHT: ht,
+            taxAmount: tax,
+            amountTTC: ttc,
+            periodStart: editForm.periodStart || editForm.dueDate,
+            periodEnd: editForm.periodEnd || editForm.dueDate,
+          };
+          if (p.status === "PAID") {
+            payload.paidAt =
+              editForm.paidAt ||
+              (p.paidAt ? new Date(p.paidAt).toISOString().slice(0, 10) : null);
+          }
+          return payload;
+        }
+        const payload: Record<string, unknown> = {
+          id: p.id,
+          dueDate: p.dueDate,
+          amountHT: p.amountHT ?? 0,
+          taxAmount: p.taxAmount ?? 0,
+          amountTTC: p.amountTTC ?? 0,
+          periodStart: p.periodStart,
+          periodEnd: p.periodEnd,
+        };
+        if (p.status === "PAID" && p.paidAt) {
+          payload.paidAt = new Date(p.paidAt).toISOString().slice(0, 10);
+        }
+        return payload;
+      });
+
+      const res = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payments }),
+      });
+
+      if (res.ok) {
+        await refreshData();
+        closeEditModal();
+        alert("Échéance modifiée avec succès.");
+      } else {
+        const data = await res.json();
+        alert(data?.error ?? "Erreur lors de la modification de l'échéance.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de la modification.");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   // Envoyer l'attestation par email
@@ -698,6 +827,12 @@ export default function PaymentTrackingTab({
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex flex-col space-y-1">
+                          <button
+                            onClick={() => openEditModal(installment)}
+                            className="text-amber-600 hover:text-amber-900"
+                          >
+                            Modifier
+                          </button>
                           {installment?.status === "PENDING" ||
                           installment?.status === "OVERDUE" ? (
                             <button
@@ -713,9 +848,7 @@ export default function PaymentTrackingTab({
                             >
                               Voir et envoyer attestation
                             </button>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
+                          ) : null}
                         </div>
                       </td>
                     )}
@@ -936,6 +1069,151 @@ export default function PaymentTrackingTab({
                   Erreur lors de la génération du PDF
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de modification d'échéance (admin) */}
+      {showEditModal && selectedInstallmentForEdit && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Modifier l'échéance -{" "}
+                {selectedInstallmentForEdit?.schedule?.quote?.reference || "N/A"} - Échéance #
+                {selectedInstallmentForEdit?.installmentNumber || "N/A"}
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Date d'échéance
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.dueDate}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, dueDate: e.target.value }))
+                    }
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Montant HT (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editForm.amountHT}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, amountHT: e.target.value }))
+                    }
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Taxe (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editForm.taxAmount}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, taxAmount: e.target.value }))
+                    }
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Montant TTC (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editForm.amountTTC}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, amountTTC: e.target.value }))
+                    }
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Début de période
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.periodStart}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        periodStart: e.target.value,
+                      }))
+                    }
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Fin de période
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.periodEnd}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        periodEnd: e.target.value,
+                      }))
+                    }
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                {selectedInstallmentForEdit?.status === "PAID" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Date de paiement
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.paidAt}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          paidAt: e.target.value,
+                        }))
+                      }
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={closeEditModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit}
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md disabled:opacity-50"
+                >
+                  {savingEdit ? "Enregistrement…" : "Enregistrer"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
