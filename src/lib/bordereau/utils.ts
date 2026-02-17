@@ -31,7 +31,7 @@ export function formatDate(date: Date | string): string {
  */
 export function mapContractStatusToEtatPolice(status: ContractStatus): string {
   const mapping: Record<ContractStatus, string> = {
-    ACTIVE: "EN COURS",
+    ACTIVE: "ACTIVE",
     SUSPENDED: "SUSPENDU",
     EXPIRED: "EXPIRE",
     CANCELLED: "RESILIE",
@@ -74,13 +74,13 @@ export function mapPaymentStatusToStatutQuittance(
   status: PaymentScheduleStatus,
 ): string {
   const mapping: Record<PaymentScheduleStatus, string> = {
-    PENDING: "EN_ATTENTE",
+    PENDING: "EMISE",
     PAID: "ENCAISSE",
     OVERDUE: "EN_RETARD",
     CANCELLED: "ANNULE",
     PARTIALLY_PAID: "PARTIEL",
   };
-  return mapping[status] ?? "EN_ATTENTE";
+  return mapping[status] ?? "EMISE";
 }
 
 /**

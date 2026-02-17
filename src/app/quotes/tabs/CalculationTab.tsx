@@ -1,4 +1,15 @@
 import { Quote, CalculationResult } from "@/lib/types";
+import { useState, useEffect } from "react";
+
+type PaymentInstallmentForEcheancier = {
+  id: string;
+  installmentNumber: number;
+  rcdAmount: number | null;
+  pjAmount: number | null;
+  feesAmount: number | null;
+  resumeAmount: number | null;
+  amountHT: number;
+};
 
 export const getFieldLabel = (path: string): string => {
   const labels: Record<string, string> = {
@@ -63,6 +74,48 @@ export default function CalculationTab({
   session: any;
   onOpenParameterEditor: () => void;
 }) {
+  const [paymentInstallments, setPaymentInstallments] = useState<
+    PaymentInstallmentForEcheancier[]
+  >([]);
+  const [loadingInstallments, setLoadingInstallments] = useState(true);
+
+  useEffect(() => {
+    if (!quote?.id) {
+      setLoadingInstallments(false);
+      return;
+    }
+    setLoadingInstallments(true);
+    const fetchInstallments = async () => {
+      try {
+        const res = await fetch(
+          `/api/payment-installments?quoteId=${quote.id}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const installments = (data.data?.installments ?? []).map(
+            (p: any) => ({
+              id: p.id,
+              installmentNumber: p.installmentNumber,
+              rcdAmount: p.rcdAmount ?? null,
+              pjAmount: p.pjAmount ?? null,
+              feesAmount: p.feesAmount ?? null,
+              resumeAmount: p.resumeAmount ?? null,
+              amountHT: p.amountHT ?? 0,
+            }),
+          );
+          setPaymentInstallments(installments);
+        } else {
+          setPaymentInstallments([]);
+        }
+      } catch {
+        setPaymentInstallments([]);
+      } finally {
+        setLoadingInstallments(false);
+      }
+    };
+    fetchInstallments();
+  }, [quote?.id]);
+
   // Fonction pour obtenir des labels lisibles pour les champs
 
   // Fonction pour restaurer le calcul original
@@ -80,7 +133,7 @@ export default function CalculationTab({
   // Fonction pour détecter toutes les différences dans calculationResult
   const getAllDifferences = (
     original: CalculationResult | null,
-    current: CalculationResult | null
+    current: CalculationResult | null,
   ) => {
     if (!original || !current) return [];
 
@@ -96,7 +149,7 @@ export default function CalculationTab({
       origObj: any,
       currObj: any,
       path: string = "",
-      parentLabel: string = ""
+      parentLabel: string = "",
     ) => {
       if (
         origObj === null ||
@@ -145,7 +198,7 @@ export default function CalculationTab({
   const getValueWithModificationIndicator = (
     originalValue: any,
     currentValue: any,
-    formatFn?: (val: any) => string
+    formatFn?: (val: any) => string,
   ) => {
     const isModified =
       originalCalculationResult && isValueModified(originalValue, currentValue);
@@ -179,7 +232,7 @@ export default function CalculationTab({
     } = getValueWithModificationIndicator(
       originalValue,
       currentValue,
-      formatFn
+      formatFn,
     );
 
     if (!isModified) {
@@ -741,8 +794,8 @@ export default function CalculationTab({
                           calculationResult.totalMajorations > 0
                             ? "text-red-600"
                             : calculationResult.totalMajorations < 0
-                            ? "text-green-600"
-                            : "text-gray-600"
+                              ? "text-green-600"
+                              : "text-gray-600"
                         }`}
                       >
                         {calculationResult.totalMajorations > 0 ? "+" : ""}
@@ -834,15 +887,15 @@ export default function CalculationTab({
                                 value < 0
                                   ? "text-green-700 bg-green-100"
                                   : value > 0
-                                  ? "text-red-700 bg-red-100"
-                                  : "text-gray-600 bg-gray-100"
+                                    ? "text-red-700 bg-red-100"
+                                    : "text-gray-600 bg-gray-100"
                               }`}
                             >
                               {value > 0 ? "+" : ""}
                               {(value * 100).toFixed(1)}%
                             </span>
                           </div>
-                        )
+                        ),
                       )}
                   </div>
                 </div>
@@ -993,7 +1046,7 @@ export default function CalculationTab({
                             <span className="text-gray-600">Ratio S/P</span>
                             <span className="font-medium">
                               {calculationResult.reprisePasseResult.ratioSP?.toFixed(
-                                3
+                                3,
                               ) || "0"}
                             </span>
                           </div>
@@ -1003,7 +1056,7 @@ export default function CalculationTab({
                             </span>
                             <span className="font-medium">
                               {calculationResult.reprisePasseResult.frequenceSinistres?.toFixed(
-                                2
+                                2,
                               ) || "0"}
                             </span>
                           </div>
@@ -1062,7 +1115,7 @@ export default function CalculationTab({
                         </h4>
                         <div className="text-2xl font-bold text-green-800">
                           {calculationResult.reprisePasseResult.primeApresSinistralite?.toLocaleString(
-                            "fr-FR"
+                            "fr-FR",
                           ) || "0"}{" "}
                           €
                         </div>
@@ -1120,12 +1173,12 @@ export default function CalculationTab({
                                       </td>
                                       <td className="border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900 text-right">
                                         {annee.primeRepriseAnnee?.toLocaleString(
-                                          "fr-FR"
+                                          "fr-FR",
                                         ) || "0"}{" "}
                                         €
                                       </td>
                                     </tr>
-                                  )
+                                  ),
                                 )}
                               </tbody>
                             </table>
@@ -1156,7 +1209,7 @@ export default function CalculationTab({
                         </div>
                         <span className="text-2xl font-bold text-amber-900">
                           {calculationResult.reprisePasseResult.primeReprisePasseTTC?.toLocaleString(
-                            "fr-FR"
+                            "fr-FR",
                           ) || "0"}{" "}
                           €
                         </span>
@@ -1172,7 +1225,15 @@ export default function CalculationTab({
           {!calculationResult.refus &&
             calculationResult.echeancier &&
             calculationResult.echeancier.echeances &&
-            calculationResult.echeancier.echeances.length > 0 && (
+            calculationResult.echeancier.echeances.length > 0 &&
+            (loadingInstallments ? (
+              <div className="flex justify-center items-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+                <span className="ml-3 text-gray-600">
+                  Chargement des échéances...
+                </span>
+              </div>
+            ) : (
               <div className="space-y-6">
                 {/* Résumé des primes par année */}
                 <div className="max-w-2xl mx-auto">
@@ -1182,14 +1243,39 @@ export default function CalculationTab({
 
                     const primeAnneeEnCours =
                       calculationResult.echeancier.echeances
-                        .filter((echeance: any) => {
-                          const year = new Date(echeance.finPeriode).getFullYear();
-                          return year === 2026;
-                        })
+                        .map((echeance: any, origIndex: number) => ({
+                          echeance,
+                          origIndex,
+                        }))
+                        .filter(
+                          ({ echeance }: { echeance: any }) =>
+                            new Date(echeance.finPeriode).getFullYear() ===
+                            2026,
+                        )
                         .reduce(
-                          (sum: number, echeance: any) =>
-                            sum + (echeance.totalTTC || 0),
-                          0
+                          (sum: number, { echeance, origIndex }: { echeance: any; origIndex: number }) => {
+                            const inst = paymentInstallments.find(
+                              (p) => p.installmentNumber === origIndex + 1,
+                            );
+                            const rcd = inst
+                              ? (inst.amountHT ?? 0)
+                              : (echeance.rcd ?? 0);
+                            const pj = inst
+                              ? (inst.pjAmount ?? 0)
+                              : (echeance.pj ?? 0);
+                            const frais = echeance.frais ?? 0;
+                            const fraisGestion =
+                              echeance.fraisGestion ?? 0;
+                            const reprise = inst
+                              ? (inst.resumeAmount ?? 0)
+                              : (echeance.reprise ?? 0);
+                            const taxe = echeance.taxe ?? 0;
+                            const totalHT =
+                              rcd + pj + frais + fraisGestion + reprise;
+                            const totalTTC = totalHT + taxe;
+                            return sum + totalTTC;
+                          },
+                          0,
                         );
 
                     return (
@@ -1207,7 +1293,9 @@ export default function CalculationTab({
                               <p className="text-emerald-100 text-xs">
                                 {
                                   calculationResult.echeancier.echeances.filter(
-                                    (e: any) => new Date(e.finPeriode).getFullYear() === 2026
+                                    (e: any) =>
+                                      new Date(e.finPeriode).getFullYear() ===
+                                      2026,
                                   ).length
                                 }{" "}
                                 échéance(s)
@@ -1297,64 +1385,83 @@ export default function CalculationTab({
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {calculationResult.echeancier.echeances
-                            .filter((echeance: any) => {
-                              // Filtrer pour n'afficher que les échéances de 2026
-                              const year = new Date(echeance.finPeriode).getFullYear();
-                              return year === 2026;
-                            })
-                            .map((echeance: any, index: number) => (
-                              <tr key={index} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                  {echeance.date}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {echeance.debutPeriode}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {echeance.finPeriode}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                  {echeance.rcd?.toLocaleString("fr-FR") || "0"}{" "}
-                                  €
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                  {echeance.pj?.toLocaleString("fr-FR") || "0"}{" "}
-                                  €
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                  {echeance.frais?.toLocaleString("fr-FR") ||
-                                    "0"}{" "}
-                                  €
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                  {echeance.fraisGestion?.toLocaleString(
-                                    "fr-FR"
-                                  ) || "0"}{" "}
-                                  €
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                  {echeance.reprise?.toLocaleString("fr-FR") ||
-                                    "0"}{" "}
-                                  €
-                                </td>
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                                  {echeance.totalHT?.toLocaleString("fr-FR") ||
-                                    "0"}{" "}
-                                  €
-                                </td>
-                                <td className="px-4 py-3 text-sm text-orange-600 text-right">
-                                  {echeance.taxe?.toLocaleString("fr-FR") ||
-                                    "0"}{" "}
-                                  €
-                                </td>
-                                <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
-                                  {echeance.totalTTC?.toLocaleString("fr-FR") ||
-                                    "0"}{" "}
-                                  €
-                                </td>
-                              </tr>
+                            .map((echeance: any, origIndex: number) => ({
+                              echeance,
+                              origIndex,
+                            }))
+                            .filter(
+                              ({ echeance }: { echeance: any }) =>
+                                new Date(echeance.finPeriode).getFullYear() ===
+                                2026,
                             )
-                          )}
+                            .map(
+                              ({
+                                echeance,
+                                origIndex,
+                              }: {
+                                echeance: any;
+                                origIndex: number;
+                              }) => {
+                                const installment = paymentInstallments.find(
+                                  (p) => p.installmentNumber === origIndex + 1,
+                                );
+                                const rcd = installment
+                                  ? (installment.amountHT ?? 0)
+                                  : (echeance.rcd ?? 0);
+                                const pj = installment
+                                  ? (installment.pjAmount ?? 0)
+                                  : (echeance.pj ?? 0);
+                                const frais = echeance.frais ?? 0;
+                                const fraisGestion = echeance.fraisGestion ?? 0;
+                                const reprise = installment
+                                  ? (installment.resumeAmount ?? 0)
+                                  : (echeance.reprise ?? 0);
+                                const taxe = echeance.taxe ?? 0;
+                                const totalHT =
+                                  rcd + pj + frais + fraisGestion + reprise;
+                                const totalTTC = totalHT + taxe;
+                                return (
+                                  <tr
+                                    key={origIndex}
+                                    className="hover:bg-gray-50"
+                                  >
+                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                      {echeance.date}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                      {echeance.debutPeriode}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                      {echeance.finPeriode}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                      {rcd.toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                      {pj.toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                      {frais.toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                      {fraisGestion.toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                                      {reprise.toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                                      {totalHT.toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-orange-600 text-right">
+                                      {taxe.toLocaleString("fr-FR")} €
+                                    </td>
+                                    <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
+                                      {totalTTC.toLocaleString("fr-FR")} €
+                                    </td>
+                                  </tr>
+                                );
+                              },
+                            )}
                         </tbody>
                         {/* Ligne de totaux */}
                         <tfoot>
@@ -1368,9 +1475,33 @@ export default function CalculationTab({
                             <td className="px-4 py-3 text-sm text-gray-900 text-right">
                               {calculationResult.echeancier.echeances
                                 .reduce(
-                                  (sum: number, echeance: any) =>
-                                    sum + (echeance.rcd || 0),
-                                  0
+                                  (sum: number, echeance: any, idx: number) => {
+                                    const inst = paymentInstallments.find(
+                                      (p) => p.installmentNumber === idx + 1,
+                                    );
+                                    const rcd = inst
+                                      ? (inst.amountHT ?? 0)
+                                      : (echeance.rcd ?? 0);
+                                    return sum + rcd;
+                                  },
+                                  0,
+                                )
+                                .toLocaleString("fr-FR")}{" "}
+                              €
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                              {calculationResult.echeancier.echeances
+                                .reduce(
+                                  (sum: number, echeance: any, idx: number) => {
+                                    const inst = paymentInstallments.find(
+                                      (p) => p.installmentNumber === idx + 1,
+                                    );
+                                    const pj = inst
+                                      ? (inst.pjAmount ?? 0)
+                                      : (echeance.pj ?? 0);
+                                    return sum + pj;
+                                  },
+                                  0,
                                 )
                                 .toLocaleString("fr-FR")}{" "}
                               €
@@ -1379,18 +1510,8 @@ export default function CalculationTab({
                               {calculationResult.echeancier.echeances
                                 .reduce(
                                   (sum: number, echeance: any) =>
-                                    sum + (echeance.pj || 0),
-                                  0
-                                )
-                                .toLocaleString("fr-FR")}{" "}
-                              €
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                              {calculationResult.echeancier.echeances
-                                .reduce(
-                                  (sum: number, echeance: any) =>
-                                    sum + (echeance.frais || 0),
-                                  0
+                                    sum + (echeance.frais ?? 0),
+                                  0,
                                 )
                                 .toLocaleString("fr-FR")}{" "}
                               €
@@ -1400,7 +1521,7 @@ export default function CalculationTab({
                                 .reduce(
                                   (sum: number, echeance: any) =>
                                     sum + (echeance.fraisGestion || 0),
-                                  0
+                                  0,
                                 )
                                 .toLocaleString("fr-FR")}{" "}
                               €
@@ -1408,9 +1529,16 @@ export default function CalculationTab({
                             <td className="px-4 py-3 text-sm text-gray-900 text-right">
                               {calculationResult.echeancier.echeances
                                 .reduce(
-                                  (sum: number, echeance: any) =>
-                                    sum + (echeance.reprise || 0),
-                                  0
+                                  (sum: number, echeance: any, idx: number) => {
+                                    const inst = paymentInstallments.find(
+                                      (p) => p.installmentNumber === idx + 1,
+                                    );
+                                    const reprise = inst
+                                      ? (inst.resumeAmount ?? 0)
+                                      : (echeance.reprise ?? 0);
+                                    return sum + reprise;
+                                  },
+                                  0,
                                 )
                                 .toLocaleString("fr-FR")}{" "}
                               €
@@ -1418,9 +1546,27 @@ export default function CalculationTab({
                             <td className="px-4 py-3 text-sm text-gray-900 text-right">
                               {calculationResult.echeancier.echeances
                                 .reduce(
-                                  (sum: number, echeance: any) =>
-                                    sum + (echeance.totalHT || 0),
-                                  0
+                                  (sum: number, echeance: any, idx: number) => {
+                                    const inst = paymentInstallments.find(
+                                      (p) => p.installmentNumber === idx + 1,
+                                    );
+                                    const rcd = inst
+                                      ? (inst.amountHT ?? 0)
+                                      : (echeance.rcd ?? 0);
+                                    const pj = inst
+                                      ? (inst.pjAmount ?? 0)
+                                      : (echeance.pj ?? 0);
+                                    const frais = echeance.frais ?? 0;
+                                    const fraisGestion =
+                                      echeance.fraisGestion ?? 0;
+                                    const reprise = inst
+                                      ? (inst.resumeAmount ?? 0)
+                                      : (echeance.reprise ?? 0);
+                                    const totalHT =
+                                      rcd + pj + frais + fraisGestion + reprise;
+                                    return sum + totalHT;
+                                  },
+                                  0,
                                 )
                                 .toLocaleString("fr-FR")}{" "}
                               €
@@ -1430,7 +1576,7 @@ export default function CalculationTab({
                                 .reduce(
                                   (sum: number, echeance: any) =>
                                     sum + (echeance.taxe || 0),
-                                  0
+                                  0,
                                 )
                                 .toLocaleString("fr-FR")}{" "}
                               €
@@ -1438,9 +1584,27 @@ export default function CalculationTab({
                             <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-right">
                               {calculationResult.echeancier.echeances
                                 .reduce(
-                                  (sum: number, echeance: any) =>
-                                    sum + (echeance.totalTTC || 0),
-                                  0
+                                  (sum: number, echeance: any, idx: number) => {
+                                    const inst = paymentInstallments.find(
+                                      (p) => p.installmentNumber === idx + 1,
+                                    );
+                                    const rcd = inst
+                                      ? (inst.amountHT ?? 0)
+                                      : (echeance.rcd ?? 0);
+                                    const pj = inst
+                                      ? (inst.pjAmount ?? 0)
+                                      : (echeance.pj ?? 0);
+                                    const frais = echeance.frais ?? 0;
+                                    const fraisGestion =
+                                      echeance.fraisGestion ?? 0;
+                                    const reprise = inst
+                                      ? (inst.resumeAmount ?? 0)
+                                      : (echeance.reprise ?? 0);
+                                    const totalHT =
+                                      rcd + pj + frais + fraisGestion + reprise;
+                                    return sum + totalHT + (echeance.taxe ?? 0);
+                                  },
+                                  0,
                                 )
                                 .toLocaleString("fr-FR")}{" "}
                               €
@@ -1511,18 +1675,44 @@ export default function CalculationTab({
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {(() => {
-                            // Filtrer d'abord pour ne garder que les échéances de 2026
-                            const echeances2026 = calculationResult.echeancier.echeances.filter(
-                              (echeance: any) => {
-                                const year = new Date(echeance.finPeriode).getFullYear();
-                                return year === 2026;
-                              }
+                            const echeancesAvecIndex =
+                              calculationResult.echeancier.echeances.map(
+                                (echeance: any, origIndex: number) => ({
+                                  echeance,
+                                  origIndex,
+                                }),
+                              );
+                            const echeances2026 = echeancesAvecIndex.filter(
+                              ({ echeance }: { echeance: any }) =>
+                                new Date(echeance.finPeriode).getFullYear() ===
+                                2026,
                             );
 
-                            // Grouper les échéances par année
                             const echeancesParAnnee = echeances2026.reduce(
-                              (acc: any, echeance: any) => {
-                                const annee = new Date(echeance.finPeriode).getFullYear().toString();
+                              (acc: any, { echeance, origIndex }: any) => {
+                                const inst = paymentInstallments.find(
+                                  (p) => p.installmentNumber === origIndex + 1,
+                                );
+                                const rcd = inst
+                                  ? (inst.amountHT ?? 0)
+                                  : (echeance.rcd ?? 0);
+                                const pj = inst
+                                  ? (inst.pjAmount ?? 0)
+                                  : (echeance.pj ?? 0);
+                                const frais = echeance.frais ?? 0;
+                                const fraisGestion =
+                                  echeance.fraisGestion ?? 0;
+                                const reprise = inst
+                                  ? (inst.resumeAmount ?? 0)
+                                  : (echeance.reprise ?? 0);
+                                const taxe = echeance.taxe ?? 0;
+                                const totalHT =
+                                  rcd + pj + frais + fraisGestion + reprise;
+                                const totalTTC = totalHT + taxe;
+
+                                const annee = new Date(echeance.finPeriode)
+                                  .getFullYear()
+                                  .toString();
                                 if (!acc[annee]) {
                                   acc[annee] = {
                                     annee,
@@ -1537,25 +1727,23 @@ export default function CalculationTab({
                                     nbEcheances: 0,
                                   };
                                 }
-                                acc[annee].rcd += echeance.rcd || 0;
-                                acc[annee].pj += echeance.pj || 0;
-                                acc[annee].frais += echeance.frais || 0;
-                                acc[annee].fraisGestion +=
-                                  echeance.fraisGestion || 0;
-                                acc[annee].reprise += echeance.reprise || 0;
-                                acc[annee].taxe += echeance.taxe || 0;
-                                acc[annee].rcdHT +=
-                                  (echeance.rcd || 0) - (echeance.taxe || 0);
-                                acc[annee].totalTTC += echeance.totalTTC || 0;
+                                acc[annee].rcd += rcd;
+                                acc[annee].pj += pj;
+                                acc[annee].frais += frais;
+                                acc[annee].fraisGestion += fraisGestion;
+                                acc[annee].reprise += reprise;
+                                acc[annee].taxe += taxe;
+                                acc[annee].rcdHT += rcd;
+                                acc[annee].totalTTC += totalTTC;
                                 acc[annee].nbEcheances += 1;
                                 return acc;
                               },
-                              {}
+                              {},
                             );
 
                             return Object.values(echeancesParAnnee)
                               .sort((a: any, b: any) =>
-                                a.annee.localeCompare(b.annee)
+                                a.annee.localeCompare(b.annee),
                               )
                               .map((annee: any, index: number) => (
                                 <tr key={index} className="hover:bg-gray-50">
@@ -1655,19 +1843,37 @@ export default function CalculationTab({
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {(() => {
-                            // Calculer les totaux par type
                             const totaux =
                               calculationResult.echeancier.echeances.reduce(
-                                (acc: any, echeance: any) => {
-                                  acc.rcd += echeance.rcd || 0;
-                                  acc.pj += echeance.pj || 0;
-                                  acc.frais += echeance.frais || 0;
-                                  acc.fraisGestion +=
-                                    echeance.fraisGestion || 0;
-                                  acc.reprise += echeance.reprise || 0;
-                                  acc.totalHT += echeance.totalHT || 0;
-                                  acc.totalTTC += echeance.totalTTC || 0;
-                                  acc.taxe += echeance.taxe || 0;
+                                (acc: any, echeance: any, idx: number) => {
+                                  const inst = paymentInstallments.find(
+                                    (p) => p.installmentNumber === idx + 1,
+                                  );
+                                  const rcd = inst
+                                    ? (inst.amountHT ?? 0)
+                                    : (echeance.rcd ?? 0);
+                                  const pj = inst
+                                    ? (inst.pjAmount ?? 0)
+                                    : (echeance.pj ?? 0);
+                                  const frais = echeance.frais ?? 0;
+                                  const fraisGestion =
+                                    echeance.fraisGestion ?? 0;
+                                  const reprise = inst
+                                    ? (inst.resumeAmount ?? 0)
+                                    : (echeance.reprise ?? 0);
+                                  const taxe = echeance.taxe ?? 0;
+                                  const totalHT =
+                                    rcd + pj + frais + fraisGestion + reprise;
+                                  const totalTTC = totalHT + taxe;
+
+                                  acc.rcd += rcd;
+                                  acc.pj += pj;
+                                  acc.frais += frais;
+                                  acc.fraisGestion += fraisGestion;
+                                  acc.reprise += reprise;
+                                  acc.totalHT += totalHT;
+                                  acc.totalTTC += totalTTC;
+                                  acc.taxe += taxe;
                                   return acc;
                                 },
                                 {
@@ -1679,7 +1885,7 @@ export default function CalculationTab({
                                   totalHT: 0,
                                   totalTTC: 0,
                                   taxe: 0,
-                                }
+                                },
                               );
 
                             return [
@@ -1761,7 +1967,7 @@ export default function CalculationTab({
                   </div>
                 </div>
               </div>
-            )}
+            ))}
 
           {/* Détail par activité - Visible pour ADMIN seulement */}
           {!calculationResult.refus &&
@@ -1827,7 +2033,7 @@ export default function CalculationTab({
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-600 text-right">
                                 {activity.PrimeMiniAct?.toLocaleString(
-                                  "fr-FR"
+                                  "fr-FR",
                                 ) || "0"}{" "}
                                 €
                               </td>
@@ -1841,12 +2047,12 @@ export default function CalculationTab({
                               </td>
                               <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
                                 {activity.Prime100Min?.toLocaleString(
-                                  "fr-FR"
+                                  "fr-FR",
                                 ) || "0"}{" "}
                                 €
                               </td>
                             </tr>
-                          )
+                          ),
                         )}
                       </tbody>
                     </table>

@@ -15,12 +15,14 @@ const GARANTIE_RC_RCD = "RC_RCD";
 const TAUX_COMMISSION = 0.24;
 
 /** SIREN = 9 premiers caractères du SIRET (formData.siret ou companyData.siret). */
-function getSiren(formData: Record<string, unknown>, companyData: Record<string, unknown> | null): string {
+function getSiren(
+  formData: Record<string, unknown>,
+  companyData: Record<string, unknown> | null,
+): string {
   const siret =
-    (formData?.siret as string) ??
-    (companyData?.siret as string) ??
-    "";
-  const s = typeof siret === "string" ? siret.replace(/\D/g, "").slice(0, 9) : "";
+    (formData?.siret as string) ?? (companyData?.siret as string) ?? "";
+  const s =
+    typeof siret === "string" ? siret.replace(/\D/g, "").slice(0, 9) : "";
   return s;
 }
 
@@ -104,15 +106,23 @@ export async function getQuittancesV2(
     return a.installmentNumber - b.installmentNumber;
   });
 
-  const withSiren: { siren: string; row: FidelidadeQuittancesRow; periodStart: Date; periodEnd: Date }[] = [];
+  const withSiren: {
+    siren: string;
+    row: FidelidadeQuittancesRow;
+    periodStart: Date;
+    periodEnd: Date;
+  }[] = [];
 
   for (const inst of installments) {
     const quote = inst.schedule.quote;
     const formData = (quote.formData ?? {}) as Record<string, unknown>;
-    const companyData = (quote.companyData ?? null) as Record<string, unknown> | null;
+    const companyData = (quote.companyData ?? null) as Record<
+      string,
+      unknown
+    > | null;
     const siren = getSiren(formData, companyData);
     const identifiantPolice = quote.reference ?? DEFAULT_STRING;
-    const identifiantQuittance = `${identifiantPolice}Q${inst.installmentNumber}`;
+    const identifiantQuittance = `${identifiantPolice}Q${inst.installmentNumber}-${inst.dueDate.toISOString().split("T")[0].split("-")[0]}`;
     const commission = Math.round(inst.amountHT * TAUX_COMMISSION * 100) / 100;
     const tauxTaxe = computeTauxTaxe(formData);
     const fromTransaction = inst.transactions?.[0]?.method;
@@ -152,7 +162,12 @@ export async function getQuittancesV2(
  * IDENTIFIANT_POLICE / IDENTIFIANT_QUITTANCE = première occurrence du groupe.
  */
 function deduplicateQuittancesBySiren(
-  withSiren: { siren: string; row: FidelidadeQuittancesRow; periodStart: Date; periodEnd: Date }[],
+  withSiren: {
+    siren: string;
+    row: FidelidadeQuittancesRow;
+    periodStart: Date;
+    periodEnd: Date;
+  }[],
 ): FidelidadeQuittancesRow[] {
   const bySiren = new Map<string, typeof withSiren>();
   for (const item of withSiren) {
@@ -195,7 +210,9 @@ function deduplicateQuittancesBySiren(
     });
   }
 
-  out.sort((a, b) => (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""));
+  out.sort((a, b) =>
+    (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""),
+  );
   return out;
 }
 
