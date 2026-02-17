@@ -68,6 +68,7 @@ export default function PaymentTrackingTab({
     periodStart: string;
     periodEnd: string;
     paidAt: string;
+    paidAmount: string;
   }>({
     dueDate: "",
     amountHT: "",
@@ -76,8 +77,10 @@ export default function PaymentTrackingTab({
     periodStart: "",
     periodEnd: "",
     paidAt: "",
+    paidAmount: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [markingUnpaid, setMarkingUnpaid] = useState(false);
   const [generatingAttestation, setGeneratingAttestation] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
@@ -399,6 +402,7 @@ export default function PaymentTrackingTab({
       paidAt: installment.paidAt
         ? new Date(installment.paidAt).toISOString().slice(0, 10)
         : "",
+      paidAmount: (installment.paidAmount ?? installment.amountTTC ?? 0).toString(),
     });
     setShowEditModal(true);
   };
@@ -447,6 +451,8 @@ export default function PaymentTrackingTab({
             payload.paidAt =
               editForm.paidAt ||
               (p.paidAt ? new Date(p.paidAt).toISOString().slice(0, 10) : null);
+            const amt = parseFloat(editForm.paidAmount);
+            payload.paidAmount = !Number.isNaN(amt) ? amt : (p.paidAmount ?? p.amountTTC ?? 0);
           }
           return payload;
         }
@@ -459,8 +465,9 @@ export default function PaymentTrackingTab({
           periodStart: p.periodStart,
           periodEnd: p.periodEnd,
         };
-        if (p.status === "PAID" && p.paidAt) {
-          payload.paidAt = new Date(p.paidAt).toISOString().slice(0, 10);
+        if (p.status === "PAID") {
+          if (p.paidAt) payload.paidAt = new Date(p.paidAt).toISOString().slice(0, 10);
+          if (p.paidAmount != null) payload.paidAmount = p.paidAmount;
         }
         return payload;
       });
@@ -484,6 +491,38 @@ export default function PaymentTrackingTab({
       alert("Erreur lors de la modification.");
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  // Marquer une échéance comme non payée (admin)
+  const handleMarkAsUnpaid = async () => {
+    if (!isAdmin || !selectedInstallmentForEdit) return;
+    if (
+      !window.confirm(
+        "Êtes-vous sûr de vouloir marquer cette échéance comme non payée ?"
+      )
+    ) {
+      return;
+    }
+    setMarkingUnpaid(true);
+    try {
+      const res = await fetch(
+        `/api/payment-installments/${selectedInstallmentForEdit.id}/mark-unpaid`,
+        { method: "PATCH" }
+      );
+      if (res.ok) {
+        await refreshData();
+        closeEditModal();
+        alert("Échéance marquée comme non payée.");
+      } else {
+        const data = await res.json();
+        alert(data?.error ?? "Erreur lors de l'annulation du paiement.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de l'annulation du paiement.");
+    } finally {
+      setMarkingUnpaid(false);
     }
   };
 
@@ -1180,22 +1219,53 @@ export default function PaymentTrackingTab({
                 </div>
 
                 {selectedInstallmentForEdit?.status === "PAID" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Date de paiement
-                    </label>
-                    <input
-                      type="date"
-                      value={editForm.paidAt}
-                      onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          paidAt: e.target.value,
-                        }))
-                      }
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Date de paiement
+                      </label>
+                      <input
+                        type="date"
+                        value={editForm.paidAt}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            paidAt: e.target.value,
+                          }))
+                        }
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Montant réglé (€)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editForm.paidAmount}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            paidAmount: e.target.value,
+                          }))
+                        }
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="pt-2 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={handleMarkAsUnpaid}
+                        disabled={markingUnpaid}
+                        className="text-sm text-red-600 hover:text-red-800 underline disabled:opacity-50"
+                      >
+                        {markingUnpaid
+                          ? "Annulation…"
+                          : "Marquer comme non payé (annuler le paiement)"}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
 
