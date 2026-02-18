@@ -82,9 +82,10 @@ export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
   "NUMERO_AVENANT",
   "MOTIF_AVENANT",
   "DATE_EFFET_AVENANT",
-  "DATE_DEMANDE",
-  "STATUT_POLICE",
-  "DATE_STAT_POLICE",
+  "DATE_ECHEANCE",
+  "ETAT_POLICE",
+  "DATE_ETAT_POLICE",
+
   "MOTIF_STATUT",
   "FRACTIONNEMENT",
   "NOM_ENTREPRISE_ASSURE",
@@ -96,21 +97,21 @@ export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
   "EFFECTIF_ENTREPRISE",
   "CODE_NAF",
   "LIBELLE_ACTIVITE_1",
-  "POIDS_ACTIVITE_1",
+  "POID_ACTIVITE_1",
   "LIBELLE_ACTIVITE_2",
-  "POIDS_ACTIVITE_2",
+  "POID_ACTIVITE_2",
   "LIBELLE_ACTIVITE_3",
-  "POIDS_ACTIVITE_3",
+  "POID_ACTIVITE_3",
   "LIBELLE_ACTIVITE_4",
-  "POIDS_ACTIVITE_4",
+  "POID_ACTIVITE_4",
   "LIBELLE_ACTIVITE_5",
-  "POIDS_ACTIVITE_5",
+  "POID_ACTIVITE_5",
   "LIBELLE_ACTIVITE_6",
-  "POIDS_ACTIVITE_6",
+  "POID_ACTIVITE_6",
   "LIBELLE_ACTIVITE_7",
-  "POIDS_ACTIVITE_7",
+  "POID_ACTIVITE_7",
   "LIBELLE_ACTIVITE_8",
-  "POIDS_ACTIVITE_8",
+  "POID_ACTIVITE_8",
 ];
 
 /** Colonnes Feuille 2 Quittances (sans DATE_EMISSION_QUITTANCE ni TAUX_COMMISSIONS, avec TAUX_TAXE) */
@@ -127,7 +128,7 @@ export const QUITTANCES_COLUMNS: (keyof FidelidadeQuittancesRow)[] = [
   "PRIME_TTC",
   "PRIME_HT",
   "TAXES",
-  "TAUX_TAXE",
+  "TAXE_POURCENTAGE",
   "COMMISSIONS",
   "MODE_PAIEMENT",
 ];
@@ -138,7 +139,10 @@ export const QUITTANCES_COLUMNS: (keyof FidelidadeQuittancesRow)[] = [
  * @returns Contenu CSV
  */
 export function generatePolicesCSV(rows: FidelidadePolicesRow[]): string {
-  return generateCSVFromHeaders(POLICES_COLUMNS, rows as unknown as Record<string, string>[]);
+  return generateCSVFromHeaders(
+    POLICES_COLUMNS,
+    rows as unknown as Record<string, string>[],
+  );
 }
 
 /**
@@ -147,7 +151,10 @@ export function generatePolicesCSV(rows: FidelidadePolicesRow[]): string {
  * @returns Contenu CSV
  */
 export function generateQuittancesCSV(rows: FidelidadeQuittancesRow[]): string {
-  return generateCSVFromHeaders(QUITTANCES_COLUMNS, rows as unknown as Record<string, string>[]);
+  return generateCSVFromHeaders(
+    QUITTANCES_COLUMNS,
+    rows as unknown as Record<string, string>[],
+  );
 }
 
 function generateCSVFromHeaders(
@@ -166,7 +173,8 @@ function generateCSVFromHeaders(
  */
 export function validatePolicesCSVStructure(csvContent: string): boolean {
   const firstLine = csvContent.split("\n")[0];
-  const headers = firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
+  const headers =
+    firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
   return (
     headers.length === POLICES_COLUMNS.length &&
     headers.every((h, i) => h === POLICES_COLUMNS[i])
@@ -178,7 +186,8 @@ export function validatePolicesCSVStructure(csvContent: string): boolean {
  */
 export function validateQuittancesCSVStructure(csvContent: string): boolean {
   const firstLine = csvContent.split("\n")[0];
-  const headers = firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
+  const headers =
+    firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
   return (
     headers.length === QUITTANCES_COLUMNS.length &&
     headers.every((h, i) => h === QUITTANCES_COLUMNS[i])

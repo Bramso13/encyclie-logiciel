@@ -7,11 +7,12 @@ export interface PappersCompanyData {
   directorName: string;
   city?: string;
   postalCode?: string;
+  codeNaf?: string;
   raw?: any;
 }
 
 export async function fetchCompanyBySiret(
-  siret: string
+  siret: string,
 ): Promise<PappersCompanyData> {
   const clean = (siret || "").replace(/\D/g, "");
   const resp = await fetch(`/api/pappers?siret=${encodeURIComponent(clean)}`);

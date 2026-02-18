@@ -1,4 +1,5 @@
 import { PrismaClient, QuoteStatus } from "@prisma/client";
+import type { PaymentScheduleStatus } from "@prisma/client";
 import { tableauTax } from "@/lib/tarificateurs/rcd";
 import type { BordereauFiltersV2, FidelidadePolicesRow } from "./types";
 import { getApporteur } from "./config";
@@ -19,12 +20,12 @@ function getActiviteTitleByCode(code: string | number): string {
 }
 
 /**
- * Règle périmètre : échéances (PaymentInstallment) puis déduplication par SIREN.
- * Une seule ligne par SIRET/SIREN (même entreprise = une seule police). DATE_FIN_CONTRAT = max des dates fin période.
+ * Règle périmètre : une ligne par SIREN (jamais deux lignes avec le même SIREN).
+ * On construit une ligne par échéance puis on déduplique par SIREN (DATE_FIN_CONTRAT = max des periodEnd du groupe).
  */
 export async function getPolicesV2(
   filters: BordereauFiltersV2,
-  prisma: PrismaClient
+  prisma: PrismaClient,
 ): Promise<FidelidadePolicesRow[]> {
   const { dateRange } = filters;
   const apporteur = getApporteur();
@@ -80,67 +81,58 @@ export async function getPolicesV2(
 
     rows.push(
       mapInstallmentToPolicesRow({
-        inst,
+        inst: {
+          periodEnd: inst.periodEnd,
+          dueDate: inst.dueDate,
+          status: inst.status,
+          paidAt: inst.paidAt,
+        },
         quote,
         contract,
         companyData,
         formData,
         apporteur,
-      })
+      }),
     );
   }
 
   return deduplicatePolicesBySiren(rows);
 }
 
-/** Une ligne par SIREN : garde la première occurrence, DATE_FIN_CONTRAT = max des periodEnd du même SIREN. */
+/** Une ligne par SIREN : garde uniquement la première occurrence, sans regrouper. */
 function deduplicatePolicesBySiren(
-  rows: FidelidadePolicesRow[]
+  rows: FidelidadePolicesRow[],
 ): FidelidadePolicesRow[] {
-  const bySiren = new Map<string, FidelidadePolicesRow[]>();
-  const periodEndBySiren = new Map<string, Date>();
+  const seenSiren = new Set<string>();
+  const out: FidelidadePolicesRow[] = [];
 
   for (const row of rows) {
-    const sirenKey = row.SIREN?.trim();
-    const key = sirenKey ? sirenKey : `_${row.IDENTIFIANT_POLICE}_${row.DATE_FIN_CONTRAT}`;
-    if (!bySiren.has(key)) bySiren.set(key, []);
-    bySiren.get(key)!.push(row);
+    const sirenKey = (row.SIREN ?? "").trim();
+    const key = sirenKey
+      ? sirenKey
+      : `_${row.IDENTIFIANT_POLICE}_${row.DATE_FIN_CONTRAT}`;
+    if (seenSiren.has(key)) continue;
+    seenSiren.add(key);
+    out.push(row);
   }
 
-  for (const [key, group] of bySiren) {
-    const maxEnd = group.reduce((max, r) => {
-      const d = parseDateFidelidade(r.DATE_FIN_CONTRAT);
-      return d && (!max || d > max) ? d : max;
-    }, null as Date | null);
-    if (maxEnd) periodEndBySiren.set(key, maxEnd);
-  }
-
-  const out: FidelidadePolicesRow[] = [];
-  for (const [key, group] of bySiren) {
-    const first = { ...group[0] };
-    const maxEnd = periodEndBySiren.get(key);
-    if (maxEnd) first.DATE_FIN_CONTRAT = formatDate(maxEnd);
-    out.push(first);
-  }
-
-  out.sort((a, b) => (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""));
+  out.sort((a, b) =>
+    (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""),
+  );
   return out;
 }
 
-function parseDateFidelidade(s: string): Date | null {
-  if (!s) return null;
-  const [d, m, y] = s.split("/").map(Number);
-  if (!d || !m || !y) return null;
-  const date = new Date(y, m - 1, d);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 function mapInstallmentToPolicesRow(params: {
-  inst: { periodEnd: Date };
+  inst: {
+    periodEnd: Date;
+    dueDate: Date;
+    status: PaymentScheduleStatus;
+    paidAt: Date | null;
+  };
   quote: {
     reference: string;
     submittedAt: Date | null;
-    codeNAF: string | null;
+
     status: QuoteStatus;
     updatedAt: Date;
     acceptedAt: Date | null;
@@ -158,10 +150,14 @@ function mapInstallmentToPolicesRow(params: {
 }): FidelidadePolicesRow {
   const { inst, quote, contract, companyData, formData, apporteur } = params;
   const activityCols = buildActivityColumnsFromFormData(formData);
+  const quoteCodeNaf =
+    (formData.code_naf as string | null | undefined) ??
+    (quote as { codeNAF?: string | null }).codeNAF ??
+    null;
   const formFields = getFormDataFieldsForPolices(
     formData,
     companyData,
-    quote.codeNAF
+    quoteCodeNaf,
   );
 
   // date_souscription = formData.dateDeffet
@@ -171,7 +167,9 @@ function mapInstallmentToPolicesRow(params: {
     formData.dateDebut ??
     formData.startDate;
   const dateSouscription =
-    dateDeffetRaw != null ? formatDate(dateDeffetRaw as Date | string) : DEFAULT_STRING;
+    dateDeffetRaw != null
+      ? formatDate(dateDeffetRaw as Date | string)
+      : DEFAULT_STRING;
 
   const dateEffet = contract
     ? formatDate(contract.startDate)
@@ -182,9 +180,7 @@ function mapInstallmentToPolicesRow(params: {
   // Date fin contrat = date fin période de l'échéance
   const dateFin = formatDate(inst.periodEnd);
 
-  const dateDemande = quote.submittedAt
-    ? formatDate(quote.submittedAt)
-    : DEFAULT_STRING;
+  const dateDemande = inst.dueDate ? formatDate(inst.dueDate) : DEFAULT_STRING;
 
   const statutPolice = contract
     ? mapContractStatusToEtatPolice(
@@ -193,17 +189,24 @@ function mapInstallmentToPolicesRow(params: {
           | "SUSPENDED"
           | "EXPIRED"
           | "CANCELLED"
-          | "PENDING_RENEWAL"
+          | "PENDING_RENEWAL",
       )
     : mapQuoteStatusToStatutPolice(quote.status);
 
   // DATE_STAT_POLICE = dateDeffet
   const dateStatPolice =
-    dateDeffetRaw != null ? formatDate(dateDeffetRaw as Date | string) : DEFAULT_STRING;
+    dateDeffetRaw != null
+      ? formatDate(dateDeffetRaw as Date | string)
+      : DEFAULT_STRING;
 
   const fractionnement = toStr(
-    formData.periodicity ?? formData.periodicite ?? formData.fractionnementPrime
+    formData.periodicity ??
+      formData.periodicite ??
+      formData.fractionnementPrime,
   );
+
+  const motifStatut =
+    inst.status === "PAID" || inst.paidAt != null ? "REGLEMENT" : "EN_COURS";
 
   return {
     APPORTEUR: apporteur,
@@ -214,10 +217,11 @@ function mapInstallmentToPolicesRow(params: {
     NUMERO_AVENANT: DEFAULT_STRING,
     MOTIF_AVENANT: DEFAULT_STRING,
     DATE_EFFET_AVENANT: DEFAULT_STRING,
-    DATE_DEMANDE: dateDemande,
-    STATUT_POLICE: statutPolice,
-    DATE_STAT_POLICE: dateStatPolice,
-    MOTIF_STATUT: DEFAULT_STRING,
+    DATE_ECHEANCE: dateDemande,
+    ETAT_POLICE: statutPolice,
+    DATE_ETAT_POLICE: dateStatPolice,
+    MOTIF_ETAT: DEFAULT_STRING,
+    MOTIF_STATUT: motifStatut,
     FRACTIONNEMENT: fractionnement,
     NOM_ENTREPRISE_ASSURE: formFields.nomEntrepriseAssure,
     SIREN: formFields.siren,
@@ -228,12 +232,12 @@ function mapInstallmentToPolicesRow(params: {
     EFFECTIF_ENTREPRISE: formFields.effectifEntreprise,
     CODE_NAF: formFields.codeNaf,
     ...activityCols,
-  } as FidelidadePolicesRow;
+  } as unknown as FidelidadePolicesRow;
 }
 
-/** formData.activities ou formData.activites ; LIBELLE = title RCD (code→title), POIDS = caSharePercent */
+/** formData.activities ou formData.activites ; LIBELLE = title RCD (code→title), POID = caSharePercent */
 function buildActivityColumnsFromFormData(
-  formData: Record<string, unknown>
+  formData: Record<string, unknown>,
 ): Record<string, string> {
   const raw = formData.activities ?? formData.activites;
   const activities = Array.isArray(raw) ? raw : [];
@@ -246,7 +250,7 @@ function buildActivityColumnsFromFormData(
       a != null && a.code != null
         ? getActiviteTitleByCode(a.code)
         : DEFAULT_STRING;
-    out[`POIDS_ACTIVITE_${i}`] =
+    out[`POID_ACTIVITE_${i}`] =
       a != null && a.caSharePercent != null
         ? String(a.caSharePercent)
         : DEFAULT_STRING;
@@ -260,7 +264,7 @@ function buildActivityColumnsFromFormData(
 function getFormDataFieldsForPolices(
   formData: Record<string, unknown>,
   companyData: Record<string, unknown>,
-  quoteCodeNaf: string | null
+  quoteCodeNaf: string | null,
 ): {
   villeRisque: string;
   codePostalRisque: string;
@@ -277,27 +281,27 @@ function getFormDataFieldsForPolices(
   return {
     villeRisque: toStr(formData.city ?? companyData.city ?? companyData.ville),
     codePostalRisque: toStr(
-      formData.postalCode ?? companyData.postalCode ?? companyData.codePostal
+      formData.postalCode ?? companyData.postalCode ?? companyData.codePostal,
     ),
     adresseRisque: toStr(
-      formData.address ?? companyData.address ?? companyData.adresse
+      formData.address ?? companyData.address ?? companyData.adresse,
     ),
     nomEntrepriseAssure: toStr(
       formData.companyName ??
         companyData.companyName ??
         companyData.name ??
-        companyData.raisonSociale
+        companyData.raisonSociale,
     ),
     siren,
     caEntreprise: toStr(
-      formData.chiffreAffaires ?? companyData.revenue ?? companyData.ca
+      formData.chiffreAffaires ?? companyData.revenue ?? companyData.ca,
     ),
     effectifEntreprise: toStr(
       formData.nombreSalaries ??
         companyData.employeeCount ??
-        companyData.effectif
+        companyData.effectif,
     ),
-    codeNaf: toStr(quoteCodeNaf ?? formData.codeNaf),
+    codeNaf: toStr(quoteCodeNaf ?? formData.code_naf),
   };
 }
 

@@ -17,9 +17,10 @@ const POLICES_ROW_KEYS: (keyof FidelidadePolicesRow)[] = [
   "NUMERO_AVENANT",
   "MOTIF_AVENANT",
   "DATE_EFFET_AVENANT",
-  "DATE_DEMANDE",
-  "STATUT_POLICE",
-  "DATE_STAT_POLICE",
+  "DATE_ECHEANCE",
+  "ETAT_POLICE",
+  "DATE_ETAT_POLICE",
+  "MOTIF_ETAT",
   "MOTIF_STATUT",
   "FRACTIONNEMENT",
   "NOM_ENTREPRISE_ASSURE",
@@ -31,21 +32,21 @@ const POLICES_ROW_KEYS: (keyof FidelidadePolicesRow)[] = [
   "EFFECTIF_ENTREPRISE",
   "CODE_NAF",
   "LIBELLE_ACTIVITE_1",
-  "POIDS_ACTIVITE_1",
+  "POID_ACTIVITE_1",
   "LIBELLE_ACTIVITE_2",
-  "POIDS_ACTIVITE_2",
+  "POID_ACTIVITE_2",
   "LIBELLE_ACTIVITE_3",
-  "POIDS_ACTIVITE_3",
+  "POID_ACTIVITE_3",
   "LIBELLE_ACTIVITE_4",
-  "POIDS_ACTIVITE_4",
+  "POID_ACTIVITE_4",
   "LIBELLE_ACTIVITE_5",
-  "POIDS_ACTIVITE_5",
+  "POID_ACTIVITE_5",
   "LIBELLE_ACTIVITE_6",
-  "POIDS_ACTIVITE_6",
+  "POID_ACTIVITE_6",
   "LIBELLE_ACTIVITE_7",
-  "POIDS_ACTIVITE_7",
+  "POID_ACTIVITE_7",
   "LIBELLE_ACTIVITE_8",
-  "POIDS_ACTIVITE_8",
+  "POID_ACTIVITE_8",
 ];
 
 describe("getPolicesV2", () => {
@@ -165,7 +166,7 @@ describe("getPolicesV2", () => {
       expect(result[0].FRACTIONNEMENT).toBe("trimestriel");
     });
 
-    it("NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT, MOTIF_STATUT sont vides", async () => {
+    it("NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT sont vides ; MOTIF_STATUT = EN_COURS si non payé", async () => {
       const mockInst = {
         id: "pi1",
         scheduleId: "ps1",
@@ -193,7 +194,7 @@ describe("getPolicesV2", () => {
       expect(result[0].NUMERO_AVENANT).toBe("");
       expect(result[0].MOTIF_AVENANT).toBe("");
       expect(result[0].DATE_EFFET_AVENANT).toBe("");
-      expect(result[0].MOTIF_STATUT).toBe("");
+      expect(result[0].MOTIF_STATUT).toBe("EN_COURS");
     });
   });
 
@@ -230,12 +231,12 @@ describe("getPolicesV2", () => {
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       const row = result[0];
-      expect(row.POIDS_ACTIVITE_1).toBe("70");
-      expect(row.POIDS_ACTIVITE_2).toBe("30");
+      expect(row.POID_ACTIVITE_1).toBe("70");
+      expect(row.POID_ACTIVITE_2).toBe("30");
       expect(row.LIBELLE_ACTIVITE_3).toBe("");
-      expect(row.POIDS_ACTIVITE_3).toBe("");
+      expect(row.POID_ACTIVITE_3).toBe("");
       expect(row.LIBELLE_ACTIVITE_4).toBe("");
-      expect(row.POIDS_ACTIVITE_4).toBe("");
+      expect(row.POID_ACTIVITE_4).toBe("");
     });
   });
 

@@ -22,9 +22,10 @@ const emptyPolicesRow: FidelidadePolicesRow = {
   NUMERO_AVENANT: "",
   MOTIF_AVENANT: "",
   DATE_EFFET_AVENANT: "",
-  DATE_DEMANDE: "",
-  STATUT_POLICE: "",
-  DATE_STAT_POLICE: "",
+  DATE_ECHEANCE: "",
+  ETAT_POLICE: "",
+  DATE_ETAT_POLICE: "",
+  MOTIF_ETAT: "",
   MOTIF_STATUT: "",
   FRACTIONNEMENT: "",
   NOM_ENTREPRISE_ASSURE: "",
@@ -36,21 +37,21 @@ const emptyPolicesRow: FidelidadePolicesRow = {
   EFFECTIF_ENTREPRISE: "",
   CODE_NAF: "",
   LIBELLE_ACTIVITE_1: "",
-  POIDS_ACTIVITE_1: "",
+  POID_ACTIVITE_1: "",
   LIBELLE_ACTIVITE_2: "",
-  POIDS_ACTIVITE_2: "",
+  POID_ACTIVITE_2: "",
   LIBELLE_ACTIVITE_3: "",
-  POIDS_ACTIVITE_3: "",
+  POID_ACTIVITE_3: "",
   LIBELLE_ACTIVITE_4: "",
-  POIDS_ACTIVITE_4: "",
+  POID_ACTIVITE_4: "",
   LIBELLE_ACTIVITE_5: "",
-  POIDS_ACTIVITE_5: "",
+  POID_ACTIVITE_5: "",
   LIBELLE_ACTIVITE_6: "",
-  POIDS_ACTIVITE_6: "",
+  POID_ACTIVITE_6: "",
   LIBELLE_ACTIVITE_7: "",
-  POIDS_ACTIVITE_7: "",
+  POID_ACTIVITE_7: "",
   LIBELLE_ACTIVITE_8: "",
-  POIDS_ACTIVITE_8: "",
+  POID_ACTIVITE_8: "",
 };
 
 const emptyQuittancesRow: FidelidadeQuittancesRow = {
@@ -78,7 +79,7 @@ describe("generatePolicesCSV", () => {
     expect(lines[0]).toContain("APPORTEUR");
     expect(lines[0]).toContain("IDENTIFIANT_POLICE");
     expect(lines[0]).toContain("LIBELLE_ACTIVITE_8");
-    expect(lines[0]).toContain("POIDS_ACTIVITE_8");
+    expect(lines[0]).toContain("POID_ACTIVITE_8");
   });
 
   it("produit une ligne de données par row", () => {

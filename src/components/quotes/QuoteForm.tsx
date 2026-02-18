@@ -97,6 +97,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
         postalCode: (data as any).postalCode || prev.postalCode,
         enCreation: false,
         nombreAnneeAssuranceContinue: 0,
+        codeNaf: data.codeNaf || prev.codeNaf,
       }));
     } catch (e: any) {
       setPappersError(e?.message || "Entreprise non trouvée");

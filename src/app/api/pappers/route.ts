@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     if (!siret || siret.length !== 14) {
       return new Response(
         JSON.stringify({ error: "Paramètre siret invalide (14 chiffres)." }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
@@ -17,12 +17,12 @@ export async function GET(request: NextRequest) {
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "Clé API PAPPERS_API_KEY manquante." }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
 
     const url = `${PAPPERS_BASE_URL}?api_token=${encodeURIComponent(
-      apiKey
+      apiKey,
     )}&siret=${encodeURIComponent(siret)}`;
 
     const resp = await fetch(url, { next: { revalidate: 0 } });
@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
     if (!resp.ok) {
       return new Response(
         JSON.stringify({ error: data?.message || "Erreur Pappers" }),
-        { status: resp.status, headers: { "Content-Type": "application/json" } }
+        {
+          status: resp.status,
+          headers: { "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -53,6 +56,7 @@ export async function GET(request: NextRequest) {
       data?.date_creation || data?.date_creation_formate || "";
     const city = siege?.ville || "";
     const postalCode = siege?.code_postal || "";
+    const codeNaf = data?.code_naf || "";
 
     return new Response(
       JSON.stringify({
@@ -64,14 +68,15 @@ export async function GET(request: NextRequest) {
         directorName,
         city,
         postalCode,
+        codeNaf,
         raw: data,
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { "Content-Type": "application/json" } },
     );
   } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error?.message || "Erreur serveur" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 }

@@ -16,6 +16,8 @@ type QuoteWithSchedule = {
     companyName?: string;
     companyForm?: { companyName?: string };
     siret?: string;
+    code_naf?: string;
+    [key: string]: unknown;
   };
   companyData?: { siret?: string; companyName?: string; [key: string]: unknown };
   product?: { name: string; code: string };
@@ -116,12 +118,17 @@ export default function ModifierEcheancierPage() {
     value: string;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"echeancier" | "doublons" | "doublonsNom" | "recherche">("echeancier");
+  const [activeTab, setActiveTab] = useState<"echeancier" | "doublons" | "doublonsNom" | "recherche" | "siret" | "naf" | "rectifier">("echeancier");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
   const [megaSearchQuery, setMegaSearchQuery] = useState("");
   const [allQuotesForSearch, setAllQuotesForSearch] = useState<QuoteWithSchedule[]>([]);
   const [megaSearchLoading, setMegaSearchLoading] = useState(false);
+  const [nafJson, setNafJson] = useState("");
+  const [nafApplyStatus, setNafApplyStatus] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [nafApplying, setNafApplying] = useState(false);
+  const [rectifierLoading, setRectifierLoading] = useState(false);
+  const [rectifierStatus, setRectifierStatus] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const copyCompanyName = (text: string, id: string) => {
     const name = text.trim();
@@ -138,6 +145,117 @@ export default function ModifierEcheancierPage() {
       setCopiedId(`ref-${id}`);
       window.setTimeout(() => setCopiedId(null), 1500);
     });
+  };
+
+  const copyAllSirets = () => {
+    const text = uniqueSirets.join("\n");
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId("all-sirets");
+      window.setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  /** Normalise un SIRET en ne gardant que les chiffres (pour matcher avec ou sans espaces) */
+  const normalizeSiret = (s: string) => (s || "").replace(/\D/g, "");
+
+  const runRectifierMontants = async () => {
+    setRectifierLoading(true);
+    setRectifierStatus(null);
+    try {
+      const res = await fetch("/api/admin/rectifier-montants", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setRectifierStatus({ type: "err", text: data?.error ?? "Erreur lors de la rectification." });
+        return;
+      }
+      setRectifierStatus({
+        type: "ok",
+        text: data?.message ?? `${data?.updated ?? 0} échéance(s) rectifiée(s).`,
+      });
+    } catch (e) {
+      setRectifierStatus({
+        type: "err",
+        text: e instanceof Error ? e.message : "Erreur réseau.",
+      });
+    } finally {
+      setRectifierLoading(false);
+    }
+  };
+
+  const applyNafMapping = async () => {
+    let mappingByNormalizedSiret: Record<string, string>;
+    try {
+      const parsed = JSON.parse(nafJson) as Record<string, unknown>;
+      mappingByNormalizedSiret = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v === "string" && k.trim() !== "") {
+          const normalized = normalizeSiret(k.trim());
+          if (normalized) mappingByNormalizedSiret[normalized] = v;
+        }
+      }
+    } catch {
+      setNafApplyStatus({ type: "err", text: "JSON invalide." });
+      return;
+    }
+    if (Object.keys(mappingByNormalizedSiret).length === 0) {
+      setNafApplyStatus({ type: "err", text: "Aucune entrée SIRET → code NAF valide." });
+      return;
+    }
+    setNafApplying(true);
+    setNafApplyStatus(null);
+    let updated = 0;
+    let failed = 0;
+    try {
+      // Utiliser tous les devis (charger tous si pas encore fait)
+      let quotesToApply: QuoteWithSchedule[] = allQuotesForSearch.length > 0 ? allQuotesForSearch : quotes;
+      if (allQuotesForSearch.length === 0) {
+        const list: QuoteWithSchedule[] = [];
+        let page = 1;
+        let totalPages = 1;
+        do {
+          const res = await fetch(`/api/quotes?limit=100&page=${page}`);
+          const data = await res.json();
+          const quotesPage = data?.data?.quotes ?? [];
+          const pagination = data?.data?.pagination;
+          totalPages = pagination?.totalPages ?? 1;
+          list.push(...(quotesPage as QuoteWithSchedule[]));
+          page++;
+        } while (page <= totalPages && list.length > 0);
+        setAllQuotesForSearch(list);
+        quotesToApply = list;
+      }
+      for (const q of quotesToApply) {
+        const siret = getQuoteSiret(q);
+        const normalizedSiret = normalizeSiret(siret);
+        const code_naf = normalizedSiret ? mappingByNormalizedSiret[normalizedSiret] : undefined;
+        if (code_naf === undefined) continue;
+        const formData = { ...((q.formData as Record<string, unknown>) || {}), code_naf };
+        const res = await fetch(`/api/quotes/${q.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ formData }),
+        });
+        if (res.ok) {
+          updated++;
+          const updatedQuote = { ...q, formData: { ...q.formData, code_naf } };
+          setQuotes((prev) =>
+            prev.map((qu) => (qu.id === q.id ? updatedQuote : qu))
+          );
+          setAllQuotesForSearch((prev) =>
+            prev.map((qu) => (qu.id === q.id ? updatedQuote : qu))
+          );
+        } else failed++;
+      }
+      setNafApplyStatus({
+        type: "ok",
+        text: `${updated} devis mis à jour avec le code NAF.${failed > 0 ? ` ${failed} échec(s).` : ""}`,
+      });
+    } catch (e) {
+      setNafApplyStatus({ type: "err", text: e instanceof Error ? e.message : "Erreur lors de l'application." });
+    } finally {
+      setNafApplying(false);
+    }
   };
 
   const handleDeleteQuote = async (id: string) => {
@@ -255,9 +373,9 @@ export default function ModifierEcheancierPage() {
     return duplicates.sort((a, b) => a.companyName.localeCompare(b.companyName, "fr"));
   }, [quotes]);
 
-  // Charger TOUS les devis (sans filtre RCD) quand on ouvre l'onglet Recherche
+  // Charger TOUS les devis (sans filtre RCD) quand on ouvre l'onglet Recherche ou SIRET
   useEffect(() => {
-    if (!session || activeTab !== "recherche" || allQuotesForSearch.length > 0) return;
+    if (!session || (activeTab !== "recherche" && activeTab !== "siret") || allQuotesForSearch.length > 0) return;
     const fetchAllForSearch = async () => {
       setMegaSearchLoading(true);
       try {
@@ -289,6 +407,17 @@ export default function ModifierEcheancierPage() {
       getQuoteSearchableText(quote).includes(q)
     );
   }, [allQuotesForSearch, megaSearchQuery]);
+
+  /** Liste de tous les SIRET uniques (tous devis quand onglet SIRET, sinon devis RCD), sans filtre sur la taille */
+  const uniqueSirets = useMemo(() => {
+    const source = activeTab === "siret" ? allQuotesForSearch : quotes;
+    const set = new Set<string>();
+    source.forEach((q) => {
+      const s = getQuoteSiret(q);
+      if (s != null && String(s).trim() !== "") set.add(String(s).trim());
+    });
+    return Array.from(set).sort();
+  }, [activeTab, quotes, allQuotesForSearch]);
 
   useEffect(() => {
     if (filteredQuotes.length === 0) return;
@@ -800,6 +929,44 @@ export default function ModifierEcheancierPage() {
               >
                 Recherche
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("siret")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px ${
+                  activeTab === "siret"
+                    ? "border-blue-600 text-blue-600 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                SIRET
+                {uniqueSirets.length > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                    {uniqueSirets.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("naf")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px ${
+                  activeTab === "naf"
+                    ? "border-blue-600 text-blue-600 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Code NAF
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("rectifier")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px ${
+                  activeTab === "rectifier"
+                    ? "border-blue-600 text-blue-600 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Rectifier
+              </button>
             </div>
 
             {activeTab === "doublons" ? (
@@ -1081,6 +1248,110 @@ export default function ModifierEcheancierPage() {
                         </div>
                       );
                     })
+                  )}
+                </div>
+              </div>
+            ) : activeTab === "siret" ? (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-3 bg-gray-100 border-b flex flex-wrap items-center gap-3">
+                  <h2 className="text-sm font-medium text-gray-700">
+                    Tous les numéros SIRET ({uniqueSirets.length})
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={copyAllSirets}
+                    disabled={uniqueSirets.length === 0 || (activeTab === "siret" && megaSearchLoading)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copier tous les SIRET
+                  </button>
+                  {copiedId === "all-sirets" && (
+                    <span className="text-sm text-green-600 font-medium">Copié !</span>
+                  )}
+                </div>
+                <div className="p-4 max-h-[70vh] overflow-y-auto">
+                  {activeTab === "siret" && megaSearchLoading ? (
+                    <p className="text-gray-500 text-sm">Chargement de tous les devis…</p>
+                  ) : uniqueSirets.length === 0 ? (
+                    <p className="text-gray-500 text-sm">
+                      {activeTab === "siret" ? "Aucun SIRET parmi tous les devis." : "Aucun SIRET parmi les devis RCD."}
+                    </p>
+                  ) : (
+                    <ul className="space-y-1 font-mono text-sm text-gray-800">
+                      {uniqueSirets.map((siret) => (
+                        <li key={siret}>{siret}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ) : activeTab === "naf" ? (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-3 bg-gray-100 border-b">
+                  <h2 className="text-sm font-medium text-gray-700 mb-1">
+                    Associer SIRET → code NAF
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Collez un JSON de la forme : {"{ \"numéroSIRET\": \"codeNAF\", ... }"}. Chaque devis dont le SIRET correspond aura son formData.code_naf mis à jour.
+                  </p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <textarea
+                    value={nafJson}
+                    onChange={(e) => setNafJson(e.target.value)}
+                    placeholder={'{"12345678901234": "6201Z", "98765432109876": "4120A"}'}
+                    className="w-full min-h-[200px] px-3 py-2 border border-gray-300 rounded-md font-mono text-sm bg-white"
+                    spellCheck={false}
+                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={applyNafMapping}
+                      disabled={nafApplying}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {nafApplying ? "Application…" : "Appliquer le mapping"}
+                    </button>
+                    {nafApplyStatus && (
+                      <span
+                        className={`text-sm ${
+                          nafApplyStatus.type === "ok" ? "text-green-700" : "text-red-700"
+                        }`}
+                      >
+                        {nafApplyStatus.text}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : activeTab === "rectifier" ? (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-3 bg-gray-100 border-b">
+                  <h2 className="text-sm font-medium text-gray-700 mb-1">
+                    Rectifier les montants HT / TTC
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Pour toutes les échéances (sans exception), si amountTTC &lt; amountHT, inverse les deux champs (amountHT ↔ amountTTC).
+                  </p>
+                </div>
+                <div className="p-4">
+                  <button
+                    type="button"
+                    onClick={runRectifierMontants}
+                    disabled={rectifierLoading}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {rectifierLoading ? "Rectification…" : "Lancer la rectification"}
+                  </button>
+                  {rectifierStatus && (
+                    <span
+                      className={`ml-3 text-sm ${
+                        rectifierStatus.type === "ok" ? "text-green-700" : "text-red-700"
+                      }`}
+                    >
+                      {rectifierStatus.text}
+                    </span>
                   )}
                 </div>
               </div>

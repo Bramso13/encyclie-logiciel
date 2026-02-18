@@ -84,8 +84,8 @@ export interface FidelidadeRow {
 }
 
 /**
- * Feuille 1 Polices — une ligne = une échéance (scope v2, aligné quittances).
- * date_souscription = formData.dateDeffet, date_fin_contrat = date fin période échéance.
+ * Feuille 1 Polices — une ligne par SIREN (déduplication par SIREN).
+ * date_souscription = formData.dateDeffet, date_fin_contrat = max date fin période des échéances du même SIREN.
  * Colonnes type contrat, compagnie, activité supprimées ; fractionnement ajouté.
  */
 export interface FidelidadePolicesRow {
@@ -97,9 +97,10 @@ export interface FidelidadePolicesRow {
   NUMERO_AVENANT: string;
   MOTIF_AVENANT: string;
   DATE_EFFET_AVENANT: string;
-  DATE_DEMANDE: string;
-  STATUT_POLICE: string;
-  DATE_STAT_POLICE: string;
+  DATE_ECHEANCE: string;
+  ETAT_POLICE: string;
+  DATE_ETAT_POLICE: string;
+
   MOTIF_STATUT: string;
   FRACTIONNEMENT: string;
   NOM_ENTREPRISE_ASSURE: string;
@@ -111,21 +112,21 @@ export interface FidelidadePolicesRow {
   EFFECTIF_ENTREPRISE: string;
   CODE_NAF: string;
   LIBELLE_ACTIVITE_1: string;
-  POIDS_ACTIVITE_1: string;
+  POID_ACTIVITE_1: string;
   LIBELLE_ACTIVITE_2: string;
-  POIDS_ACTIVITE_2: string;
+  POID_ACTIVITE_2: string;
   LIBELLE_ACTIVITE_3: string;
-  POIDS_ACTIVITE_3: string;
+  POID_ACTIVITE_3: string;
   LIBELLE_ACTIVITE_4: string;
-  POIDS_ACTIVITE_4: string;
+  POID_ACTIVITE_4: string;
   LIBELLE_ACTIVITE_5: string;
-  POIDS_ACTIVITE_5: string;
+  POID_ACTIVITE_5: string;
   LIBELLE_ACTIVITE_6: string;
-  POIDS_ACTIVITE_6: string;
+  POID_ACTIVITE_6: string;
   LIBELLE_ACTIVITE_7: string;
-  POIDS_ACTIVITE_7: string;
+  POID_ACTIVITE_7: string;
   LIBELLE_ACTIVITE_8: string;
-  POIDS_ACTIVITE_8: string;
+  POID_ACTIVITE_8: string;
 }
 
 /**
@@ -146,7 +147,7 @@ export interface FidelidadeQuittancesRow {
   PRIME_TTC: string;
   PRIME_HT: string;
   TAXES: string;
-  TAUX_TAXE: string;
+  TAXE_POURCENTAGE: string;
   COMMISSIONS: string;
   MODE_PAIEMENT: string;
 }
