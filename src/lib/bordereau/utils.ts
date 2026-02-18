@@ -76,7 +76,7 @@ export function mapPaymentStatusToStatutQuittance(
   const mapping: Record<PaymentScheduleStatus, string> = {
     PENDING: "EMISE",
     PAID: "ENCAISSE",
-    OVERDUE: "EN_RETARD",
+    OVERDUE: "EMISE",
     CANCELLED: "ANNULE",
     PARTIALLY_PAID: "PARTIEL",
   };
