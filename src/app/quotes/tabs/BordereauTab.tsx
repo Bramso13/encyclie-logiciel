@@ -39,6 +39,7 @@ interface LocalInstallment {
   paidAt: string | null;
   paidAmount: number | null;
   paymentMethod: string | null;
+  emissionDate: string | null;
 }
 
 interface ContractData {
@@ -209,50 +210,42 @@ function mapApiInstallment(p: any): LocalInstallment {
     paidAt: p.paidAt ? toISODateString(p.paidAt) : null,
     paidAmount: p.paidAmount ?? null,
     paymentMethod: p.paymentMethod ?? null,
+    emissionDate: p.emissionDate ? toISODateString(p.emissionDate) : null,
   };
 }
 
 // ─── Bordereau computation ───────────────────────────────────────────────────
 
-function computePolicesRow(
+/**
+ * Une ligne par échéance dans la Feuille 1 (Polices).
+ * Les champs société sont partagés, les champs dates/motif sont propres à chaque échéance.
+ */
+function computePolicesRows(
   installments: LocalInstallment[],
   fd: Record<string, any>,
   cd: Record<string, any>,
   quoteRef: string,
   quoteStatus: string,
-  contract: ContractData | null
-): PolicesRow | null {
-  if (installments.length === 0) return null;
+  contract: ContractData | null,
+  resiliationDate: string | null,
+): PolicesRow[] {
+  if (installments.length === 0) return [];
 
-  const first = installments[0];
   const dateDeffetRaw =
     fd.dateDeffet ?? fd.dateEffet ?? fd.dateDebut ?? fd.startDate;
   const dateSouscription = dateDeffetRaw ? fmtDate(dateDeffetRaw) : "";
-  const dateEffet = contract
-    ? fmtDate(contract.startDate)
-    : dateDeffetRaw
-    ? fmtDate(dateDeffetRaw)
-    : "";
-  const dateFin = fmtDate(first.periodEnd);
-  const dateEcheance = fmtDate(first.dueDate);
 
-  const etatPolice = contract
-    ? CONTRACT_STATUS[contract.status] ?? "EN COURS"
-    : STATUS_POLICE[quoteStatus] ?? "DEVIS";
+  // DATE_EFFET_CONTRAT = contract.startDate uniquement
+  const dateEffet = contract ? fmtDate(contract.startDate) : "";
 
-  const dateStatPolice = dateDeffetRaw ? fmtDate(dateDeffetRaw) : "";
-  const motifStatut =
-    first.status === "PAID" || first.paidAt != null ? "REGLEMENT" : "EN_COURS";
   const fractionnement = toStr(
-    fd.periodicity ?? fd.periodicite ?? fd.fractionnementPrime
+    fd.periodicity ?? fd.periodicite ?? fd.fractionnementPrime,
   );
   const siretRaw = fd.siret ?? cd.siret;
-  const siren = siretRaw
-    ? String(siretRaw).replace(/\D/g, "").slice(0, 9)
-    : "";
+  const siren = siretRaw ? String(siretRaw).replace(/\D/g, "").slice(0, 9) : "";
 
   const activities = Array.isArray(fd.activities ?? fd.activites)
-    ? fd.activities ?? fd.activites
+    ? (fd.activities ?? fd.activites)
     : [];
   const actCols: Record<string, string> = {};
   for (let i = 1; i <= 8; i++) {
@@ -265,43 +258,92 @@ function computePolicesRow(
       a?.caSharePercent != null ? String(a.caSharePercent) : "";
   }
 
-  return {
+  // Fin du mois de résiliation (pour ETAT_POLICE par ligne)
+  let resiliationEndOfMonth: Date | null = null;
+  if (resiliationDate) {
+    const d = new Date(resiliationDate);
+    resiliationEndOfMonth = new Date(
+      d.getFullYear(),
+      d.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+  }
+
+  const sharedFields = {
     APPORTEUR: APPORTEUR_CODE,
     IDENTIFIANT_POLICE: quoteRef,
     DATE_SOUSCRIPTION: dateSouscription,
     DATE_EFFET_CONTRAT: dateEffet,
-    DATE_FIN_CONTRAT: dateFin,
     NUMERO_AVENANT: "",
     MOTIF_AVENANT: "",
     DATE_EFFET_AVENANT: "",
-    DATE_ECHEANCE: dateEcheance,
-    ETAT_POLICE: etatPolice,
-    DATE_ETAT_POLICE: dateStatPolice,
-    MOTIF_ETAT: "",
-    MOTIF_STATUT: motifStatut,
     FRACTIONNEMENT: fractionnement,
     NOM_ENTREPRISE_ASSURE: toStr(
-      fd.companyName ?? cd.companyName ?? cd.name ?? cd.raisonSociale
+      fd.companyName ?? cd.companyName ?? cd.name ?? cd.raisonSociale,
     ),
     SIREN: siren,
     ADRESSE_RISQUE: toStr(fd.address ?? cd.address ?? cd.adresse),
     VILLE_RISQUE: toStr(fd.city ?? cd.city ?? cd.ville),
-    CODE_POSTAL_RISQUE: toStr(
-      fd.postalCode ?? cd.postalCode ?? cd.codePostal
-    ),
+    CODE_POSTAL_RISQUE: toStr(fd.postalCode ?? cd.postalCode ?? cd.codePostal),
     CA_ENTREPRISE: toStr(fd.chiffreAffaires ?? cd.revenue ?? cd.ca),
     EFFECTIF_ENTREPRISE: toStr(
-      fd.nombreSalaries ?? cd.employeeCount ?? cd.effectif
+      fd.nombreSalaries ?? cd.employeeCount ?? cd.effectif,
     ),
     CODE_NAF: toStr(fd.code_naf ?? fd.codeNAF),
     ...actCols,
   };
+
+  return installments.map((inst) => {
+    const instPeriodStart = inst.periodStart
+      ? new Date(inst.periodStart)
+      : null;
+    const isResiliated =
+      !!resiliationDate &&
+      !!resiliationEndOfMonth &&
+      !!instPeriodStart &&
+      instPeriodStart <= resiliationEndOfMonth;
+
+    // ETAT_POLICE pour cette ligne
+    const etatPolice = isResiliated
+      ? "RESILIE"
+      : contract
+        ? (CONTRACT_STATUS[contract.status] ?? "EN COURS")
+        : (STATUS_POLICE[quoteStatus] ?? "DEVIS");
+
+    // DATE_ETAT_POLICE = paidAt si payé, sinon emissionDate
+    const dateStatPolice = inst.paidAt
+      ? fmtDate(inst.paidAt)
+      : inst.emissionDate
+        ? fmtDate(inst.emissionDate)
+        : "";
+
+    // MOTIF_ETAT : RESILIATION / REGLEMENT / EMISSION
+    const motifEtat = isResiliated
+      ? "RESILIATION"
+      : inst.status === "PAID" || inst.paidAt != null
+        ? "REGLEMENT"
+        : "EMISSION";
+
+    return {
+      ...sharedFields,
+      DATE_FIN_CONTRAT: fmtDate(inst.periodEnd),
+      DATE_ECHEANCE: fmtDate(inst.dueDate),
+      ETAT_POLICE: etatPolice,
+      DATE_ETAT_POLICE: dateStatPolice,
+      MOTIF_ETAT: motifEtat,
+      MOTIF_STATUT: motifEtat,
+    } as PolicesRow;
+  });
 }
 
 function computeQuittancesRows(
   installments: LocalInstallment[],
   fd: Record<string, any>,
-  quoteRef: string
+  quoteRef: string,
 ): QuittancesRow[] {
   const region = fd.territory ?? fd.region;
   const rate =
@@ -310,7 +352,7 @@ function computeQuittancesRows(
     rate != null ? String(Math.round(rate * 100 * 100) / 100) : "";
 
   const periodicity = toStr(
-    fd.periodicity ?? fd.periodicite ?? fd.fractionnementPrime
+    fd.periodicity ?? fd.periodicite ?? fd.fractionnementPrime,
   );
   const letter = getQuittanceLetter(periodicity);
 
@@ -323,7 +365,7 @@ function computeQuittancesRows(
       : `${quoteRef}${inst.installmentNumber}-${year}`;
     const commission = Math.round(inst.amountHT * 0.24 * 100) / 100;
     let modePaiement = inst.paymentMethod
-      ? PAYMENT_METHOD_LABELS[inst.paymentMethod] ?? inst.paymentMethod
+      ? (PAYMENT_METHOD_LABELS[inst.paymentMethod] ?? inst.paymentMethod)
       : "";
     if (inst.status === "PAID" && !modePaiement) modePaiement = "VIREMENT";
 
@@ -431,7 +473,8 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "IDENTIFIANT_POLICE",
     label: "Identifiant police",
-    description: "Numéro unique de la police qui identifie le contrat/devis chez Fidelidade",
+    description:
+      "Numéro unique de la police qui identifie le contrat/devis chez Fidelidade",
     source: "quote.reference",
     editType: "readonly",
     note: "Modifiable via la référence du devis dans l'en-tête",
@@ -447,16 +490,17 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "DATE_EFFET_CONTRAT",
     label: "Date d'effet du contrat",
-    description: "Date à partir de laquelle les garanties s'appliquent",
-    source: "contract.startDate (si contrat) sinon formData.dateDeffet",
-    editType: "date",
-    fdKeys: ["dateDeffet"],
-    note: "Si un contrat est associé, éditez la date dans l'onglet Contrat",
+    description:
+      "Date à partir de laquelle les garanties s'appliquent — obligatoirement liée à un contrat",
+    source: "contract.startDate (vide si pas de contrat)",
+    editType: "readonly",
+    note: "Créez un contrat via le bouton dédié si cette valeur est vide",
   },
   {
     key: "DATE_FIN_CONTRAT",
     label: "Date de fin du contrat",
-    description: "Date d'expiration des garanties (fin de la 1ère période d'échéance)",
+    description:
+      "Date d'expiration des garanties (fin de la 1ère période d'échéance)",
     source: "installments[0].periodEnd",
     editType: "readonly",
     note: "Modifiable via la colonne « Fin période » dans Feuille 2 ci-dessous",
@@ -464,7 +508,8 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "NUMERO_AVENANT",
     label: "Numéro d'avenant",
-    description: "Numéro de l'avenant en cas de modification de contrat en cours",
+    description:
+      "Numéro de l'avenant en cas de modification de contrat en cours",
     source: "Non géré — valeur vide",
     editType: "readonly",
   },
@@ -485,7 +530,8 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "DATE_ECHEANCE",
     label: "Date d'échéance",
-    description: "Date d'appel de la première prime (date à laquelle la prime est due)",
+    description:
+      "Date d'appel de la première prime (date à laquelle la prime est due)",
     source: "installments[0].dueDate",
     editType: "readonly",
     note: "Modifiable via la colonne « Échéance » dans Feuille 2 ci-dessous",
@@ -501,30 +547,27 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "DATE_ETAT_POLICE",
     label: "Date état police",
-    description: "Date à laquelle le statut de la police a été défini",
-    source: "formData.dateDeffet → dateEffet",
-    editType: "date",
-    fdKeys: ["dateDeffet"],
+    description:
+      "Date d'émission de l'appel de prime (si payé : date de paiement, sinon : date d'émission saisie dans Feuille 2)",
+    source: "installment.paidAt ?? installment.emissionDate",
+    editType: "readonly",
+    note: "Éditez la colonne « Date émission » dans Feuille 2 pour chaque échéance",
   },
   {
     key: "MOTIF_ETAT",
     label: "Motif état",
-    description: "Raison associée à l'état de la police",
-    source: "Non géré — valeur vide",
+    description:
+      "Raison de l'état de la police : REGLEMENT si payé, EMISSION si appel de prime envoyé, RESILIATION si résilié",
+    source:
+      "resiliationDate → RESILIATION | paidAt/PAID → REGLEMENT | sinon → EMISSION",
     editType: "readonly",
-  },
-  {
-    key: "MOTIF_STATUT",
-    label: "Motif statut",
-    description: "Indique si la prime a été réglée (REGLEMENT) ou est en cours (EN_COURS)",
-    source: "installments[0] → PAID ou paidAt ≠ null → REGLEMENT",
-    editType: "readonly",
-    note: "Calculé automatiquement depuis le statut de la 1ère échéance dans Feuille 2",
+    note: "Calculé automatiquement selon le statut de l'échéance",
   },
   {
     key: "FRACTIONNEMENT",
     label: "Fractionnement",
-    description: "Fréquence de paiement des primes (mensuel, trimestriel, semestriel, annuel)",
+    description:
+      "Fréquence de paiement des primes (mensuel, trimestriel, semestriel, annuel)",
     source: "formData.periodicity → periodicite → fractionnementPrime",
     editType: "text",
     fdKeys: ["periodicity"],
@@ -533,7 +576,8 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "NOM_ENTREPRISE_ASSURE",
     label: "Nom entreprise assurée",
-    description: "Raison sociale complète de l'entreprise couverte par le contrat",
+    description:
+      "Raison sociale complète de l'entreprise couverte par le contrat",
     source: "formData.companyName → companyData.companyName → raisonSociale",
     editType: "text",
     fdKeys: ["companyName"],
@@ -579,7 +623,8 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "CA_ENTREPRISE",
     label: "Chiffre d'affaires (€)",
-    description: "Chiffre d'affaires annuel de l'entreprise — sert au calcul de la prime",
+    description:
+      "Chiffre d'affaires annuel de l'entreprise — sert au calcul de la prime",
     source: "formData.chiffreAffaires → companyData.revenue",
     editType: "number",
     fdKeys: ["chiffreAffaires"],
@@ -595,7 +640,8 @@ const POLICE_FIELD_CONFIG: PoliceFieldConfig[] = [
   {
     key: "CODE_NAF",
     label: "Code NAF / APE",
-    description: "Code identifiant l'activité principale de l'entreprise (nomenclature INSEE)",
+    description:
+      "Code identifiant l'activité principale de l'entreprise (nomenclature INSEE)",
     source: "formData.code_naf → formData.codeNAF",
     editType: "text",
     fdKeys: ["code_naf"],
@@ -627,12 +673,18 @@ export default function BordereauTab({
     text: string;
   } | null>(null);
 
+  // ── Création de contrat ───────────────────────────────────────────────────
+  const [showCreateContractModal, setShowCreateContractModal] = useState(false);
+  const [createContractDate, setCreateContractDate] = useState<string>("");
+  const [creatingContract, setCreatingContract] = useState(false);
+
   // ── Résiliation ────────────────────────────────────────────────────────────
   const [resiliationDate, setResiliationDate] = useState<string | null>(null);
   const [resiliationReason, setResiliationReason] = useState<string>("");
   const [showResiliationModal, setShowResiliationModal] = useState(false);
   const [resiliationModalDate, setResiliationModalDate] = useState<string>("");
-  const [resiliationModalReason, setResiliationModalReason] = useState<string>("");
+  const [resiliationModalReason, setResiliationModalReason] =
+    useState<string>("");
   const [resiliating, setResiliating] = useState(false);
 
   // ── Init from props ────────────────────────────────────────────────────────
@@ -658,7 +710,9 @@ export default function BordereauTab({
           setHasSchedule(true);
           // Charger la date de résiliation si définie
           if (sched.resiliationDate) {
-            const rd = new Date(sched.resiliationDate).toISOString().split("T")[0];
+            const rd = new Date(sched.resiliationDate)
+              .toISOString()
+              .split("T")[0];
             setResiliationDate(rd);
             setResiliationReason(sched.resiliationReason ?? "");
           } else {
@@ -688,22 +742,33 @@ export default function BordereauTab({
   }, [fetchData]);
 
   // ── Computed bordereau rows ───────────────────────────────────────────────
-  const policesRow = useMemo(
+  const policesRows = useMemo(
     () =>
-      computePolicesRow(
+      computePolicesRows(
         installments,
         editFd,
         editCd,
         quote.reference,
         quote.status,
-        contract
+        contract,
+        resiliationDate,
       ),
-    [installments, editFd, editCd, quote.reference, quote.status, contract]
+    [
+      installments,
+      editFd,
+      editCd,
+      quote.reference,
+      quote.status,
+      contract,
+      resiliationDate,
+    ],
   );
+  // Première ligne pour l'affichage des champs partagés dans la config
+  const policesRow = policesRows[0] ?? null;
 
   const quittancesRows = useMemo(
     () => computeQuittancesRows(installments, editFd, quote.reference),
-    [installments, editFd, quote.reference]
+    [installments, editFd, quote.reference],
   );
 
   // ── Field update helpers ──────────────────────────────────────────────────
@@ -719,9 +784,7 @@ export default function BordereauTab({
 
   const setInst = (idx: number, key: keyof LocalInstallment, value: any) => {
     setInstallments((prev) =>
-      prev.map((inst, i) =>
-        i === idx ? { ...inst, [key]: value } : inst
-      )
+      prev.map((inst, i) => (i === idx ? { ...inst, [key]: value } : inst)),
     );
     setIsDirty(true);
   };
@@ -745,6 +808,7 @@ export default function BordereauTab({
       paidAt: null,
       paidAmount: null,
       paymentMethod: null,
+      emissionDate: null,
     };
     setInstallments((prev) => [...prev, newInst]);
     setIsDirty(true);
@@ -754,7 +818,7 @@ export default function BordereauTab({
     setInstallments((prev) =>
       prev
         .filter((_, i) => i !== idx)
-        .map((inst, i) => ({ ...inst, installmentNumber: i + 1 }))
+        .map((inst, i) => ({ ...inst, installmentNumber: i + 1 })),
     );
     setIsDirty(true);
   };
@@ -786,7 +850,7 @@ export default function BordereauTab({
   const openResiliationModal = () => {
     // Pré-remplir avec la date du jour si pas de date existante
     setResiliationModalDate(
-      resiliationDate ?? new Date().toISOString().split("T")[0]
+      resiliationDate ?? new Date().toISOString().split("T")[0],
     );
     setResiliationModalReason(resiliationReason);
     setShowResiliationModal(true);
@@ -814,17 +878,24 @@ export default function BordereauTab({
         const raw = await contractRes.json();
         setContract(raw.data ?? null);
       }
-      setSaveMsg({ type: "success", text: `Contrat résilié au ${new Date(resiliationModalDate).toLocaleDateString("fr-FR")}` });
+      setSaveMsg({
+        type: "success",
+        text: `Contrat résilié au ${new Date(resiliationModalDate).toLocaleDateString("fr-FR")}`,
+      });
       setTimeout(() => setSaveMsg(null), 5000);
     } catch (err) {
-      setSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Erreur résiliation" });
+      setSaveMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Erreur résiliation",
+      });
     } finally {
       setResiliating(false);
     }
   };
 
   const handleUndoResiliate = async () => {
-    if (!confirm("Annuler la résiliation et remettre le contrat actif ?")) return;
+    if (!confirm("Annuler la résiliation et remettre le contrat actif ?"))
+      return;
     setResiliating(true);
     try {
       const res = await fetch(`/api/quotes/${quote.id}/resiliate`, {
@@ -841,12 +912,50 @@ export default function BordereauTab({
         const raw = await contractRes.json();
         setContract(raw.data ?? null);
       }
-      setSaveMsg({ type: "success", text: "Résiliation annulée — contrat remis actif" });
+      setSaveMsg({
+        type: "success",
+        text: "Résiliation annulée — contrat remis actif",
+      });
       setTimeout(() => setSaveMsg(null), 5000);
     } catch (err) {
-      setSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Erreur" });
+      setSaveMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Erreur",
+      });
     } finally {
       setResiliating(false);
+    }
+  };
+
+  // ── Création contrat ──────────────────────────────────────────────────────
+  const handleCreateContract = async () => {
+    if (!createContractDate) return;
+    setCreatingContract(true);
+    try {
+      const res = await fetch(`/api/quotes/${quote.id}/contract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate: createContractDate }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message ?? "Erreur création contrat");
+      }
+      const raw = await res.json();
+      setContract(raw.data ?? null);
+      setShowCreateContractModal(false);
+      setSaveMsg({
+        type: "success",
+        text: `Contrat créé avec date d'effet au ${new Date(createContractDate).toLocaleDateString("fr-FR")}`,
+      });
+      setTimeout(() => setSaveMsg(null), 5000);
+    } catch (err) {
+      setSaveMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Erreur création contrat",
+      });
+    } finally {
+      setCreatingContract(false);
     }
   };
 
@@ -865,7 +974,8 @@ export default function BordereauTab({
           changeReason: "Mise à jour depuis l'onglet Bordereau",
         }),
       });
-      if (!quoteRes.ok) throw new Error("Erreur lors de la mise à jour du devis");
+      if (!quoteRes.ok)
+        throw new Error("Erreur lors de la mise à jour du devis");
 
       // 2. Save installments (only if schedule exists or we have installments)
       if (hasSchedule || installments.length > 0) {
@@ -889,15 +999,20 @@ export default function BordereauTab({
                 resumeAmount: inst.resumeAmount,
                 paidAt: inst.paidAt ?? null,
                 paidAmount: inst.paidAmount,
+                emissionDate: inst.emissionDate ?? null,
               })),
             }),
-          }
+          },
         );
-        if (!schedRes.ok) throw new Error("Erreur lors de la mise à jour de l'échéancier");
+        if (!schedRes.ok)
+          throw new Error("Erreur lors de la mise à jour de l'échéancier");
       }
 
       setIsDirty(false);
-      setSaveMsg({ type: "success", text: "Modifications enregistrées avec succès." });
+      setSaveMsg({
+        type: "success",
+        text: "Modifications enregistrées avec succès.",
+      });
       setTimeout(() => setSaveMsg(null), 4000);
     } catch (err) {
       setSaveMsg({
@@ -913,9 +1028,7 @@ export default function BordereauTab({
   const generateSchedule = async (empty = false) => {
     setGenerating(true);
     try {
-      const body = empty
-        ? { createEmpty: true }
-        : { calculationResult };
+      const body = empty ? { createEmpty: true } : { calculationResult };
 
       const res = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
         method: "POST",
@@ -940,18 +1053,19 @@ export default function BordereauTab({
   };
 
   // ── Activities in formData ────────────────────────────────────────────────
-  const activities: { code: string; caSharePercent: string }[] =
-    Array.isArray(editFd.activities ?? editFd.activites)
-      ? (editFd.activities ?? editFd.activites).map((a: any) => ({
-          code: String(a?.code ?? ""),
-          caSharePercent: String(a?.caSharePercent ?? ""),
-        }))
-      : [];
+  const activities: { code: string; caSharePercent: string }[] = Array.isArray(
+    editFd.activities ?? editFd.activites,
+  )
+    ? (editFd.activities ?? editFd.activites).map((a: any) => ({
+        code: String(a?.code ?? ""),
+        caSharePercent: String(a?.caSharePercent ?? ""),
+      }))
+    : [];
 
   const setActivity = (
     idx: number,
     key: "code" | "caSharePercent",
-    val: string
+    val: string,
   ) => {
     const updated = [...activities];
     while (updated.length <= idx)
@@ -1090,14 +1204,12 @@ export default function BordereauTab({
             <Field label="Nom de l'entreprise assurée">
               <input
                 className={inputCls}
-                value={
-                  toStr(
-                    editFd.companyName ??
-                      editCd.companyName ??
-                      editCd.name ??
-                      editCd.raisonSociale
-                  )
-                }
+                value={toStr(
+                  editFd.companyName ??
+                    editCd.companyName ??
+                    editCd.name ??
+                    editCd.raisonSociale,
+                )}
                 onChange={(e) => {
                   setCd("companyName", e.target.value);
                   setFd("companyName", e.target.value);
@@ -1121,7 +1233,9 @@ export default function BordereauTab({
               <input
                 className={inputCls}
                 type="number"
-                value={toStr(editFd.chiffreAffaires ?? editCd.revenue ?? editCd.ca)}
+                value={toStr(
+                  editFd.chiffreAffaires ?? editCd.revenue ?? editCd.ca,
+                )}
                 onChange={(e) => setFd("chiffreAffaires", e.target.value)}
                 placeholder="ex : 500000"
               />
@@ -1133,7 +1247,7 @@ export default function BordereauTab({
                 value={toStr(
                   editFd.nombreSalaries ??
                     editCd.employeeCount ??
-                    editCd.effectif
+                    editCd.effectif,
                 )}
                 onChange={(e) => setFd("nombreSalaries", e.target.value)}
                 placeholder="ex : 10"
@@ -1146,7 +1260,9 @@ export default function BordereauTab({
             <Field label="Adresse">
               <input
                 className={inputCls}
-                value={toStr(editFd.address ?? editCd.address ?? editCd.adresse)}
+                value={toStr(
+                  editFd.address ?? editCd.address ?? editCd.adresse,
+                )}
                 onChange={(e) => {
                   setFd("address", e.target.value);
                   setCd("address", e.target.value);
@@ -1158,9 +1274,7 @@ export default function BordereauTab({
               <input
                 className={inputCls}
                 value={toStr(
-                  editFd.postalCode ??
-                    editCd.postalCode ??
-                    editCd.codePostal
+                  editFd.postalCode ?? editCd.postalCode ?? editCd.codePostal,
                 )}
                 onChange={(e) => {
                   setFd("postalCode", e.target.value);
@@ -1207,7 +1321,7 @@ export default function BordereauTab({
                 value={toStr(
                   editFd.periodicity ??
                     editFd.periodicite ??
-                    editFd.fractionnementPrime
+                    editFd.fractionnementPrime,
                 )}
                 onChange={(e) => setFd("periodicity", e.target.value)}
                 placeholder="ex : trimestriel"
@@ -1221,7 +1335,7 @@ export default function BordereauTab({
                   editFd.dateDeffet ??
                     editFd.dateEffet ??
                     editFd.dateDebut ??
-                    editFd.startDate
+                    editFd.startDate,
                 )}
                 onChange={(e) => setFd("dateDeffet", e.target.value)}
               />
@@ -1235,9 +1349,7 @@ export default function BordereauTab({
             </div>
             {Array.from({ length: 8 }).map((_, i) => {
               const act = activities[i] ?? { code: "", caSharePercent: "" };
-              const title = act.code
-                ? getActiviteTitle(act.code)
-                : "—";
+              const title = act.code ? getActiviteTitle(act.code) : "—";
               return (
                 <div key={i} className="flex gap-2 items-end">
                   <div className="flex-1">
@@ -1304,219 +1416,385 @@ export default function BordereauTab({
                 Feuille 1 — Police
               </h3>
               <span className="text-xs text-gray-400">
-                (une ligne par SIREN)
+                (une ligne par échéance)
               </span>
             </div>
 
-            {!policesRow && installments.length === 0 ? (
+            {/* Bannière : pas de contrat → DATE_EFFET_CONTRAT vide */}
+            {!contract && (
+              <div className="mb-3 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 text-xs text-amber-800">
+                  <strong>DATE_EFFET_CONTRAT sera vide</strong> — aucun contrat
+                  n'est associé à ce devis. Créez un contrat pour définir la
+                  date à partir de laquelle les garanties s'appliquent.
+                </div>
+                <button
+                  onClick={() => {
+                    setCreateContractDate(
+                      new Date().toISOString().split("T")[0],
+                    );
+                    setShowCreateContractModal(true);
+                  }}
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Créer le contrat
+                </button>
+              </div>
+            )}
+
+            {installments.length === 0 ? (
               <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 text-sm">
                 <Calendar className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                Aucun échéancier — la ligne Police sera générée après création des échéances ci-dessous.
+                Aucun échéancier — les lignes Police seront générées après
+                création des échéances ci-dessous.
               </div>
             ) : (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-indigo-700 text-white text-xs">
-                      <th className="px-4 py-2 text-left font-semibold w-48">
-                        Colonne bordereau
-                      </th>
-                      <th className="px-4 py-2 text-left font-semibold">
-                        Correspond à
-                      </th>
-                      <th className="px-4 py-2 text-left font-semibold w-56">
-                        Valeur
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {POLICE_FIELD_CONFIG.map((cfg, rowIdx) => {
-                      const computedVal = policesRow?.[cfg.key] ?? "";
-                      const isReadonly = cfg.editType === "readonly";
-                      const rowBg = rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50";
+              <>
+                {/* ─ Champs partagés (société / contrat) ─ */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
+                  <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Champs communs à toutes les lignes
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-indigo-700 text-white text-xs">
+                        <th className="px-4 py-2 text-left font-semibold w-48">
+                          Colonne bordereau
+                        </th>
+                        <th className="px-4 py-2 text-left font-semibold">
+                          Correspond à
+                        </th>
+                        <th className="px-4 py-2 text-left font-semibold w-56">
+                          Valeur
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {POLICE_FIELD_CONFIG.map((cfg, rowIdx) => {
+                        const computedVal = policesRow?.[cfg.key] ?? "";
+                        const isReadonly = cfg.editType === "readonly";
+                        const rowBg =
+                          rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50";
 
-                      /* Current value from editFd/editCd */
-                      const currentFdVal = cfg.fdKeys
-                        ? toStr(cfg.fdKeys.reduce((acc: any, k) => acc ?? editFd[k], undefined as any))
-                        : "";
-                      const currentCdVal = cfg.cdKeys
-                        ? toStr(cfg.cdKeys.reduce((acc: any, k) => acc ?? editCd[k], undefined as any))
-                        : "";
-                      const currentVal = currentFdVal || currentCdVal || computedVal;
+                        const currentFdVal = cfg.fdKeys
+                          ? toStr(
+                              cfg.fdKeys.reduce(
+                                (acc: any, k) => acc ?? editFd[k],
+                                undefined as any,
+                              ),
+                            )
+                          : "";
+                        const currentCdVal = cfg.cdKeys
+                          ? toStr(
+                              cfg.cdKeys.reduce(
+                                (acc: any, k) => acc ?? editCd[k],
+                                undefined as any,
+                              ),
+                            )
+                          : "";
+                        const currentVal =
+                          currentFdVal || currentCdVal || computedVal;
 
-                      const handleChange = (val: string) => {
-                        if (!cfg.fdKeys?.[0]) return;
-                        setFd(cfg.fdKeys[0], val || undefined);
-                        if (cfg.cdKeys?.[0]) setCd(cfg.cdKeys[0], val || undefined);
-                      };
+                        const handleChange = (val: string) => {
+                          if (!cfg.fdKeys?.[0]) return;
+                          setFd(cfg.fdKeys[0], val || undefined);
+                          if (cfg.cdKeys?.[0])
+                            setCd(cfg.cdKeys[0], val || undefined);
+                        };
 
-                      return (
-                        <tr key={cfg.key} className={rowBg}>
-                          {/* Column code + label */}
-                          <td className="px-4 py-2.5 align-top">
-                            <div className="font-mono text-xs font-bold text-indigo-800 leading-tight">
-                              {cfg.key}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {cfg.label}
-                            </div>
-                          </td>
-
-                          {/* Source & description */}
-                          <td className="px-4 py-2.5 align-top">
-                            <div className="text-xs text-gray-700 leading-snug">
-                              {cfg.description}
-                            </div>
-                            <div className="mt-1 font-mono text-xs text-indigo-400 leading-tight">
-                              {cfg.source}
-                            </div>
-                            {cfg.note && (
-                              <div className="mt-1 text-xs text-amber-600 italic">
-                                ⚠ {cfg.note}
+                        return (
+                          <tr key={cfg.key} className={rowBg}>
+                            <td className="px-4 py-2.5 align-top">
+                              <div className="font-mono text-xs font-bold text-indigo-800 leading-tight">
+                                {cfg.key}
                               </div>
-                            )}
-                          </td>
-
-                          {/* Value cell */}
-                          <td className="px-3 py-2 align-middle">
-                            {isReadonly ? (
-                              <span
-                                className={`text-sm px-2 py-1 rounded ${
-                                  computedVal
-                                    ? "font-medium text-gray-900"
-                                    : "text-gray-300 italic"
-                                }`}
-                              >
-                                {computedVal || "—"}
-                              </span>
-                            ) : cfg.editType === "siret" ? (
-                              <div>
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {cfg.label}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 align-top">
+                              <div className="text-xs text-gray-700 leading-snug">
+                                {cfg.description}
+                              </div>
+                              <div className="mt-1 font-mono text-xs text-indigo-400 leading-tight">
+                                {cfg.source}
+                              </div>
+                              {cfg.note && (
+                                <div className="mt-1 text-xs text-amber-600 italic">
+                                  ⚠ {cfg.note}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 align-middle">
+                              {isReadonly ? (
+                                <span
+                                  className={`text-sm px-2 py-1 rounded ${computedVal ? "font-medium text-gray-900" : "text-gray-300 italic"}`}
+                                >
+                                  {computedVal || "—"}
+                                </span>
+                              ) : cfg.editType === "siret" ? (
+                                <div>
+                                  <input
+                                    className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
+                                    value={toStr(editFd.siret ?? editCd.siret)}
+                                    onChange={(e) =>
+                                      handleChange(e.target.value)
+                                    }
+                                    placeholder="14 chiffres"
+                                    maxLength={14}
+                                  />
+                                  {computedVal && (
+                                    <div className="text-xs text-gray-400 mt-0.5">
+                                      SIREN extrait :{" "}
+                                      <span className="font-mono font-medium text-gray-600">
+                                        {computedVal}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : cfg.editType === "date" ? (
                                 <input
+                                  type="date"
                                   className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
-                                  value={toStr(editFd.siret ?? editCd.siret)}
+                                  value={toISODateString(
+                                    cfg.fdKeys
+                                      ? cfg.fdKeys.reduce(
+                                          (acc: any, k) => acc ?? editFd[k],
+                                          undefined as any,
+                                        )
+                                      : undefined,
+                                  )}
                                   onChange={(e) => handleChange(e.target.value)}
-                                  placeholder="14 chiffres"
-                                  maxLength={14}
                                 />
-                                {computedVal && (
-                                  <div className="text-xs text-gray-400 mt-0.5">
-                                    SIREN extrait :{" "}
-                                    <span className="font-mono font-medium text-gray-600">
-                                      {computedVal}
-                                    </span>
+                              ) : cfg.editType === "number" ? (
+                                <input
+                                  type="number"
+                                  className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
+                                  value={currentVal}
+                                  onChange={(e) => handleChange(e.target.value)}
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
+                                  value={currentVal}
+                                  onChange={(e) => handleChange(e.target.value)}
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {/* Activities */}
+                      {Array.from({ length: 8 }).map((_, i) => {
+                        const act = activities[i] ?? {
+                          code: "",
+                          caSharePercent: "",
+                        };
+                        const title = act.code
+                          ? getActiviteTitle(act.code)
+                          : "";
+                        const rowBg =
+                          (POLICE_FIELD_CONFIG.length + i * 2) % 2 === 0
+                            ? "bg-white"
+                            : "bg-gray-50";
+                        return (
+                          <tr key={`act-${i}`} className={rowBg}>
+                            <td className="px-4 py-2.5 align-top">
+                              <div className="font-mono text-xs font-bold text-indigo-800 leading-tight">
+                                LIBELLE_ACTIVITE_{i + 1}
+                              </div>
+                              <div className="font-mono text-xs font-bold text-indigo-800 leading-tight mt-1">
+                                POID_ACTIVITE_{i + 1}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 align-top">
+                              <div className="text-xs text-gray-700">
+                                Activité {i + 1} — libellé depuis code (1–20) et
+                                % CA
+                              </div>
+                              <div className="font-mono text-xs text-indigo-400 mt-0.5">
+                                formData.activities[{i}].code → title
+                              </div>
+                              <div className="font-mono text-xs text-indigo-400">
+                                formData.activities[{i}].caSharePercent
+                              </div>
+                              {title && (
+                                <div className="mt-1 text-xs text-emerald-600 font-medium">
+                                  → {title}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 align-middle">
+                              <div className="flex gap-1.5 items-center">
+                                <div className="flex-1">
+                                  <div className="text-xs text-gray-400 mb-0.5">
+                                    Code (1–20)
+                                  </div>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={20}
+                                    className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
+                                    value={act.code}
+                                    onChange={(e) =>
+                                      setActivity(i, "code", e.target.value)
+                                    }
+                                    placeholder="—"
+                                  />
+                                </div>
+                                <div className="w-16">
+                                  <div className="text-xs text-gray-400 mb-0.5">
+                                    % CA
+                                  </div>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
+                                    value={act.caSharePercent}
+                                    onChange={(e) =>
+                                      setActivity(
+                                        i,
+                                        "caSharePercent",
+                                        e.target.value,
+                                      )
+                                    }
+                                    placeholder="0"
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center gap-4 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 bg-yellow-50 border border-gray-300 rounded inline-block" />
+                      Champ éditable
+                    </span>
+                  </div>
+                </div>
+
+                {/* ─ Aperçu Polices : une ligne par échéance ─ */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Aperçu bordereau — une ligne par échéance
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-indigo-50 text-indigo-800 text-xs border-b border-indigo-200">
+                          <th className="px-3 py-2 text-center font-semibold">
+                            N°
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            DATE_FIN_CONTRAT
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            DATE_ECHEANCE
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            DATE_ETAT_POLICE
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            ETAT_POLICE
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            MOTIF_ETAT
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {policesRows.map((row, idx) => {
+                          const inst = installments[idx];
+                          const excluded = inst
+                            ? isExcludedByResiliation(inst)
+                            : false;
+                          const motifColor =
+                            row.MOTIF_ETAT === "REGLEMENT"
+                              ? "text-emerald-700 bg-emerald-50"
+                              : row.MOTIF_ETAT === "RESILIATION"
+                                ? "text-red-700 bg-red-50"
+                                : "text-amber-700 bg-amber-50";
+                          return (
+                            <tr
+                              key={idx}
+                              className={
+                                excluded
+                                  ? "opacity-40 bg-red-50"
+                                  : idx % 2 === 0
+                                    ? "bg-white"
+                                    : "bg-gray-50"
+                              }
+                              title={
+                                excluded
+                                  ? "Hors bordereau (après résiliation)"
+                                  : undefined
+                              }
+                            >
+                              <td className="px-3 py-2 text-center font-semibold text-gray-700">
+                                {inst?.installmentNumber ?? idx + 1}
+                                {excluded && (
+                                  <div className="text-xs text-red-400 font-normal">
+                                    Hors BDX
                                   </div>
                                 )}
-                              </div>
-                            ) : cfg.editType === "date" ? (
-                              <input
-                                type="date"
-                                className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
-                                value={toISODateString(
-                                  cfg.fdKeys
-                                    ? cfg.fdKeys.reduce((acc: any, k) => acc ?? editFd[k], undefined as any)
-                                    : undefined
+                              </td>
+                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                                {row.DATE_FIN_CONTRAT || "—"}
+                              </td>
+                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                                {row.DATE_ECHEANCE || "—"}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                {row.DATE_ETAT_POLICE ? (
+                                  <span className="text-gray-700">
+                                    {row.DATE_ETAT_POLICE}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 italic">
+                                    Non définie — saisir date émission
+                                  </span>
                                 )}
-                                onChange={(e) => handleChange(e.target.value)}
-                              />
-                            ) : cfg.editType === "number" ? (
-                              <input
-                                type="number"
-                                className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
-                                value={currentVal}
-                                onChange={(e) => handleChange(e.target.value)}
-                              />
-                            ) : (
-                              <input
-                                type="text"
-                                className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
-                                value={currentVal}
-                                onChange={(e) => handleChange(e.target.value)}
-                              />
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    {/* Activities rows (LIBELLE + POID) */}
-                    {Array.from({ length: 8 }).map((_, i) => {
-                      const act = activities[i] ?? { code: "", caSharePercent: "" };
-                      const hasActivity = !!act.code;
-                      const title = hasActivity ? getActiviteTitle(act.code) : "";
-                      const rowBg = (POLICE_FIELD_CONFIG.length + i * 2) % 2 === 0 ? "bg-white" : "bg-gray-50";
-                      return (
-                        <tr key={`act-${i}`} className={rowBg}>
-                          <td className="px-4 py-2.5 align-top">
-                            <div className="font-mono text-xs font-bold text-indigo-800 leading-tight">
-                              LIBELLE_ACTIVITE_{i + 1}
-                            </div>
-                            <div className="font-mono text-xs font-bold text-indigo-800 leading-tight mt-1">
-                              POID_ACTIVITE_{i + 1}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5 align-top">
-                            <div className="text-xs text-gray-700">
-                              Activité {i + 1} — libellé calculé depuis le code (1–20){" "}
-                              et part du CA en %
-                            </div>
-                            <div className="font-mono text-xs text-indigo-400 mt-0.5">
-                              formData.activities[{i}].code → title
-                            </div>
-                            <div className="font-mono text-xs text-indigo-400">
-                              formData.activities[{i}].caSharePercent
-                            </div>
-                            {title && (
-                              <div className="mt-1 text-xs text-emerald-600 font-medium">
-                                → {title}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 align-middle">
-                            <div className="flex gap-1.5 items-center">
-                              <div className="flex-1">
-                                <div className="text-xs text-gray-400 mb-0.5">Code (1–20)</div>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={20}
-                                  className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
-                                  value={act.code}
-                                  onChange={(e) => setActivity(i, "code", e.target.value)}
-                                  placeholder="—"
-                                />
-                              </div>
-                              <div className="w-16">
-                                <div className="text-xs text-gray-400 mb-0.5">% CA</div>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-yellow-50"
-                                  value={act.caSharePercent}
-                                  onChange={(e) => setActivity(i, "caSharePercent", e.target.value)}
-                                  placeholder="0"
-                                />
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {/* Legend */}
-                <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center gap-4 text-xs text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 bg-yellow-50 border border-gray-300 rounded inline-block" />
-                    Champ éditable
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="text-amber-600">⚠</span>
-                    Valeur calculée automatiquement
-                  </span>
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                <span
+                                  className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${
+                                    row.ETAT_POLICE === "RESILIE"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-blue-100 text-blue-700"
+                                  }`}
+                                >
+                                  {row.ETAT_POLICE || "—"}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                <span
+                                  className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${motifColor}`}
+                                >
+                                  {row.MOTIF_ETAT || "—"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
+                    DATE_ETAT_POLICE = <span className="font-mono">paidAt</span>{" "}
+                    si payé, sinon{" "}
+                    <span className="font-mono">emissionDate</span> (colonne «
+                    Date émission » dans Feuille 2)
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -1601,6 +1879,12 @@ export default function BordereauTab({
                         <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
                           Échéance
                         </th>
+                        <th
+                          className="px-3 py-2 text-left font-semibold whitespace-nowrap"
+                          title="Date d'émission de l'appel de prime — utilisée dans DATE_ETAT_POLICE si la prime n'est pas payée"
+                        >
+                          Date émission ⓘ
+                        </th>
                         <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">
                           Prime HT (€)
                         </th>
@@ -1642,7 +1926,11 @@ export default function BordereauTab({
                                 ? "opacity-40 bg-red-50 line-through-[cells]"
                                 : "hover:bg-gray-50 transition-colors"
                             }
-                            title={excluded ? "Hors bordereau : période après la résiliation" : undefined}
+                            title={
+                              excluded
+                                ? "Hors bordereau : période après la résiliation"
+                                : undefined
+                            }
                           >
                             {/* N° + badge hors bordereau */}
                             <td className="px-3 py-1.5 font-semibold text-gray-700 text-center">
@@ -1654,7 +1942,9 @@ export default function BordereauTab({
                               )}
                             </td>
                             {/* ID Quittance */}
-                            <td className={`px-3 py-1.5 font-mono whitespace-nowrap ${excluded ? "text-red-400 line-through" : "text-indigo-700"}`}>
+                            <td
+                              className={`px-3 py-1.5 font-mono whitespace-nowrap ${excluded ? "text-red-400 line-through" : "text-indigo-700"}`}
+                            >
                               {row?.IDENTIFIANT_QUITTANCE ?? "—"}
                             </td>
                             {/* Début période */}
@@ -1690,6 +1980,22 @@ export default function BordereauTab({
                                 }
                               />
                             </td>
+                            {/* Date émission d'appel de prime → DATE_ETAT_POLICE */}
+                            <td className="px-1 py-1 whitespace-nowrap">
+                              <input
+                                type="date"
+                                className="border border-gray-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-32"
+                                value={inst.emissionDate ?? ""}
+                                onChange={(e) =>
+                                  setInst(
+                                    idx,
+                                    "emissionDate",
+                                    e.target.value || null,
+                                  )
+                                }
+                                title="DATE_ETAT_POLICE si prime non payée"
+                              />
+                            </td>
                             {/* Prime HT */}
                             <td className="px-1 py-1">
                               <input
@@ -1700,7 +2006,7 @@ export default function BordereauTab({
                                   setInst(
                                     idx,
                                     "amountHT",
-                                    parseFloat(e.target.value) || 0
+                                    parseFloat(e.target.value) || 0,
                                   )
                                 }
                               />
@@ -1715,7 +2021,7 @@ export default function BordereauTab({
                                   setInst(
                                     idx,
                                     "taxAmount",
-                                    parseFloat(e.target.value) || 0
+                                    parseFloat(e.target.value) || 0,
                                   )
                                 }
                               />
@@ -1730,7 +2036,7 @@ export default function BordereauTab({
                                   setInst(
                                     idx,
                                     "amountTTC",
-                                    parseFloat(e.target.value) || 0
+                                    parseFloat(e.target.value) || 0,
                                   )
                                 }
                               />
@@ -1768,11 +2074,7 @@ export default function BordereauTab({
                                 className="border border-gray-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-32"
                                 value={inst.paidAt ?? ""}
                                 onChange={(e) =>
-                                  setInst(
-                                    idx,
-                                    "paidAt",
-                                    e.target.value || null
-                                  )
+                                  setInst(idx, "paidAt", e.target.value || null)
                                 }
                               />
                             </td>
@@ -1785,7 +2087,7 @@ export default function BordereauTab({
                                   setInst(
                                     idx,
                                     "paymentMethod",
-                                    e.target.value || null
+                                    e.target.value || null,
                                   )
                                 }
                               >
@@ -1839,10 +2141,8 @@ export default function BordereauTab({
                           <td />
                           <td className="px-3 py-2 text-right text-xs">
                             {(
-                              installments.reduce(
-                                (s, i) => s + i.amountHT,
-                                0
-                              ) * 0.24
+                              installments.reduce((s, i) => s + i.amountHT, 0) *
+                              0.24
                             ).toFixed(2)}
                           </td>
                           <td colSpan={4} />
@@ -1882,6 +2182,73 @@ export default function BordereauTab({
         </div>
       </div>
 
+      {/* ── Modale de création de contrat ───────────────────────────────── */}
+      {showCreateContractModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-lg font-bold text-gray-900">
+                  Créer le contrat
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowCreateContractModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Un contrat sera créé et associé à ce devis. La{" "}
+              <strong>date d'effet</strong> détermine la valeur de{" "}
+              <code className="bg-gray-100 px-1 rounded text-xs">
+                DATE_EFFET_CONTRAT
+              </code>{" "}
+              dans le bordereau.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date d'effet (startDate) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                value={createContractDate}
+                onChange={(e) => setCreateContractDate(e.target.value)}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                La date de fin sera fixée à un an plus tard automatiquement.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCreateContractModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleCreateContract}
+                disabled={!createContractDate || creatingContract}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {creatingContract ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                Créer le contrat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Modale de résiliation ────────────────────────────────────────── */}
       {showResiliationModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1905,13 +2272,19 @@ export default function BordereauTab({
               <strong>Conséquences :</strong>
               <ul className="mt-1 list-disc ml-4 space-y-1">
                 <li>
-                  Les échéances du <strong>mois de résiliation</strong> apparaîtront dans le bordereau avec{" "}
-                  <code className="bg-amber-100 px-1 rounded">ETAT_POLICE = RESILIE</code>
+                  Les échéances du <strong>mois de résiliation</strong>{" "}
+                  apparaîtront dans le bordereau avec{" "}
+                  <code className="bg-amber-100 px-1 rounded">
+                    ETAT_POLICE = RESILIE
+                  </code>
                 </li>
                 <li>
-                  Les échéances des <strong>mois suivants</strong> n'apparaîtront plus dans aucun bordereau
+                  Les échéances des <strong>mois suivants</strong>{" "}
+                  n'apparaîtront plus dans aucun bordereau
                 </li>
-                <li>Le statut du contrat sera mis à <strong>RÉSILIÉ</strong></li>
+                <li>
+                  Le statut du contrat sera mis à <strong>RÉSILIÉ</strong>
+                </li>
               </ul>
             </div>
 
@@ -1927,7 +2300,8 @@ export default function BordereauTab({
                   onChange={(e) => setResiliationModalDate(e.target.value)}
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Les échéances dont la période débute après ce mois seront exclues du bordereau.
+                  Les échéances dont la période débute après ce mois seront
+                  exclues du bordereau.
                 </p>
               </div>
 

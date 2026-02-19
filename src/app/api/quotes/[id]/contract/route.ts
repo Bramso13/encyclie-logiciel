@@ -53,6 +53,80 @@ export async function GET(
   }
 }
 
+// POST /api/quotes/[id]/contract - Create a contract for this quote (if none exists)
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> },
+) {
+  const params = await props.params;
+  try {
+    return await withAuth(async (userId, userRole) => {
+      const quote = await prisma.quote.findUnique({
+        where: { id: params.id },
+        select: {
+          id: true,
+          brokerId: true,
+          reference: true,
+          formData: true,
+          productId: true,
+          contract: { select: { id: true } },
+        },
+      });
+
+      if (!quote) throw new ApiError(404, "Devis non trouvé");
+      if (userRole === "BROKER" && quote.brokerId !== userId) {
+        throw new ApiError(403, "Accès refusé à ce devis");
+      }
+      if (quote.contract) {
+        throw new ApiError(409, "Un contrat est déjà associé à ce devis");
+      }
+
+      const body = await request.json();
+      const { startDate } = body as { startDate: string };
+
+      if (!startDate) throw new ApiError(400, "La date d'effet (startDate) est obligatoire");
+
+      const start = new Date(startDate);
+      // endDate par défaut = startDate + 1 an
+      const end = new Date(start);
+      end.setFullYear(end.getFullYear() + 1);
+
+      // Calcul de la prime annuelle depuis formData si disponible
+      const formData = (quote.formData ?? {}) as Record<string, any>;
+      const annualPremium =
+        Number(formData.primeTTC ?? formData.primeAnnuelleTTC ?? formData.totalTTC ?? 0);
+
+      // Référence contrat = référence devis (garantit l'unicité si déjà unique)
+      const reference = `${quote.reference ?? params.id}-C`;
+
+      const contract = await prisma.insuranceContract.create({
+        data: {
+          reference,
+          quoteId: params.id,
+          brokerId: quote.brokerId,
+          productId: quote.productId,
+          startDate: start,
+          endDate: end,
+          annualPremium,
+          status: "ACTIVE",
+        },
+        select: {
+          id: true,
+          reference: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          updatedAt: true,
+        },
+      });
+
+      return createApiResponse(contract, "Contrat créé avec succès");
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
 // PATCH /api/quotes/[id]/contract - Update the contract linked to this quote
 export async function PATCH(
   request: NextRequest,

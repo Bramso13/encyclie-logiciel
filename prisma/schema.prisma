@@ -257,6 +257,8 @@ enum QuoteStatus {
   OFFER_READY
   OFFER_SENT
   ACCEPTED
+  PRIME_CALL_EMITTED   // Appel de prime émis (emissionDate définie sur la prochaine échéance)
+  INSTALLMENT_IN_PROGRESS // Echéance en cours (règlement reçu pour une échéance)
   REJECTED
   EXPIRED
 }
@@ -877,6 +879,10 @@ model PaymentInstallment {
   paidAmount Float?    @default(0)
   paymentMethod PaymentMethod?
   paymentReference String? // Référence du paiement (numéro de chèque, virement, etc.)
+
+  // Date d'émission de l'appel de prime (sauvegardée manuellement ou générée)
+  // Utilisée pour DATE_ETAT_POLICE dans le bordereau quand la prime n'est pas encore payée
+  emissionDate DateTime? @map("emission_date")
 
   // Notes administratives
   adminNotes String?

@@ -253,6 +253,7 @@ export async function PATCH(
           periodEnd?: string;
           paidAt?: string | null;
           paidAmount?: number | null;
+          emissionDate?: string | null;
         }>;
       };
 
@@ -311,6 +312,9 @@ export async function PATCH(
           p.paidAmount !== undefined
             ? (typeof p.paidAmount === "number" ? p.paidAmount : null)
             : undefined;
+        const emissionDate = p.emissionDate !== undefined
+          ? (p.emissionDate ? new Date(p.emissionDate) : null)
+          : undefined;
 
         totalAmountHT += amountHT;
         totalTaxAmount += taxAmount;
@@ -357,6 +361,9 @@ export async function PATCH(
           }
           if (paidAmount !== undefined) {
             updateData.paidAmount = paidAmount;
+          }
+          if (emissionDate !== undefined) {
+            updateData.emissionDate = emissionDate;
           }
           await prisma.paymentInstallment.update({
             where: { id: inst.id },

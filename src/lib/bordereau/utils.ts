@@ -63,6 +63,8 @@ export function mapQuoteStatusToStatutPolice(status: QuoteStatus): string {
     ACCEPTED: "ACCEPTE",
     REJECTED: "REJETE",
     EXPIRED: "EXPIRE",
+    PRIME_CALL_EMITTED: "EMISE",
+    INSTALLMENT_IN_PROGRESS: "EN COURS",
   };
   return mapping[status] || "DEVIS";
 }

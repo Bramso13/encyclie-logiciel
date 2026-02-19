@@ -105,6 +105,7 @@ export async function getPolicesV2(
           dueDate: inst.dueDate,
           status: inst.status,
           paidAt: inst.paidAt,
+          emissionDate: inst.emissionDate ?? null,
         },
         quote,
         contract,
@@ -116,31 +117,14 @@ export async function getPolicesV2(
     );
   }
 
-  return deduplicatePolicesBySiren(rows);
-}
-
-/** Une ligne par SIREN : garde uniquement la première occurrence, sans regrouper. */
-function deduplicatePolicesBySiren(
-  rows: FidelidadePolicesRow[],
-): FidelidadePolicesRow[] {
-  const seenSiren = new Set<string>();
-  const out: FidelidadePolicesRow[] = [];
-
-  for (const row of rows) {
-    const sirenKey = (row.SIREN ?? "").trim();
-    const key = sirenKey
-      ? sirenKey
-      : `_${row.IDENTIFIANT_POLICE}_${row.DATE_FIN_CONTRAT}`;
-    if (seenSiren.has(key)) continue;
-    seenSiren.add(key);
-    out.push(row);
-  }
-
-  out.sort((a, b) =>
+  // Une ligne par échéance — pas de déduplication par SIREN
+  // (une entreprise = un contrat = un échéancier, donc pas de doublon possible)
+  rows.sort((a, b) =>
     (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""),
   );
-  return out;
+  return rows;
 }
+
 
 function mapInstallmentToPolicesRow(params: {
   inst: {
@@ -148,6 +132,7 @@ function mapInstallmentToPolicesRow(params: {
     dueDate: Date;
     status: PaymentScheduleStatus;
     paidAt: Date | null;
+    emissionDate: Date | null;
   };
   quote: {
     reference: string;
@@ -181,7 +166,7 @@ function mapInstallmentToPolicesRow(params: {
     quoteCodeNaf,
   );
 
-  // date_souscription = formData.dateDeffet
+  // DATE_SOUSCRIPTION = date d'effet du formulaire
   const dateDeffetRaw =
     formData.dateDeffet ??
     formData.dateEffet ??
@@ -192,19 +177,15 @@ function mapInstallmentToPolicesRow(params: {
       ? formatDate(dateDeffetRaw as Date | string)
       : DEFAULT_STRING;
 
-  const dateEffet = contract
-    ? formatDate(contract.startDate)
-    : dateDeffetRaw != null
-      ? formatDate(dateDeffetRaw as Date | string)
-      : DEFAULT_STRING;
+  // DATE_EFFET_CONTRAT = contract.startDate uniquement (vide si pas de contrat)
+  const dateEffet = contract ? formatDate(contract.startDate) : DEFAULT_STRING;
 
-  // Date fin contrat = date fin période de l'échéance
+  // DATE_FIN_CONTRAT = fin de période de l'échéance
   const dateFin = formatDate(inst.periodEnd);
 
   const dateDemande = inst.dueDate ? formatDate(inst.dueDate) : DEFAULT_STRING;
 
-  // Si l'échéancier a une date de résiliation, forcer RESILIE
-  // (quel que soit le statut du contrat ou du devis)
+  // ETAT_POLICE
   const statutPolice = resiliationDate
     ? "RESILIE"
     : contract
@@ -218,10 +199,12 @@ function mapInstallmentToPolicesRow(params: {
       )
     : mapQuoteStatusToStatutPolice(quote.status);
 
-  // DATE_STAT_POLICE = dateDeffet
+  // DATE_ETAT_POLICE = paidAt si payé, sinon emissionDate (date d'émission d'appel de prime)
   const dateStatPolice =
-    dateDeffetRaw != null
-      ? formatDate(dateDeffetRaw as Date | string)
+    inst.paidAt != null
+      ? formatDate(inst.paidAt)
+      : inst.emissionDate != null
+      ? formatDate(inst.emissionDate)
       : DEFAULT_STRING;
 
   const fractionnement = toStr(
@@ -230,8 +213,12 @@ function mapInstallmentToPolicesRow(params: {
       formData.fractionnementPrime,
   );
 
-  const motifStatut =
-    inst.status === "PAID" || inst.paidAt != null ? "REGLEMENT" : "EN_COURS";
+  // MOTIF_ETAT : RESILIATION / REGLEMENT / EMISSION
+  const motifEtat = resiliationDate
+    ? "RESILIATION"
+    : inst.status === "PAID" || inst.paidAt != null
+    ? "REGLEMENT"
+    : "EMISSION";
 
   return {
     APPORTEUR: apporteur,
@@ -245,8 +232,8 @@ function mapInstallmentToPolicesRow(params: {
     DATE_ECHEANCE: dateDemande,
     ETAT_POLICE: statutPolice,
     DATE_ETAT_POLICE: dateStatPolice,
-    MOTIF_ETAT: DEFAULT_STRING,
-    MOTIF_STATUT: motifStatut,
+    MOTIF_ETAT: motifEtat,
+    MOTIF_STATUT: motifEtat,
     FRACTIONNEMENT: fractionnement,
     NOM_ENTREPRISE_ASSURE: formFields.nomEntrepriseAssure,
     SIREN: formFields.siren,
