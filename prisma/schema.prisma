@@ -830,6 +830,10 @@ model PaymentSchedule {
   // Statut global
   status PaymentScheduleStatus @default(PENDING)
 
+  // Résiliation
+  resiliationDate   DateTime? @map("resiliation_date")
+  resiliationReason String?   @map("resiliation_reason")
+
   // Relations
   payments PaymentInstallment[]
 

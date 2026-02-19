@@ -9,6 +9,50 @@ import {
 } from "@/lib/api-utils";
 import { ContractStatus } from "@prisma/client";
 
+// GET /api/quotes/[id]/contract - Get the contract linked to this quote
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> },
+) {
+  const params = await props.params;
+  try {
+    return await withAuth(async (userId, userRole) => {
+      const quote = await prisma.quote.findUnique({
+        where: { id: params.id },
+        select: { id: true, brokerId: true },
+      });
+
+      if (!quote) {
+        throw new ApiError(404, "Devis non trouvé");
+      }
+
+      if (userRole === "BROKER" && quote.brokerId !== userId) {
+        throw new ApiError(403, "Accès refusé à ce devis");
+      }
+
+      const contract = await prisma.insuranceContract.findUnique({
+        where: { quoteId: params.id },
+        select: {
+          id: true,
+          reference: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!contract) {
+        return createApiResponse(null, "Aucun contrat associé");
+      }
+
+      return createApiResponse(contract);
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
 // PATCH /api/quotes/[id]/contract - Update the contract linked to this quote
 export async function PATCH(
   request: NextRequest,

@@ -98,6 +98,7 @@ export async function getQuittancesV2(
       paymentMethod: true,
       schedule: {
         select: {
+          // resiliationDate sera disponible après migration + prisma generate
           quote: {
             select: {
               reference: true,
@@ -115,7 +116,24 @@ export async function getQuittancesV2(
     },
   });
 
-  installments.sort((a, b) => {
+  // Filtrer les échéances strictement post-résiliation.
+  // resiliationDate sera sélectionné après migration + prisma generate.
+  const filteredInstallments = (installments as any[]).filter((inst) => {
+    const resiliationDate: Date | null = inst.schedule?.resiliationDate ?? null;
+    if (!resiliationDate) return true;
+    const endOfResiliationMonth = new Date(
+      resiliationDate.getFullYear(),
+      resiliationDate.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+    return inst.periodStart <= endOfResiliationMonth;
+  });
+
+  filteredInstallments.sort((a: any, b: any) => {
     const refA = a.schedule.quote.reference ?? "";
     const refB = b.schedule.quote.reference ?? "";
     if (refA !== refB) return refA.localeCompare(refB);
@@ -129,7 +147,7 @@ export async function getQuittancesV2(
     periodEnd: Date;
   }[] = [];
 
-  for (const inst of installments) {
+  for (const inst of filteredInstallments as any[]) {
     const quote = inst.schedule.quote;
     const formData = (quote.formData ?? {}) as Record<string, unknown>;
     const companyData = (quote.companyData ?? null) as Record<

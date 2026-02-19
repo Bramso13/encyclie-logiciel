@@ -64,7 +64,24 @@ export async function getPolicesV2(
     },
   });
 
-  installments.sort((a, b) => {
+  // Filtrer les échéances post-résiliation.
+  // resiliationDate sera disponible sur le schedule après migration + prisma generate.
+  const filteredInstallments = (installments as any[]).filter((inst) => {
+    const resiliationDate: Date | null = inst.schedule?.resiliationDate ?? null;
+    if (!resiliationDate) return true;
+    const endOfResiliationMonth = new Date(
+      resiliationDate.getFullYear(),
+      resiliationDate.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+    return inst.periodStart <= endOfResiliationMonth;
+  });
+
+  filteredInstallments.sort((a: any, b: any) => {
     const refA = a.schedule.quote.reference ?? "";
     const refB = b.schedule.quote.reference ?? "";
     if (refA !== refB) return refA.localeCompare(refB);
@@ -73,11 +90,13 @@ export async function getPolicesV2(
 
   const rows: FidelidadePolicesRow[] = [];
 
-  for (const inst of installments) {
+  for (const inst of filteredInstallments as any[]) {
     const quote = inst.schedule.quote;
     const contract = quote.contract;
     const companyData = (quote.companyData ?? {}) as Record<string, unknown>;
     const formData = (quote.formData ?? {}) as Record<string, unknown>;
+
+    const resiliationDate: Date | null = inst.schedule?.resiliationDate ?? null;
 
     rows.push(
       mapInstallmentToPolicesRow({
@@ -92,6 +111,7 @@ export async function getPolicesV2(
         companyData,
         formData,
         apporteur,
+        resiliationDate,
       }),
     );
   }
@@ -147,8 +167,9 @@ function mapInstallmentToPolicesRow(params: {
   companyData: Record<string, unknown>;
   formData: Record<string, unknown>;
   apporteur: string;
+  resiliationDate?: Date | null;
 }): FidelidadePolicesRow {
-  const { inst, quote, contract, companyData, formData, apporteur } = params;
+  const { inst, quote, contract, companyData, formData, apporteur, resiliationDate } = params;
   const activityCols = buildActivityColumnsFromFormData(formData);
   const quoteCodeNaf =
     (formData.code_naf as string | null | undefined) ??
@@ -182,7 +203,11 @@ function mapInstallmentToPolicesRow(params: {
 
   const dateDemande = inst.dueDate ? formatDate(inst.dueDate) : DEFAULT_STRING;
 
-  const statutPolice = contract
+  // Si l'échéancier a une date de résiliation, forcer RESILIE
+  // (quel que soit le statut du contrat ou du devis)
+  const statutPolice = resiliationDate
+    ? "RESILIE"
+    : contract
     ? mapContractStatusToEtatPolice(
         contract.status as
           | "ACTIVE"

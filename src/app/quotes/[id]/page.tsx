@@ -25,6 +25,7 @@ import OffreTab from "../tabs/OffreTab";
 import AppelDePrimeTab from "../tabs/AppelDePrimeTab";
 import ContratTab from "../tabs/ContratTab";
 import AggravationTab from "../tabs/AggravationTab";
+import BordereauTab from "../tabs/BordereauTab";
 import { calculateWithMapping } from "@/lib/utils";
 
 export default function QuoteDetailPage() {
@@ -253,6 +254,25 @@ export default function QuoteDetailPage() {
             strokeLinejoin="round"
             strokeWidth={2}
             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "bordereau",
+      label: "Bordereau",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 10h18M3 14h18M3 6h18M3 18h18"
           />
         </svg>
       ),
@@ -745,6 +765,14 @@ export default function QuoteDetailPage() {
 
         {activeTab === "aggravation" && (
           <AggravationTab quote={quote} calculationResult={calculationResult} />
+        )}
+
+        {activeTab === "bordereau" && (
+          <BordereauTab
+            quote={quote}
+            calculationResult={calculationResult}
+            session={session}
+          />
         )}
 
         {activeTab === "chat" && <ChatTab quote={quote} />}
