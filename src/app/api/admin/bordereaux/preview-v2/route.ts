@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { withAuthAndRole } from "@/lib/api-utils";
 import { getPolicesV2, getQuittancesV2 } from "@/lib/bordereau";
+import type { BordereauInclusionOptions } from "@/lib/bordereau";
 
 const prisma = new PrismaClient();
 
@@ -15,7 +16,10 @@ export async function POST(request: NextRequest) {
   return withAuthAndRole(["ADMIN"], async () => {
     try {
       const body = await request.json();
-      const { dateRange } = body as { dateRange?: { startDate: string; endDate: string } };
+      const { dateRange, inclusionOptions } = body as {
+        dateRange?: { startDate: string; endDate: string };
+        inclusionOptions?: BordereauInclusionOptions;
+      };
 
       if (!dateRange?.startDate || !dateRange?.endDate) {
         return NextResponse.json(
@@ -29,8 +33,8 @@ export async function POST(request: NextRequest) {
       const filters = { dateRange: { startDate, endDate } };
 
       const [polices, quittances] = await Promise.all([
-        getPolicesV2(filters, prisma),
-        getQuittancesV2(filters, prisma),
+        getPolicesV2(filters, prisma, inclusionOptions),
+        getQuittancesV2(filters, prisma, inclusionOptions),
       ]);
 
       return NextResponse.json({

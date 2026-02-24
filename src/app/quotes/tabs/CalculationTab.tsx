@@ -1253,19 +1253,26 @@ export default function CalculationTab({
                             2026,
                         )
                         .reduce(
-                          (sum: number, { echeance, origIndex }: { echeance: any; origIndex: number }) => {
+                          (
+                            sum: number,
+                            {
+                              echeance,
+                              origIndex,
+                            }: { echeance: any; origIndex: number },
+                          ) => {
                             const inst = paymentInstallments.find(
                               (p) => p.installmentNumber === origIndex + 1,
                             );
                             const rcd = inst
-                              ? (inst.amountHT ?? 0)
+                              ? inst.rcdAmount && inst.rcdAmount > 0
+                                ? inst.rcdAmount
+                                : (echeance.rcd ?? 0)
                               : (echeance.rcd ?? 0);
                             const pj = inst
                               ? (inst.pjAmount ?? 0)
                               : (echeance.pj ?? 0);
                             const frais = echeance.frais ?? 0;
-                            const fraisGestion =
-                              echeance.fraisGestion ?? 0;
+                            const fraisGestion = echeance.fraisGestion ?? 0;
                             const reprise = inst
                               ? (inst.resumeAmount ?? 0)
                               : (echeance.reprise ?? 0);
@@ -1406,7 +1413,10 @@ export default function CalculationTab({
                                   (p) => p.installmentNumber === origIndex + 1,
                                 );
                                 const rcd = installment
-                                  ? (installment.amountHT ?? 0)
+                                  ? installment.rcdAmount &&
+                                    installment.rcdAmount > 0
+                                    ? installment.rcdAmount
+                                    : (echeance.rcd ?? 0)
                                   : (echeance.rcd ?? 0);
                                 const pj = installment
                                   ? (installment.pjAmount ?? 0)
@@ -1480,7 +1490,9 @@ export default function CalculationTab({
                                       (p) => p.installmentNumber === idx + 1,
                                     );
                                     const rcd = inst
-                                      ? (inst.amountHT ?? 0)
+                                      ? inst.rcdAmount && inst.rcdAmount > 0
+                                        ? inst.rcdAmount
+                                        : (echeance.rcd ?? 0)
                                       : (echeance.rcd ?? 0);
                                     return sum + rcd;
                                   },
@@ -1551,7 +1563,9 @@ export default function CalculationTab({
                                       (p) => p.installmentNumber === idx + 1,
                                     );
                                     const rcd = inst
-                                      ? (inst.amountHT ?? 0)
+                                      ? inst.rcdAmount && inst.rcdAmount > 0
+                                        ? inst.rcdAmount
+                                        : (echeance.rcd ?? 0)
                                       : (echeance.rcd ?? 0);
                                     const pj = inst
                                       ? (inst.pjAmount ?? 0)
@@ -1589,7 +1603,9 @@ export default function CalculationTab({
                                       (p) => p.installmentNumber === idx + 1,
                                     );
                                     const rcd = inst
-                                      ? (inst.amountHT ?? 0)
+                                      ? inst.rcdAmount && inst.rcdAmount > 0
+                                        ? inst.rcdAmount
+                                        : (echeance.rcd ?? 0)
                                       : (echeance.rcd ?? 0);
                                     const pj = inst
                                       ? (inst.pjAmount ?? 0)
@@ -1694,14 +1710,15 @@ export default function CalculationTab({
                                   (p) => p.installmentNumber === origIndex + 1,
                                 );
                                 const rcd = inst
-                                  ? (inst.amountHT ?? 0)
+                                  ? inst.rcdAmount && inst.rcdAmount > 0
+                                    ? inst.rcdAmount
+                                    : (echeance.rcd ?? 0)
                                   : (echeance.rcd ?? 0);
                                 const pj = inst
                                   ? (inst.pjAmount ?? 0)
                                   : (echeance.pj ?? 0);
                                 const frais = echeance.frais ?? 0;
-                                const fraisGestion =
-                                  echeance.fraisGestion ?? 0;
+                                const fraisGestion = echeance.fraisGestion ?? 0;
                                 const reprise = inst
                                   ? (inst.resumeAmount ?? 0)
                                   : (echeance.reprise ?? 0);
@@ -1850,7 +1867,9 @@ export default function CalculationTab({
                                     (p) => p.installmentNumber === idx + 1,
                                   );
                                   const rcd = inst
-                                    ? (inst.amountHT ?? 0)
+                                    ? inst.rcdAmount && inst.rcdAmount > 0
+                                      ? inst.rcdAmount
+                                      : (echeance.rcd ?? 0)
                                     : (echeance.rcd ?? 0);
                                   const pj = inst
                                     ? (inst.pjAmount ?? 0)

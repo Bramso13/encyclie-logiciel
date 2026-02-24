@@ -1216,6 +1216,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
         rcdEcheance +
         fraisGestionEcheance +
         pjEcheance +
+        fraisEcheance +
         (repriseEcheance === undefined ? 0 : repriseEcheance);
 
       const totalTCHEcheance = totalHTEcheance + taxeEcheance;

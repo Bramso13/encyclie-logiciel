@@ -23,9 +23,17 @@ function getActiviteTitleByCode(code: string | number): string {
  * Règle périmètre : une ligne par SIREN (jamais deux lignes avec le même SIREN).
  * On construit une ligne par échéance puis on déduplique par SIREN (DATE_FIN_CONTRAT = max des periodEnd du groupe).
  */
+export interface BordereauInclusionOptions {
+  /** Inclure seulement les échéances ayant une date d'émission (défaut : true) */
+  requireEmission?: boolean;
+  /** Inclure N > 1 seulement si l'échéance précédente est payée (défaut : true) */
+  requirePrevPaid?: boolean;
+}
+
 export async function getPolicesV2(
   filters: BordereauFiltersV2,
   prisma: PrismaClient,
+  options?: BordereauInclusionOptions,
 ): Promise<FidelidadePolicesRow[]> {
   const { dateRange } = filters;
   const apporteur = getApporteur();
@@ -88,9 +96,55 @@ export async function getPolicesV2(
     return a.installmentNumber - b.installmentNumber;
   });
 
+  // ── Filtre d'inclusion bordereau (contrôlé par options) ──────────────────────
+  const doRequireEmission = options?.requireEmission !== false; // true par défaut
+  const doRequirePrevPaid = options?.requirePrevPaid !== false; // true par défaut
+
+  // 1. Filtre emissionDate
+  const withEmission = doRequireEmission
+    ? (filteredInstallments as any[]).filter((i: any) => !!i.emissionDate)
+    : (filteredInstallments as any[]);
+
+  // 2. Filtre échéance précédente payée (uniquement si les deux options sont actives)
+  const prevPaidMap = new Map<string, boolean>();
+  if (doRequirePrevPaid) {
+    const toCheckPrev = withEmission
+      .filter((i: any) => i.installmentNumber > 1)
+      .map((i: any) => ({ scheduleId: i.scheduleId, prevNum: i.installmentNumber - 1 }));
+
+    if (toCheckPrev.length > 0) {
+      const scheduleToNums = new Map<string, Set<number>>();
+      for (const p of toCheckPrev) {
+        if (!scheduleToNums.has(p.scheduleId))
+          scheduleToNums.set(p.scheduleId, new Set());
+        scheduleToNums.get(p.scheduleId)!.add(p.prevNum);
+      }
+      const prevInsts = await prisma.paymentInstallment.findMany({
+        where: {
+          OR: [...scheduleToNums.entries()].map(([scheduleId, nums]) => ({
+            scheduleId,
+            installmentNumber: { in: [...nums] },
+          })),
+        },
+        select: { scheduleId: true, installmentNumber: true, status: true, paidAt: true },
+      });
+      for (const prev of prevInsts) {
+        const key = `${prev.scheduleId}-${prev.installmentNumber}`;
+        prevPaidMap.set(key, prev.status === "PAID" || prev.paidAt !== null);
+      }
+    }
+  }
+
+  const bordereauInstallments = withEmission.filter((inst: any) => {
+    if (!doRequirePrevPaid) return true;
+    if (inst.installmentNumber === 1) return true;
+    const key = `${inst.scheduleId}-${inst.installmentNumber - 1}`;
+    return prevPaidMap.get(key) === true;
+  });
+
   const rows: FidelidadePolicesRow[] = [];
 
-  for (const inst of filteredInstallments as any[]) {
+  for (const inst of bordereauInstallments as any[]) {
     const quote = inst.schedule.quote;
     const contract = quote.contract;
     const companyData = (quote.companyData ?? {}) as Record<string, unknown>;
@@ -101,11 +155,13 @@ export async function getPolicesV2(
     rows.push(
       mapInstallmentToPolicesRow({
         inst: {
+          periodStart: inst.periodStart,
           periodEnd: inst.periodEnd,
           dueDate: inst.dueDate,
           status: inst.status,
           paidAt: inst.paidAt,
           emissionDate: inst.emissionDate ?? null,
+          installmentNumber: inst.installmentNumber,
         },
         quote,
         contract,
@@ -117,22 +173,37 @@ export async function getPolicesV2(
     );
   }
 
-  // Une ligne par échéance — pas de déduplication par SIREN
-  // (une entreprise = un contrat = un échéancier, donc pas de doublon possible)
+  // Déduplication par SIREN — même logique que pour les Quittances :
+  // une seule ligne par SIREN (première occurrence après tri).
+  // Si pas de SIREN, on utilise l'IDENTIFIANT_POLICE comme clé de fallback.
+  const seenSiren = new Set<string>();
+  const deduped: FidelidadePolicesRow[] = [];
+
   rows.sort((a, b) =>
     (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""),
   );
-  return rows;
+
+  for (const row of rows) {
+    const sirenKey = row.SIREN?.trim();
+    const key = sirenKey ? sirenKey : `_${row.IDENTIFIANT_POLICE}`;
+    if (seenSiren.has(key)) continue;
+    seenSiren.add(key);
+    deduped.push(row);
+  }
+
+  return deduped;
 }
 
 
 function mapInstallmentToPolicesRow(params: {
   inst: {
+    periodStart: Date;
     periodEnd: Date;
     dueDate: Date;
     status: PaymentScheduleStatus;
     paidAt: Date | null;
     emissionDate: Date | null;
+    installmentNumber: number;
   };
   quote: {
     reference: string;
@@ -177,27 +248,20 @@ function mapInstallmentToPolicesRow(params: {
       ? formatDate(dateDeffetRaw as Date | string)
       : DEFAULT_STRING;
 
-  // DATE_EFFET_CONTRAT = contract.startDate uniquement (vide si pas de contrat)
-  const dateEffet = contract ? formatDate(contract.startDate) : DEFAULT_STRING;
+  // DATE_EFFET_CONTRAT = début de période de l'échéance
+  const dateEffet = formatDate(inst.periodStart);
 
   // DATE_FIN_CONTRAT = fin de période de l'échéance
   const dateFin = formatDate(inst.periodEnd);
 
   const dateDemande = inst.dueDate ? formatDate(inst.dueDate) : DEFAULT_STRING;
 
-  // ETAT_POLICE
+  // ETAT_POLICE : RESILIE > SOUSCRIPTION (1re échéance) > EN COURS (autres)
   const statutPolice = resiliationDate
     ? "RESILIE"
-    : contract
-    ? mapContractStatusToEtatPolice(
-        contract.status as
-          | "ACTIVE"
-          | "SUSPENDED"
-          | "EXPIRED"
-          | "CANCELLED"
-          | "PENDING_RENEWAL",
-      )
-    : mapQuoteStatusToStatutPolice(quote.status);
+    : inst.installmentNumber === 1
+    ? "SOUSCRIPTION"
+    : "EN COURS";
 
   // DATE_ETAT_POLICE = paidAt si payé, sinon emissionDate (date d'émission d'appel de prime)
   const dateStatPolice =

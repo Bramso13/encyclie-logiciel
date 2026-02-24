@@ -235,8 +235,7 @@ function computePolicesRows(
     fd.dateDeffet ?? fd.dateEffet ?? fd.dateDebut ?? fd.startDate;
   const dateSouscription = dateDeffetRaw ? fmtDate(dateDeffetRaw) : "";
 
-  // DATE_EFFET_CONTRAT = contract.startDate uniquement
-  const dateEffet = contract ? fmtDate(contract.startDate) : "";
+  // DATE_EFFET_CONTRAT = début de période de l'échéance (per-row, défini dans la boucle)
 
   const fractionnement = toStr(
     fd.periodicity ?? fd.periodicite ?? fd.fractionnementPrime,
@@ -277,7 +276,7 @@ function computePolicesRows(
     APPORTEUR: APPORTEUR_CODE,
     IDENTIFIANT_POLICE: quoteRef,
     DATE_SOUSCRIPTION: dateSouscription,
-    DATE_EFFET_CONTRAT: dateEffet,
+    // DATE_EFFET_CONTRAT est per-installment (= periodStart), défini dans la boucle
     NUMERO_AVENANT: "",
     MOTIF_AVENANT: "",
     DATE_EFFET_AVENANT: "",
@@ -307,12 +306,12 @@ function computePolicesRows(
       !!instPeriodStart &&
       instPeriodStart <= resiliationEndOfMonth;
 
-    // ETAT_POLICE pour cette ligne
+    // ETAT_POLICE : RESILIE > SOUSCRIPTION (1re) > EN COURS (autres)
     const etatPolice = isResiliated
       ? "RESILIE"
-      : contract
-        ? (CONTRACT_STATUS[contract.status] ?? "EN COURS")
-        : (STATUS_POLICE[quoteStatus] ?? "DEVIS");
+      : inst.installmentNumber === 1
+        ? "SOUSCRIPTION"
+        : "EN COURS";
 
     // DATE_ETAT_POLICE = paidAt si payé, sinon emissionDate
     const dateStatPolice = inst.paidAt
@@ -328,8 +327,12 @@ function computePolicesRows(
         ? "REGLEMENT"
         : "EMISSION";
 
+    // DATE_EFFET_CONTRAT = début de période de l'échéance
+    const dateEffet = fmtDate(inst.periodStart);
+
     return {
       ...sharedFields,
+      DATE_EFFET_CONTRAT: dateEffet,
       DATE_FIN_CONTRAT: fmtDate(inst.periodEnd),
       DATE_ECHEANCE: fmtDate(inst.dueDate),
       ETAT_POLICE: etatPolice,
@@ -845,6 +848,22 @@ export default function BordereauTab({
     const periodStart = inst.periodStart ? new Date(inst.periodStart) : null;
     if (!periodStart) return false;
     return periodStart > resiliationEndOfMonth;
+  };
+
+  /**
+   * Retourne true si l'échéance n'apparaît PAS dans le bordereau généré :
+   * - pas de date d'émission, OU
+   * - l'échéance précédente n'est pas encore payée (pour N > 1)
+   */
+  const isExcludedFromBordereau = (inst: LocalInstallment): boolean => {
+    if (!inst.emissionDate) return true;
+    if (inst.installmentNumber <= 1) return false;
+    const prevIdx = installments.findIndex(
+      (i) => i.installmentNumber === inst.installmentNumber - 1,
+    );
+    if (prevIdx === -1) return false; // précédente introuvable → on laisse passer
+    const prev = installments[prevIdx];
+    return prev.status !== "PAID" && prev.paidAt == null;
   };
 
   const openResiliationModal = () => {
@@ -1690,61 +1709,57 @@ export default function BordereauTab({
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-indigo-50 text-indigo-800 text-xs border-b border-indigo-200">
-                          <th className="px-3 py-2 text-center font-semibold">
-                            N°
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            DATE_FIN_CONTRAT
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            DATE_ECHEANCE
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            DATE_ETAT_POLICE
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            ETAT_POLICE
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            MOTIF_ETAT
-                          </th>
+                          <th className="px-3 py-2 text-center font-semibold">N°</th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_EFFET_CONTRAT</th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_FIN_CONTRAT</th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_ECHEANCE</th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_ETAT_POLICE</th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">ETAT_POLICE</th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">MOTIF_ETAT</th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Dans BDX ?</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {policesRows.map((row, idx) => {
                           const inst = installments[idx];
-                          const excluded = inst
-                            ? isExcludedByResiliation(inst)
-                            : false;
+                          const excludedResil = inst ? isExcludedByResiliation(inst) : false;
+                          const excludedBdx = inst ? isExcludedFromBordereau(inst) : true;
+                          const excluded = excludedResil || excludedBdx;
                           const motifColor =
                             row.MOTIF_ETAT === "REGLEMENT"
                               ? "text-emerald-700 bg-emerald-50"
                               : row.MOTIF_ETAT === "RESILIATION"
                                 ? "text-red-700 bg-red-50"
                                 : "text-amber-700 bg-amber-50";
+                          const etatColor =
+                            row.ETAT_POLICE === "RESILIE"
+                              ? "bg-red-100 text-red-700"
+                              : row.ETAT_POLICE === "SOUSCRIPTION"
+                                ? "bg-indigo-100 text-indigo-700"
+                                : "bg-blue-100 text-blue-700";
                           return (
                             <tr
                               key={idx}
                               className={
                                 excluded
-                                  ? "opacity-40 bg-red-50"
+                                  ? "opacity-40 bg-gray-50"
                                   : idx % 2 === 0
                                     ? "bg-white"
                                     : "bg-gray-50"
                               }
                               title={
-                                excluded
+                                excludedResil
                                   ? "Hors bordereau (après résiliation)"
-                                  : undefined
+                                  : excludedBdx
+                                    ? "Hors bordereau (pas d'émission ou précédente non réglée)"
+                                    : undefined
                               }
                             >
                               <td className="px-3 py-2 text-center font-semibold text-gray-700">
                                 {inst?.installmentNumber ?? idx + 1}
-                                {excluded && (
-                                  <div className="text-xs text-red-400 font-normal">
-                                    Hors BDX
-                                  </div>
-                                )}
+                              </td>
+                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                                {row.DATE_EFFET_CONTRAT || "—"}
                               </td>
                               <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
                                 {row.DATE_FIN_CONTRAT || "—"}
@@ -1754,23 +1769,13 @@ export default function BordereauTab({
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap">
                                 {row.DATE_ETAT_POLICE ? (
-                                  <span className="text-gray-700">
-                                    {row.DATE_ETAT_POLICE}
-                                  </span>
+                                  <span className="text-gray-700">{row.DATE_ETAT_POLICE}</span>
                                 ) : (
-                                  <span className="text-gray-300 italic">
-                                    Non définie — saisir date émission
-                                  </span>
+                                  <span className="text-gray-300 italic text-xs">Non définie</span>
                                 )}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap">
-                                <span
-                                  className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${
-                                    row.ETAT_POLICE === "RESILIE"
-                                      ? "bg-red-100 text-red-700"
-                                      : "bg-blue-100 text-blue-700"
-                                  }`}
-                                >
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${etatColor}`}>
                                   {row.ETAT_POLICE || "—"}
                                 </span>
                               </td>
@@ -1781,17 +1786,27 @@ export default function BordereauTab({
                                   {row.MOTIF_ETAT || "—"}
                                 </span>
                               </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                {excluded ? (
+                                  <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-400">
+                                    {excludedResil ? "Résilié" : "Hors BDX"}
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                    ✓ Inclus
+                                  </span>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
-                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
-                    DATE_ETAT_POLICE = <span className="font-mono">paidAt</span>{" "}
-                    si payé, sinon{" "}
-                    <span className="font-mono">emissionDate</span> (colonne «
-                    Date émission » dans Feuille 2)
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400 space-y-0.5">
+                    <div>DATE_EFFET_CONTRAT = début de période de l'échéance · DATE_ETAT_POLICE = <span className="font-mono">paidAt</span> si payé, sinon <span className="font-mono">emissionDate</span></div>
+                    <div>ETAT_POLICE : SOUSCRIPTION (1re échéance) · EN COURS (autres) · RESILIE (si résilié)</div>
+                    <div className="text-amber-600">Règle d'inclusion : date d'émission requise + échéance précédente réglée</div>
                   </div>
                 </div>
               </>
@@ -1917,27 +1932,32 @@ export default function BordereauTab({
                     <tbody className="divide-y divide-gray-100">
                       {installments.map((inst, idx) => {
                         const row = quittancesRows[idx];
-                        const excluded = isExcludedByResiliation(inst);
+                        const excludedResil = isExcludedByResiliation(inst);
+                        const excludedBdx = isExcludedFromBordereau(inst);
+                        const excluded = excludedResil || excludedBdx;
+                        const exclusionReason = excludedResil
+                          ? "Hors bordereau : période après la résiliation"
+                          : excludedBdx && !inst.emissionDate
+                            ? "Hors bordereau : date d'émission manquante"
+                            : excludedBdx
+                              ? "Hors bordereau : échéance précédente non réglée"
+                              : undefined;
                         return (
                           <tr
                             key={inst.id}
                             className={
                               excluded
-                                ? "opacity-40 bg-red-50 line-through-[cells]"
+                                ? "opacity-40 bg-gray-50"
                                 : "hover:bg-gray-50 transition-colors"
                             }
-                            title={
-                              excluded
-                                ? "Hors bordereau : période après la résiliation"
-                                : undefined
-                            }
+                            title={exclusionReason}
                           >
                             {/* N° + badge hors bordereau */}
                             <td className="px-3 py-1.5 font-semibold text-gray-700 text-center">
                               {inst.installmentNumber}
                               {excluded && (
-                                <div className="text-xs font-normal text-red-500 whitespace-nowrap mt-0.5">
-                                  Hors bordereau
+                                <div className="text-xs font-normal text-gray-400 whitespace-nowrap mt-0.5">
+                                  {excludedResil ? "Résilié" : "Hors BDX"}
                                 </div>
                               )}
                             </td>

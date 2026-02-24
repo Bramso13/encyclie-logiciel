@@ -11,6 +11,7 @@ import {
   getQuittancesFileName,
   getBordereauZipFileName,
 } from "@/lib/bordereau";
+import type { BordereauInclusionOptions } from "@/lib/bordereau";
 
 const prisma = new PrismaClient();
 
@@ -28,10 +29,12 @@ export async function POST(request: NextRequest) {
         dateRange,
         polices: policesOverride,
         quittances: quittancesOverride,
+        inclusionOptions,
       } = body as {
         dateRange?: { startDate: string; endDate: string };
         polices?: import("@/lib/bordereau").FidelidadePolicesRow[];
         quittances?: import("@/lib/bordereau").FidelidadeQuittancesRow[];
+        inclusionOptions?: BordereauInclusionOptions;
       };
 
       if (!dateRange?.startDate || !dateRange?.endDate) {
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "dateRange.startDate et dateRange.endDate requis",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -55,8 +58,8 @@ export async function POST(request: NextRequest) {
       if (!policesRows || !quittancesRows) {
         const filters = { dateRange: { startDate, endDate } };
         const [p, q] = await Promise.all([
-          getPolicesV2(filters, prisma),
-          getQuittancesV2(filters, prisma),
+          getPolicesV2(filters, prisma, inclusionOptions),
+          getQuittancesV2(filters, prisma, inclusionOptions),
         ]);
         policesRows = policesRows ?? p;
         quittancesRows = quittancesRows ?? q;
@@ -91,6 +94,10 @@ export async function POST(request: NextRequest) {
               startDate: dateRange.startDate,
               endDate: dateRange.endDate,
             },
+            inclusionOptions: (inclusionOptions ?? {
+              requireEmission: true,
+              requirePrevPaid: true,
+            }) as Record<string, boolean>,
           },
           csvDataPolices: policesRows as unknown as object,
           csvDataQuittances: quittancesRows as unknown as object,
@@ -117,7 +124,7 @@ export async function POST(request: NextRequest) {
               ? error.message
               : "Échec de l'export bordereau",
         },
-        { status: 500 }
+        { status: 500 },
       );
     } finally {
       await prisma.$disconnect();

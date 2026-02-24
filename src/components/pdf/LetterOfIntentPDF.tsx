@@ -376,12 +376,14 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
   // Séparer les échéances par année (selon la date de début)
   const echeances2025 =
     calculationResult?.echeancier?.echeances?.filter(
-      (echeance: any) => getYearFromDate(echeance.date) === 2025
+      (echeance: any) => getYearFromDate(echeance.date) === 2025,
     ) || [];
   const echeances2026 =
     calculationResult?.echeancier?.echeances?.filter(
-      (echeance: any) => getYearFromDate(echeance.date) === 2026
+      (echeance: any) => getYearFromDate(echeance.date) === 2026,
     ) || [];
+
+  console.log("echeances2026", echeances2026);
 
   // Fonction helper pour calculer les totaux d'un tableau d'échéances
   const calculateTotals = (echeances: any[]) => {
@@ -391,7 +393,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
       frais: echeances.reduce((sum, e) => sum + (e.frais || 0), 0),
       fraisGestion: echeances.reduce(
         (sum, e) => sum + (e.fraisGestion || 0),
-        0
+        0,
       ),
       reprise: echeances.reduce((sum, e) => sum + (e.reprise || 0), 0),
       totalHT: echeances.reduce((sum, e) => sum + (e.totalHT || 0), 0),
@@ -614,8 +616,8 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             {formatDate(frenchToEnglishDate(echeances[0]?.date || ""))} au{" "}
             {formatDate(
               frenchToEnglishDate(
-                echeances[echeances.length - 1]?.finPeriode || ""
-              )
+                echeances[echeances.length - 1]?.finPeriode || "",
+              ),
             )}
           </Text>
           <Text style={[styles.tableCell, styles.tableCellAmount]}></Text>
@@ -844,7 +846,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
             Date de création de l'entreprise :{" "}
             {formatDate(
               quote?.formData?.companyCreationDate ||
-                quote?.companyData?.creationDate
+                quote?.companyData?.creationDate,
             ) || "xxx"}
           </Text>
         </View>
@@ -877,7 +879,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
                     ]}
                   >
                     {tableauTax.find(
-                      (tax) => tax.code.toString() === activity.code
+                      (tax) => tax.code.toString() === activity.code,
                     )?.title || "—"}
                   </Text>
                   <Text

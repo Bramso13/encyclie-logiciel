@@ -7,6 +7,35 @@ import type {
 } from "@/lib/bordereau";
 import { POLICES_COLUMNS, QUITTANCES_COLUMNS } from "@/lib/bordereau";
 
+function Toggle({
+  checked,
+  onChange,
+  id,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  id: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      id={id}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+        checked ? "bg-indigo-600" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+          checked ? "translate-x-4" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
 type TabId = "polices" | "quittances";
 
 const HISTORY_PAGE_SIZE = 20;
@@ -149,6 +178,11 @@ const defaultYear = now.getFullYear();
 export default function BordereauxPage() {
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
   const [selectedYear, setSelectedYear] = useState(defaultYear);
+
+  // Filtres d'inclusion bordereau
+  const [requireEmission, setRequireEmission] = useState(true);
+  const [requirePrevPaid, setRequirePrevPaid] = useState(true);
+
   const [polices, setPolices] = useState<FidelidadePolicesRow[]>([]);
   const [quittances, setQuittances] = useState<FidelidadeQuittancesRow[]>([]);
   const [editedPolices, setEditedPolices] = useState<FidelidadePolicesRow[]>(
@@ -264,10 +298,8 @@ export default function BordereauxPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          dateRange: {
-            startDate,
-            endDate,
-          },
+          dateRange: { startDate, endDate },
+          inclusionOptions: { requireEmission, requirePrevPaid },
         }),
       });
 
@@ -320,12 +352,10 @@ export default function BordereauxPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          dateRange: {
-            startDate,
-            endDate,
-          },
+          dateRange: { startDate, endDate },
           polices: editedPolices,
           quittances: editedQuittances,
+          inclusionOptions: { requireEmission, requirePrevPaid },
         }),
       });
 
@@ -426,6 +456,66 @@ export default function BordereauxPage() {
               </select>
             </div>
 
+            {/* Séparateur vertical */}
+            <div className="hidden sm:block w-px h-10 bg-gray-200" />
+
+            {/* Filtres d'inclusion */}
+            <div className="flex flex-col gap-2.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Filtres d'inclusion
+              </p>
+              <div className="flex items-center gap-2">
+                <Toggle
+                  id="filter-emission"
+                  checked={requireEmission}
+                  onChange={(v) => {
+                    setRequireEmission(v);
+                    setShowPreview(false);
+                  }}
+                />
+                <label
+                  htmlFor="filter-emission"
+                  className="text-sm text-gray-700 cursor-pointer select-none"
+                >
+                  Date d'émission requise
+                </label>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    requireEmission
+                      ? "bg-indigo-100 text-indigo-700"
+                      : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  {requireEmission ? "ON" : "OFF"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Toggle
+                  id="filter-prev-paid"
+                  checked={requirePrevPaid}
+                  onChange={(v) => {
+                    setRequirePrevPaid(v);
+                    setShowPreview(false);
+                  }}
+                />
+                <label
+                  htmlFor="filter-prev-paid"
+                  className="text-sm text-gray-700 cursor-pointer select-none"
+                >
+                  Échéance précédente réglée
+                </label>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    requirePrevPaid
+                      ? "bg-indigo-100 text-indigo-700"
+                      : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  {requirePrevPaid ? "ON" : "OFF"}
+                </span>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button
                 onClick={handlePreview}
@@ -467,6 +557,34 @@ export default function BordereauxPage() {
               )}
             </div>
           </div>
+
+          {/* Récapitulatif des filtres actifs */}
+          {(!requireEmission || !requirePrevPaid) && (
+            <div className="mt-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800">
+              <svg
+                className="w-4 h-4 mt-0.5 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>
+                Filtres assouplis :{" "}
+                {!requireEmission && (
+                  <strong>date d'émission non requise</strong>
+                )}
+                {!requireEmission && !requirePrevPaid && " · "}
+                {!requirePrevPaid && (
+                  <strong>échéance précédente non vérifiée</strong>
+                )}{" "}
+                — le bordereau peut inclure des échéances non encore émises.
+              </span>
+            </div>
+          )}
 
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-4">

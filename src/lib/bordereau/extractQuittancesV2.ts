@@ -61,6 +61,7 @@ function computeTauxTaxe(formData: Record<string, unknown>): string {
 export async function getQuittancesV2(
   filters: BordereauFiltersV2,
   prisma: PrismaClient,
+  options?: import("./extractPolicesV2").BordereauInclusionOptions,
 ): Promise<FidelidadeQuittancesRow[]> {
   const { dateRange } = filters;
   const apporteur = getApporteur();
@@ -86,6 +87,7 @@ export async function getQuittancesV2(
       ],
     },
     select: {
+      scheduleId: true,
       periodStart: true,
       periodEnd: true,
       dueDate: true,
@@ -113,12 +115,11 @@ export async function getQuittancesV2(
         take: 1,
         select: { method: true },
       },
-    },
+    } as any,
   });
 
   // Filtrer les échéances strictement post-résiliation.
-  // resiliationDate sera sélectionné après migration + prisma generate.
-  const filteredInstallments = (installments as any[]).filter((inst) => {
+  const filteredByResiliation = (installments as any[]).filter((inst) => {
     const resiliationDate: Date | null = inst.schedule?.resiliationDate ?? null;
     if (!resiliationDate) return true;
     const endOfResiliationMonth = new Date(
@@ -131,6 +132,50 @@ export async function getQuittancesV2(
       999
     );
     return inst.periodStart <= endOfResiliationMonth;
+  });
+
+  // ── Filtre d'inclusion bordereau (contrôlé par options) ──────────────────────
+  const doRequireEmission = options?.requireEmission !== false;
+  const doRequirePrevPaid = options?.requirePrevPaid !== false;
+
+  const withEmission = doRequireEmission
+    ? filteredByResiliation.filter((i: any) => !!i.emissionDate)
+    : filteredByResiliation;
+
+  const prevPaidMapQ = new Map<string, boolean>();
+  if (doRequirePrevPaid) {
+    const toCheckPrev = withEmission
+      .filter((i: any) => i.installmentNumber > 1)
+      .map((i: any) => ({ scheduleId: i.scheduleId, prevNum: i.installmentNumber - 1 }));
+
+    if (toCheckPrev.length > 0) {
+      const scheduleToNums = new Map<string, Set<number>>();
+      for (const p of toCheckPrev) {
+        if (!scheduleToNums.has(p.scheduleId))
+          scheduleToNums.set(p.scheduleId, new Set());
+        scheduleToNums.get(p.scheduleId)!.add(p.prevNum);
+      }
+      const prevInsts = await prisma.paymentInstallment.findMany({
+        where: {
+          OR: [...scheduleToNums.entries()].map(([scheduleId, nums]) => ({
+            scheduleId,
+            installmentNumber: { in: [...nums] },
+          })),
+        },
+        select: { scheduleId: true, installmentNumber: true, status: true, paidAt: true },
+      });
+      for (const prev of prevInsts) {
+        const key = `${prev.scheduleId}-${prev.installmentNumber}`;
+        prevPaidMapQ.set(key, prev.status === "PAID" || prev.paidAt !== null);
+      }
+    }
+  }
+
+  const filteredInstallments = withEmission.filter((inst: any) => {
+    if (!doRequirePrevPaid) return true;
+    if (inst.installmentNumber === 1) return true;
+    const key = `${inst.scheduleId}-${inst.installmentNumber - 1}`;
+    return prevPaidMapQ.get(key) === true;
   });
 
   filteredInstallments.sort((a: any, b: any) => {
