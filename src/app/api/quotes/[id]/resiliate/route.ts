@@ -21,7 +21,7 @@ import {
  */
 export async function POST(
   request: NextRequest,
-  props: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ id: string }> },
 ) {
   const params = await props.params;
   try {
@@ -54,9 +54,11 @@ export async function POST(
         select: { id: true },
       });
 
-      if (!schedule) throw new ApiError(404, "Échéancier non trouvé pour ce devis");
+      if (!schedule)
+        throw new ApiError(404, "Échéancier non trouvé pour ce devis");
 
-      const isResiliate = resiliationDate !== null && resiliationDate !== undefined;
+      const isResiliate =
+        resiliationDate !== null && resiliationDate !== undefined;
 
       await prisma.$transaction(async (tx) => {
         // 1. Mise à jour de l'échéancier
@@ -79,6 +81,14 @@ export async function POST(
             },
           });
         }
+      });
+
+      await prisma.quote.update({
+        where: { id: params.id },
+        data: {
+          status: isResiliate ? "REJECTED" : "IN_PROGRESS",
+          updatedAt: new Date(),
+        },
       });
 
       // Retourner l'état mis à jour
@@ -104,7 +114,7 @@ export async function POST(
 
       return createApiResponse(
         { schedule: updatedSchedule, contract: updatedContract },
-        message
+        message,
       );
     });
   } catch (error) {

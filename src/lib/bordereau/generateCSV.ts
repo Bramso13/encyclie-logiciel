@@ -86,7 +86,7 @@ export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
   "ETAT_POLICE",
   "DATE_ETAT_POLICE",
 
-  "MOTIF_STATUT",
+  "MOTIF_ETAT",
   "FRACTIONNEMENT",
   "NOM_ENTREPRISE_ASSURE",
   "SIREN",
@@ -114,7 +114,7 @@ export const POLICES_COLUMNS: (keyof FidelidadePolicesRow)[] = [
   "POID_ACTIVITE_8",
 ];
 
-/** Colonnes Feuille 2 Quittances (sans DATE_EMISSION_QUITTANCE ni TAUX_COMMISSIONS, avec TAUX_TAXE) */
+/** Colonnes Feuille 2 Quittances (avec DATE_EMISSION_QUITTANCE, TAUX_TAXE) */
 export const QUITTANCES_COLUMNS: (keyof FidelidadeQuittancesRow)[] = [
   "APPORTEUR",
   "IDENTIFIANT_POLICE",
@@ -122,6 +122,7 @@ export const QUITTANCES_COLUMNS: (keyof FidelidadeQuittancesRow)[] = [
   "IDENTIFIANT_QUITTANCE",
   "DATE_EFFET_QUITTANCE",
   "DATE_FIN_QUITTANCE",
+  "DATE_EMISSION_QUITTANCE",
   "DATE_ENCAISSEMENT",
   "STATUT_QUITTANCE",
   "GARANTIE",

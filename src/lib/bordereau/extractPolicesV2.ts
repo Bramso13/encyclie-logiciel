@@ -84,7 +84,7 @@ export async function getPolicesV2(
       23,
       59,
       59,
-      999
+      999,
     );
     return inst.periodStart <= endOfResiliationMonth;
   });
@@ -110,7 +110,10 @@ export async function getPolicesV2(
   if (doRequirePrevPaid) {
     const toCheckPrev = withEmission
       .filter((i: any) => i.installmentNumber > 1)
-      .map((i: any) => ({ scheduleId: i.scheduleId, prevNum: i.installmentNumber - 1 }));
+      .map((i: any) => ({
+        scheduleId: i.scheduleId,
+        prevNum: i.installmentNumber - 1,
+      }));
 
     if (toCheckPrev.length > 0) {
       const scheduleToNums = new Map<string, Set<number>>();
@@ -126,7 +129,12 @@ export async function getPolicesV2(
             installmentNumber: { in: [...nums] },
           })),
         },
-        select: { scheduleId: true, installmentNumber: true, status: true, paidAt: true },
+        select: {
+          scheduleId: true,
+          installmentNumber: true,
+          status: true,
+          paidAt: true,
+        },
       });
       for (const prev of prevInsts) {
         const key = `${prev.scheduleId}-${prev.installmentNumber}`;
@@ -194,7 +202,6 @@ export async function getPolicesV2(
   return deduped;
 }
 
-
 function mapInstallmentToPolicesRow(params: {
   inst: {
     periodStart: Date;
@@ -225,7 +232,15 @@ function mapInstallmentToPolicesRow(params: {
   apporteur: string;
   resiliationDate?: Date | null;
 }): FidelidadePolicesRow {
-  const { inst, quote, contract, companyData, formData, apporteur, resiliationDate } = params;
+  const {
+    inst,
+    quote,
+    contract,
+    companyData,
+    formData,
+    apporteur,
+    resiliationDate,
+  } = params;
   const activityCols = buildActivityColumnsFromFormData(formData);
   const quoteCodeNaf =
     (formData.code_naf as string | null | undefined) ??
@@ -260,16 +275,16 @@ function mapInstallmentToPolicesRow(params: {
   const statutPolice = resiliationDate
     ? "RESILIE"
     : inst.installmentNumber === 1
-    ? "SOUSCRIPTION"
-    : "EN COURS";
+      ? "SOUSCRIPTION"
+      : "EN COURS";
 
   // DATE_ETAT_POLICE = paidAt si payé, sinon emissionDate (date d'émission d'appel de prime)
   const dateStatPolice =
     inst.paidAt != null
       ? formatDate(inst.paidAt)
       : inst.emissionDate != null
-      ? formatDate(inst.emissionDate)
-      : DEFAULT_STRING;
+        ? formatDate(inst.emissionDate)
+        : DEFAULT_STRING;
 
   const fractionnement = toStr(
     formData.periodicity ??
@@ -281,8 +296,8 @@ function mapInstallmentToPolicesRow(params: {
   const motifEtat = resiliationDate
     ? "RESILIATION"
     : inst.status === "PAID" || inst.paidAt != null
-    ? "REGLEMENT"
-    : "EMISSION";
+      ? "REGLEMENT"
+      : "EMISSION";
 
   return {
     APPORTEUR: apporteur,
@@ -297,7 +312,7 @@ function mapInstallmentToPolicesRow(params: {
     ETAT_POLICE: statutPolice,
     DATE_ETAT_POLICE: dateStatPolice,
     MOTIF_ETAT: motifEtat,
-    MOTIF_STATUT: motifEtat,
+
     FRACTIONNEMENT: fractionnement,
     NOM_ENTREPRISE_ASSURE: formFields.nomEntrepriseAssure,
     SIREN: formFields.siren,

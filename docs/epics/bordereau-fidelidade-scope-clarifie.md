@@ -49,7 +49,7 @@ Document de synthèse des réponses d’élicitation pour aligner l’epic et le
 
 ### Feuille 1 — Polices (ex. ~25+ colonnes)
 
-AGENT ASSURÉ, IDENTIFIANT_POLICE, DATE_SOUSCRIPTION, DATE_EFFET_CONTRAT, DATE_FIN_CONTRAT, NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT, DATE_DEMANDE, STATUT_POLICE, DATE_STAT_POLICE, MOTIF_STATUT, TYPE_CONTRAT, COMPAGNIE, NOM_ENTREPRISE_ASSURE, SIREN, ACTIVITÉ, ADRESSE_RISQUE, VILLE_RISQUE, CODE_POSTAL_RISQUE, CA_ENTREPRISE, EFFECTIF_ENTREPRISE, CODE_NAF, LIBELLÉ_ACTIVITÉ (x8), POIDS_ACTIVITÉ (x8).
+AGENT ASSURÉ, IDENTIFIANT_POLICE, DATE_SOUSCRIPTION, DATE_EFFET_CONTRAT, DATE_FIN_CONTRAT, NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT, DATE_DEMANDE, STATUT_POLICE, DATE_STAT_POLICE, MOTIF_ETAT, TYPE_CONTRAT, COMPAGNIE, NOM_ENTREPRISE_ASSURE, SIREN, ACTIVITÉ, ADRESSE_RISQUE, VILLE_RISQUE, CODE_POSTAL_RISQUE, CA_ENTREPRISE, EFFECTIF_ENTREPRISE, CODE_NAF, LIBELLÉ_ACTIVITÉ (x8), POIDS_ACTIVITÉ (x8).
 
 ### Feuille 2 — Quittances
 
@@ -59,15 +59,15 @@ APPORTEUR, IDENTIFIANT_POLICE, NUMERO_AVENANT, IDENTIFIANT_QUITTANCE, DATE_EMISS
 
 ## 7. Écarts à corriger dans l’epic / les stories
 
-| Point | Avant (epic/stories) | Après (scope clarifié) |
-|-------|----------------------|-------------------------|
-| Nombre de fichiers | 1 CSV (36 colonnes) | 2 CSV (polices + quittances) |
-| Filtre courtiers | Multi-sélect courtiers | Supprimé ; APPORTEUR = constante |
-| Données Feuille 1 | Contrats filtrés par échéance | Contrats + quotes ACCEPTED ; une ligne = une police |
-| Données Feuille 2 | Absent | Une ligne = une échéance ; IDENTIFIANT_QUITTANCE = IDENTIFIANT_POLICE + Q1/Q2… |
-| Paires activités | Jusqu’à 8 (déjà ok) | Exactement 8 paires |
-| Qualité | Prévisualisation + édition manuelle | Mapping exhaustif ; valeurs correctes par défaut ; édition pour correction ponctuelle |
+| Point              | Avant (epic/stories)                | Après (scope clarifié)                                                                |
+| ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------- |
+| Nombre de fichiers | 1 CSV (36 colonnes)                 | 2 CSV (polices + quittances)                                                          |
+| Filtre courtiers   | Multi-sélect courtiers              | Supprimé ; APPORTEUR = constante                                                      |
+| Données Feuille 1  | Contrats filtrés par échéance       | Contrats + quotes ACCEPTED ; une ligne = une police                                   |
+| Données Feuille 2  | Absent                              | Une ligne = une échéance ; IDENTIFIANT_QUITTANCE = IDENTIFIANT_POLICE + Q1/Q2…        |
+| Paires activités   | Jusqu’à 8 (déjà ok)                 | Exactement 8 paires                                                                   |
+| Qualité            | Prévisualisation + édition manuelle | Mapping exhaustif ; valeurs correctes par défaut ; édition pour correction ponctuelle |
 
 ---
 
-*Document rédigé par Sarah (PO) à partir des réponses utilisateur — février 2025.*
+_Document rédigé par Sarah (PO) à partir des réponses utilisateur — février 2025._

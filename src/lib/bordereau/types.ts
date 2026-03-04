@@ -101,7 +101,7 @@ export interface FidelidadePolicesRow {
   ETAT_POLICE: string;
   DATE_ETAT_POLICE: string;
 
-  MOTIF_STATUT: string;
+  MOTIF_ETAT: string;
   FRACTIONNEMENT: string;
   NOM_ENTREPRISE_ASSURE: string;
   SIREN: string;
@@ -131,8 +131,7 @@ export interface FidelidadePolicesRow {
 
 /**
  * Feuille 2 Quittances — une ligne = une échéance (scope v2).
- * Colonnes DATE_EMISSION_QUITTANCE et TAUX_COMMISSIONS supprimées ; TAUX_TAXE ajouté.
- * Commission = PrimeHT * 0.24.
+ * DATE_EMISSION_QUITTANCE = emissionDate de l'échéance ou acceptedAt du devis. TAUX_TAXE ; Commission = PrimeHT * 0.24.
  */
 export interface FidelidadeQuittancesRow {
   APPORTEUR: string;
@@ -141,6 +140,7 @@ export interface FidelidadeQuittancesRow {
   IDENTIFIANT_QUITTANCE: string;
   DATE_EFFET_QUITTANCE: string;
   DATE_FIN_QUITTANCE: string;
+  DATE_EMISSION_QUITTANCE: string;
   DATE_ENCAISSEMENT: string;
   STATUT_QUITTANCE: string;
   GARANTIE: string;

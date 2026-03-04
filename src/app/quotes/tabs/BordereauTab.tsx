@@ -63,7 +63,7 @@ interface PolicesRow {
   ETAT_POLICE: string;
   DATE_ETAT_POLICE: string;
   MOTIF_ETAT: string;
-  MOTIF_STATUT: string;
+
   FRACTIONNEMENT: string;
   NOM_ENTREPRISE_ASSURE: string;
   SIREN: string;
@@ -338,7 +338,6 @@ function computePolicesRows(
       ETAT_POLICE: etatPolice,
       DATE_ETAT_POLICE: dateStatPolice,
       MOTIF_ETAT: motifEtat,
-      MOTIF_STATUT: motifEtat,
     } as PolicesRow;
   });
 }
@@ -1709,21 +1708,41 @@ export default function BordereauTab({
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-indigo-50 text-indigo-800 text-xs border-b border-indigo-200">
-                          <th className="px-3 py-2 text-center font-semibold">N°</th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_EFFET_CONTRAT</th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_FIN_CONTRAT</th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_ECHEANCE</th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">DATE_ETAT_POLICE</th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">ETAT_POLICE</th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">MOTIF_ETAT</th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Dans BDX ?</th>
+                          <th className="px-3 py-2 text-center font-semibold">
+                            N°
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            DATE_EFFET_CONTRAT
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            DATE_FIN_CONTRAT
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            DATE_ECHEANCE
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            DATE_ETAT_POLICE
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            ETAT_POLICE
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            MOTIF_ETAT
+                          </th>
+                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                            Dans BDX ?
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {policesRows.map((row, idx) => {
                           const inst = installments[idx];
-                          const excludedResil = inst ? isExcludedByResiliation(inst) : false;
-                          const excludedBdx = inst ? isExcludedFromBordereau(inst) : true;
+                          const excludedResil = inst
+                            ? isExcludedByResiliation(inst)
+                            : false;
+                          const excludedBdx = inst
+                            ? isExcludedFromBordereau(inst)
+                            : true;
                           const excluded = excludedResil || excludedBdx;
                           const motifColor =
                             row.MOTIF_ETAT === "REGLEMENT"
@@ -1769,13 +1788,19 @@ export default function BordereauTab({
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap">
                                 {row.DATE_ETAT_POLICE ? (
-                                  <span className="text-gray-700">{row.DATE_ETAT_POLICE}</span>
+                                  <span className="text-gray-700">
+                                    {row.DATE_ETAT_POLICE}
+                                  </span>
                                 ) : (
-                                  <span className="text-gray-300 italic text-xs">Non définie</span>
+                                  <span className="text-gray-300 italic text-xs">
+                                    Non définie
+                                  </span>
                                 )}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap">
-                                <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${etatColor}`}>
+                                <span
+                                  className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${etatColor}`}
+                                >
                                   {row.ETAT_POLICE || "—"}
                                 </span>
                               </td>
@@ -1804,9 +1829,20 @@ export default function BordereauTab({
                     </table>
                   </div>
                   <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400 space-y-0.5">
-                    <div>DATE_EFFET_CONTRAT = début de période de l'échéance · DATE_ETAT_POLICE = <span className="font-mono">paidAt</span> si payé, sinon <span className="font-mono">emissionDate</span></div>
-                    <div>ETAT_POLICE : SOUSCRIPTION (1re échéance) · EN COURS (autres) · RESILIE (si résilié)</div>
-                    <div className="text-amber-600">Règle d'inclusion : date d'émission requise + échéance précédente réglée</div>
+                    <div>
+                      DATE_EFFET_CONTRAT = début de période de l'échéance ·
+                      DATE_ETAT_POLICE ={" "}
+                      <span className="font-mono">paidAt</span> si payé, sinon{" "}
+                      <span className="font-mono">emissionDate</span>
+                    </div>
+                    <div>
+                      ETAT_POLICE : SOUSCRIPTION (1re échéance) · EN COURS
+                      (autres) · RESILIE (si résilié)
+                    </div>
+                    <div className="text-amber-600">
+                      Règle d'inclusion : date d'émission requise + échéance
+                      précédente réglée
+                    </div>
                   </div>
                 </div>
               </>

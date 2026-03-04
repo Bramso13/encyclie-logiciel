@@ -420,35 +420,44 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                 <Text style={styles.tableHeaderCell}>Date de règlement</Text>
               </View>
               {calculationResult.echeancier.echeances.map(
-                (echeance: any, index: number) => (
-                  <View key={index} style={styles.tableRow}>
-                    <Text
-                      style={[
-                        styles.tableCell,
-                        styles.tableCellLeft,
-                        { flex: 1.2 },
-                      ]}
-                    >
-                      {echeance.date}
-                    </Text>
-                    <Text style={[styles.tableCell, styles.tableCellRight]}>
-                      {formatNumber(echeance.totalHT)} €
-                    </Text>
-                    <Text style={[styles.tableCell, styles.tableCellRight]}>
-                      {formatNumber(echeance.taxe)} €
-                    </Text>
-                    <Text
-                      style={[
-                        styles.tableCell,
-                        styles.tableCellRight,
-                        styles.tableCellBold,
-                      ]}
-                    >
-                      {formatNumber(echeance.totalTTC)} €
-                    </Text>
-                    <Text style={styles.tableCell}>{echeance.date}</Text>
-                  </View>
-                )
+                (echeance: any, index: number) => {
+                  const isFirst =
+                    calculationResult?.isFirstInstallment === true;
+                  const fraisGestion = isFirst
+                    ? Number(calculationResult?.fraisGestion ?? 0)
+                    : 0;
+                  const totalTTC =
+                    Number(echeance?.totalTTC ?? 0) + fraisGestion;
+                  return (
+                    <View key={index} style={styles.tableRow}>
+                      <Text
+                        style={[
+                          styles.tableCell,
+                          styles.tableCellLeft,
+                          { flex: 1.2 },
+                        ]}
+                      >
+                        {echeance.date}
+                      </Text>
+                      <Text style={[styles.tableCell, styles.tableCellRight]}>
+                        {formatNumber(echeance.totalHT)} €
+                      </Text>
+                      <Text style={[styles.tableCell, styles.tableCellRight]}>
+                        {formatNumber(echeance.taxe)} €
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tableCell,
+                          styles.tableCellRight,
+                          styles.tableCellBold,
+                        ]}
+                      >
+                        {formatNumber(totalTTC)} €
+                      </Text>
+                      <Text style={styles.tableCell}>{echeance.date}</Text>
+                    </View>
+                  );
+                }
               )}
             </View>
           )}
@@ -466,6 +475,9 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                     <Text style={styles.detailHeaderCell}>PJ</Text>
                     <Text style={styles.detailHeaderCell}>Frais</Text>
                     <Text style={styles.detailHeaderCell}>Reprise</Text>
+                    <Text style={styles.detailHeaderCell}>
+                      Frais de gestion
+                    </Text>
                   </View>
                   {calculationResult.echeancier.echeances.map(
                     (echeance: any, index: number) => (
@@ -481,6 +493,11 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                         </Text>
                         <Text style={styles.detailCell}>
                           {formatNumber(echeance.reprise)} €
+                        </Text>
+                        <Text style={styles.detailCell}>
+                          {calculationResult?.isFirstInstallment === true
+                            ? `${formatNumber(calculationResult?.fraisGestion ?? 0)} €`
+                            : "0 €"}
                         </Text>
                       </View>
                     )

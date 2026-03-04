@@ -54,8 +54,14 @@ const QUOTE_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   DRAFT: { label: "Brouillon", color: "bg-gray-100 text-gray-600" },
   SUBMITTED: { label: "Soumis", color: "bg-blue-100 text-blue-700" },
   ACCEPTED: { label: "Accepté", color: "bg-emerald-100 text-emerald-700" },
-  PRIME_CALL_EMITTED: { label: "Appel de prime émis", color: "bg-amber-100 text-amber-700" },
-  INSTALLMENT_IN_PROGRESS: { label: "Échéance en cours", color: "bg-indigo-100 text-indigo-700" },
+  PRIME_CALL_EMITTED: {
+    label: "Appel de prime émis",
+    color: "bg-amber-100 text-amber-700",
+  },
+  INSTALLMENT_IN_PROGRESS: {
+    label: "Échéance en cours",
+    color: "bg-indigo-100 text-indigo-700",
+  },
   IN_PROGRESS: { label: "En cours", color: "bg-blue-100 text-blue-700" },
 };
 
@@ -79,18 +85,25 @@ function fmtDate(d: string | null | undefined): string {
 
 function fmtEuro(n: number | null | undefined): string {
   if (n == null) return "—";
-  return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + " €";
+  return (
+    new Intl.NumberFormat("fr-FR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(n) + " €"
+  );
 }
 
 /** Construit un echeancier "simulé" pour le PDF à partir d'une seule échéance */
 function buildSingleInstallmentCalcResult(
   inst: LocalInstallment,
-  baseCalcResult: CalculationResult | null
+  baseCalcResult: CalculationResult | null,
 ): CalculationResult | null {
   if (!baseCalcResult) return null;
 
   const echeance = {
-    date: inst.dueDate ? new Date(inst.dueDate).toLocaleDateString("fr-FR") : "—",
+    date: inst.dueDate
+      ? new Date(inst.dueDate).toLocaleDateString("fr-FR")
+      : "—",
     totalHT: inst.amountHT,
     taxe: inst.taxAmount,
     totalTTC: inst.amountTTC,
@@ -98,14 +111,23 @@ function buildSingleInstallmentCalcResult(
     pj: inst.pjAmount ?? 0,
     frais: inst.feesAmount ?? 0,
     reprise: inst.resumeAmount ?? 0,
-    debutPeriode: inst.periodStart ? new Date(inst.periodStart).toLocaleDateString("fr-FR") : "—",
-    finPeriode: inst.periodEnd ? new Date(inst.periodEnd).toLocaleDateString("fr-FR") : "—",
+    debutPeriode: inst.periodStart
+      ? new Date(inst.periodStart).toLocaleDateString("fr-FR")
+      : "—",
+    finPeriode: inst.periodEnd
+      ? new Date(inst.periodEnd).toLocaleDateString("fr-FR")
+      : "—",
   };
 
+  const fraisGestion = (baseCalcResult as any)?.fraisGestion ?? 0;
+  const isFirstInstallment = inst.installmentNumber === 1;
   return {
     ...baseCalcResult,
     primeTotal: inst.amountHT,
-    totalTTC: inst.amountTTC,
+    totalTTC: isFirstInstallment
+      ? inst.amountTTC + fraisGestion
+      : inst.amountTTC,
+    isFirstInstallment,
     autres: {
       ...((baseCalcResult as any).autres ?? {}),
       taxeAssurance: inst.taxAmount,
@@ -137,13 +159,17 @@ export default function AppelDePrimeTab({
   const [pdfLoading, setPdfLoading] = useState<Record<string, boolean>>({});
 
   // Actions
-  const [actionMsg, setActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [actionMsg, setActionMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Modal : Valider la prochaine échéance
   const [showValidateModal, setShowValidateModal] = useState(false);
-  const [validateInstallmentId, setValidateInstallmentId] = useState<string>("");
+  const [validateInstallmentId, setValidateInstallmentId] =
+    useState<string>("");
   const [validateEmissionDate, setValidateEmissionDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [validating, setValidating] = useState(false);
 
@@ -151,7 +177,7 @@ export default function AppelDePrimeTab({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentInstallmentId, setPaymentInstallmentId] = useState<string>("");
   const [paymentDate, setPaymentDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [paymentMethod, setPaymentMethod] = useState<string>("BANK_TRANSFER");
   const [paying, setPaying] = useState(false);
@@ -184,7 +210,10 @@ export default function AppelDePrimeTab({
             emissionDate: p.emissionDate ?? null,
             paymentMethod: p.paymentMethod ?? null,
           }))
-          .sort((a: LocalInstallment, b: LocalInstallment) => a.installmentNumber - b.installmentNumber);
+          .sort(
+            (a: LocalInstallment, b: LocalInstallment) =>
+              a.installmentNumber - b.installmentNumber,
+          );
         setInstallments(sorted);
         if (sorted.length > 0 && !activeTab) {
           setActiveTab(sorted[0].id);
@@ -205,7 +234,10 @@ export default function AppelDePrimeTab({
       if (pdfUrls[inst.id] || pdfLoading[inst.id]) return;
       setPdfLoading((prev) => ({ ...prev, [inst.id]: true }));
       try {
-        const singleCalcResult = buildSingleInstallmentCalcResult(inst, calculationResult);
+        const singleCalcResult = buildSingleInstallmentCalcResult(
+          inst,
+          calculationResult,
+        );
         const res = await fetch("/api/generate-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -225,7 +257,7 @@ export default function AppelDePrimeTab({
         setPdfLoading((prev) => ({ ...prev, [inst.id]: false }));
       }
     },
-    [calculationResult, quote, pdfUrls, pdfLoading]
+    [calculationResult, quote, pdfUrls, pdfLoading],
   );
 
   // Charger le PDF dès qu'un onglet devient actif
@@ -239,12 +271,12 @@ export default function AppelDePrimeTab({
 
   /** Prochaine échéance sans emissionDate (ordre chronologique) */
   const nextUnvalidatedInstallment = installments.find(
-    (i) => !i.emissionDate && i.status !== "PAID" && i.status !== "CANCELLED"
+    (i) => !i.emissionDate && i.status !== "PAID" && i.status !== "CANCELLED",
   );
 
   /** Échéances candidates pour règlement : ont une emissionDate et ne sont pas payées */
   const payableInstallments = installments.filter(
-    (i) => i.emissionDate && i.status !== "PAID" && i.status !== "CANCELLED"
+    (i) => i.emissionDate && i.status !== "PAID" && i.status !== "CANCELLED",
   );
 
   const openValidateModal = () => {
@@ -281,13 +313,19 @@ export default function AppelDePrimeTab({
         throw new Error(e.message ?? "Erreur");
       }
       setShowValidateModal(false);
-      setActionMsg({ type: "success", text: "Appel de prime émis — statut du devis mis à jour" });
+      setActionMsg({
+        type: "success",
+        text: "Appel de prime émis — statut du devis mis à jour",
+      });
       setTimeout(() => setActionMsg(null), 5000);
       // Invalider les PDF générés pour forcer la re-génération
       setPdfUrls({});
       await fetchInstallments();
     } catch (err) {
-      setActionMsg({ type: "error", text: err instanceof Error ? err.message : "Erreur" });
+      setActionMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Erreur",
+      });
     } finally {
       setValidating(false);
     }
@@ -311,12 +349,18 @@ export default function AppelDePrimeTab({
         throw new Error(e.message ?? "Erreur");
       }
       setShowPaymentModal(false);
-      setActionMsg({ type: "success", text: "Règlement enregistré — échéance marquée comme payée" });
+      setActionMsg({
+        type: "success",
+        text: "Règlement enregistré — échéance marquée comme payée",
+      });
       setTimeout(() => setActionMsg(null), 5000);
       setPdfUrls({});
       await fetchInstallments();
     } catch (err) {
-      setActionMsg({ type: "error", text: err instanceof Error ? err.message : "Erreur" });
+      setActionMsg({
+        type: "error",
+        text: err instanceof Error ? err.message : "Erreur",
+      });
     } finally {
       setPaying(false);
     }
@@ -324,11 +368,18 @@ export default function AppelDePrimeTab({
 
   const handleDownloadPdf = async (inst: LocalInstallment) => {
     try {
-      const singleCalcResult = buildSingleInstallmentCalcResult(inst, calculationResult);
+      const singleCalcResult = buildSingleInstallmentCalcResult(
+        inst,
+        calculationResult,
+      );
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "premium-call", quote, calculationResult: singleCalcResult }),
+        body: JSON.stringify({
+          type: "premium-call",
+          quote,
+          calculationResult: singleCalcResult,
+        }),
       });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
@@ -348,33 +399,55 @@ export default function AppelDePrimeTab({
   const handleSendEmail = async (inst: LocalInstallment) => {
     try {
       const brokerInfo = await getBrokerInfo(session?.user?.id);
-      const singleCalcResult = buildSingleInstallmentCalcResult(inst, calculationResult);
+      const singleCalcResult = buildSingleInstallmentCalcResult(
+        inst,
+        calculationResult,
+      );
       const pdfBlob = await pdf(
         <PremiumCallPDF
           quote={quote}
           calculationResult={singleCalcResult}
           baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
-        />
+        />,
       ).toBlob();
 
       const formData = new FormData();
       formData.append("quoteId", quote.id);
-      formData.append("companyName", quote.formData?.companyName || quote.companyData?.companyName || "");
+      formData.append(
+        "companyName",
+        quote.formData?.companyName || quote.companyData?.companyName || "",
+      );
       formData.append("clientEmail", session?.user?.email || "");
-      formData.append("pdf", pdfBlob, `appel-prime-${quote.reference || "devis"}-echeance${inst.installmentNumber}.pdf`);
+      formData.append(
+        "pdf",
+        pdfBlob,
+        `appel-prime-${quote.reference || "devis"}-echeance${inst.installmentNumber}.pdf`,
+      );
 
-      const res = await fetch("/api/email/send-premium-call", { method: "POST", body: formData });
+      const res = await fetch("/api/email/send-premium-call", {
+        method: "POST",
+        body: formData,
+      });
       if (!res.ok) throw new Error("Erreur lors de l'envoi");
 
-      setActionMsg({ type: "success", text: `Appel de prime n°${inst.installmentNumber} envoyé par email` });
+      setActionMsg({
+        type: "success",
+        text: `Appel de prime n°${inst.installmentNumber} envoyé par email`,
+      });
       setTimeout(() => setActionMsg(null), 5000);
     } catch (err) {
-      setActionMsg({ type: "error", text: "Erreur lors de l'envoi de l'email" });
+      setActionMsg({
+        type: "error",
+        text: "Erreur lors de l'envoi de l'email",
+      });
     }
   };
 
   // ── Statut quote ─────────────────────────────────────────────────────────
-  const quoteStatusInfo = QUOTE_STATUS_LABELS[quote.status] ?? { label: quote.status, color: "bg-gray-100 text-gray-600" };
+  const quoteStatusInfo = QUOTE_STATUS_LABELS[quote.status] ?? {
+    label: quote.status,
+    color: "bg-gray-100 text-gray-600",
+  };
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -400,7 +473,9 @@ export default function AppelDePrimeTab({
 
         <div className="flex items-center gap-3 flex-wrap">
           {/* Badge statut devis */}
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${quoteStatusInfo.color}`}>
+          <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${quoteStatusInfo.color}`}
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-current" />
             {quoteStatusInfo.label}
           </span>
@@ -410,7 +485,11 @@ export default function AppelDePrimeTab({
             onClick={openValidateModal}
             disabled={!nextUnvalidatedInstallment}
             className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-            title={!nextUnvalidatedInstallment ? "Toutes les échéances ont une date d'émission" : `Valider l'échéance n°${nextUnvalidatedInstallment.installmentNumber}`}
+            title={
+              !nextUnvalidatedInstallment
+                ? "Toutes les échéances ont une date d'émission"
+                : `Valider l'échéance n°${nextUnvalidatedInstallment.installmentNumber}`
+            }
           >
             <FileText className="w-4 h-4" />
             Valider la prochaine échéance
@@ -426,7 +505,11 @@ export default function AppelDePrimeTab({
             onClick={openPaymentModal}
             disabled={payableInstallments.length === 0}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-            title={payableInstallments.length === 0 ? "Aucune échéance avec appel de prime émis" : undefined}
+            title={
+              payableInstallments.length === 0
+                ? "Aucune échéance avec appel de prime émis"
+                : undefined
+            }
           >
             <CreditCard className="w-4 h-4" />
             Règlement reçu
@@ -441,18 +524,23 @@ export default function AppelDePrimeTab({
 
       {/* ── Message d'action ────────────────────────────────────────────── */}
       {actionMsg && (
-        <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
-          actionMsg.type === "success"
-            ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-            : "bg-red-50 border border-red-200 text-red-800"
-        }`}>
+        <div
+          className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
+            actionMsg.type === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+              : "bg-red-50 border border-red-200 text-red-800"
+          }`}
+        >
           {actionMsg.type === "success" ? (
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           ) : (
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
           )}
           {actionMsg.text}
-          <button onClick={() => setActionMsg(null)} className="ml-auto text-current opacity-60 hover:opacity-100">
+          <button
+            onClick={() => setActionMsg(null)}
+            className="ml-auto text-current opacity-60 hover:opacity-100"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -464,7 +552,8 @@ export default function AppelDePrimeTab({
           <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Aucun échéancier</p>
           <p className="text-sm text-gray-400 mt-1">
-            Créez un échéancier dans l'onglet Bordereau pour gérer les appels de prime.
+            Créez un échéancier dans l'onglet Bordereau pour gérer les appels de
+            prime.
           </p>
         </div>
       ) : (
@@ -473,7 +562,10 @@ export default function AppelDePrimeTab({
           <div className="flex border-b border-gray-200 overflow-x-auto">
             {installments.map((inst) => {
               const isActive = activeTab === inst.id;
-              const statusInfo = STATUS_LABELS[inst.status] ?? { label: inst.status, color: "bg-gray-100 text-gray-600" };
+              const statusInfo = STATUS_LABELS[inst.status] ?? {
+                label: inst.status,
+                color: "bg-gray-100 text-gray-600",
+              };
               const hasEmission = !!inst.emissionDate;
               return (
                 <button
@@ -493,7 +585,9 @@ export default function AppelDePrimeTab({
                     <Clock className="w-4 h-4 text-gray-400" />
                   )}
                   Échéance {inst.installmentNumber}
-                  <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${statusInfo.color}`}>
+                  <span
+                    className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${statusInfo.color}`}
+                  >
                     {statusInfo.label}
                   </span>
                 </button>
@@ -506,7 +600,10 @@ export default function AppelDePrimeTab({
             if (activeTab !== inst.id) return null;
             const pdfUrl = pdfUrls[inst.id];
             const isPdfLoading = pdfLoading[inst.id];
-            const statusInfo = STATUS_LABELS[inst.status] ?? { label: inst.status, color: "bg-gray-100 text-gray-600" };
+            const statusInfo = STATUS_LABELS[inst.status] ?? {
+              label: inst.status,
+              color: "bg-gray-100 text-gray-600",
+            };
 
             return (
               <div key={inst.id} className="flex flex-col">
@@ -522,12 +619,15 @@ export default function AppelDePrimeTab({
                           <span className="font-semibold text-gray-900">
                             Échéance n°{inst.installmentNumber}
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.color}`}>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.color}`}
+                          >
                             {statusInfo.label}
                           </span>
                         </div>
                         <div className="text-sm text-gray-500 mt-0.5">
-                          Période : {fmtDate(inst.periodStart)} → {fmtDate(inst.periodEnd)}
+                          Période : {fmtDate(inst.periodStart)} →{" "}
+                          {fmtDate(inst.periodEnd)}
                         </div>
                       </div>
                     </div>
@@ -554,52 +654,132 @@ export default function AppelDePrimeTab({
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="text-xs text-gray-500 mb-1">Prime HT</div>
-                      <div className="font-semibold text-gray-900">{fmtEuro(inst.amountHT)}</div>
+                      <div className="font-semibold text-gray-900">
+                        {fmtEuro(inst.amountHT)}
+                      </div>
                     </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">Frais</div>
+                      <div className="font-semibold text-gray-900">
+                        {fmtEuro(inst.feesAmount)}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">
+                        Frais de gestion
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {inst.installmentNumber === 1
+                          ? fmtEuro(calculationResult?.fraisGestion ?? 0)
+                          : "0 €"}
+                      </div>
+                    </div>
+
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="text-xs text-gray-500 mb-1">Taxes</div>
-                      <div className="font-semibold text-gray-900">{fmtEuro(inst.taxAmount)}</div>
-                    </div>
-                    <div className="bg-indigo-50 rounded-lg p-3">
-                      <div className="text-xs text-indigo-600 mb-1 font-medium">Prime TTC</div>
-                      <div className="font-bold text-indigo-700 text-lg">{fmtEuro(inst.amountTTC)}</div>
+                      <div className="font-semibold text-gray-900">
+                        {fmtEuro(inst.taxAmount)}
+                      </div>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-3">
-                      <div className="text-xs text-gray-500 mb-1">Date d'échéance</div>
-                      <div className="font-semibold text-gray-900">{fmtDate(inst.dueDate)}</div>
+                      <div className="text-xs text-gray-500 mb-1">RCD</div>
+                      <div className="font-semibold text-gray-900">
+                        {fmtEuro(inst.amountHT + inst.taxAmount)}
+                      </div>
+                    </div>
+                    <div className="bg-indigo-50 rounded-lg p-3">
+                      <div className="text-xs text-indigo-600 mb-1 font-medium">
+                        Prime TTC
+                      </div>
+                      <div className="font-bold text-indigo-700 text-lg">
+                        {fmtEuro(
+                          inst.installmentNumber === 1
+                            ? inst.amountTTC +
+                                (calculationResult?.fraisGestion ?? 0) +
+                                (inst.pjAmount ?? 0)
+                            : inst.amountTTC,
+                        )}
+                      </div>
+                    </div>
+                    <div className="bg-indigo-50 rounded-lg p-3">
+                      <div className="text-xs text-indigo-600 mb-1 font-medium">
+                        Total HT
+                      </div>
+                      <div className="font-bold text-indigo-700 text-lg">
+                        {fmtEuro(
+                          inst.installmentNumber === 1
+                            ? inst.amountHT +
+                                (calculationResult?.fraisGestion ?? 0) +
+                                (inst.pjAmount ?? 0)
+                            : inst.amountHT,
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-indigo-50 rounded-lg p-3">
+                      <div className="text-xs text-indigo-600 mb-1 font-medium">
+                        Protection juridique TTC
+                      </div>
+                      <div className="font-bold text-indigo-700 text-lg">
+                        {fmtEuro(inst.pjAmount ?? 0)}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">
+                        Date d'échéance
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {fmtDate(inst.dueDate)}
+                      </div>
                     </div>
                   </div>
 
                   {/* Bloc émission / règlement */}
                   <div className="mt-3 flex flex-wrap gap-3">
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                      inst.emissionDate ? "bg-amber-50 border border-amber-200" : "bg-gray-50 border border-dashed border-gray-200"
-                    }`}>
-                      <FileText className={`w-4 h-4 ${inst.emissionDate ? "text-amber-600" : "text-gray-300"}`} />
+                    <div
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                        inst.emissionDate
+                          ? "bg-amber-50 border border-amber-200"
+                          : "bg-gray-50 border border-dashed border-gray-200"
+                      }`}
+                    >
+                      <FileText
+                        className={`w-4 h-4 ${inst.emissionDate ? "text-amber-600" : "text-gray-300"}`}
+                      />
                       <span className="text-gray-600">Date émission :</span>
-                      <span className={`font-medium ${inst.emissionDate ? "text-amber-700" : "text-gray-400 italic"}`}>
-                        {inst.emissionDate ? fmtDate(inst.emissionDate) : "Non définie"}
+                      <span
+                        className={`font-medium ${inst.emissionDate ? "text-amber-700" : "text-gray-400 italic"}`}
+                      >
+                        {inst.emissionDate
+                          ? fmtDate(inst.emissionDate)
+                          : "Non définie"}
                       </span>
-                      {!inst.emissionDate && nextUnvalidatedInstallment?.id === inst.id && (
-                        <button
-                          onClick={openValidateModal}
-                          className="ml-1 text-xs text-amber-600 underline hover:text-amber-800"
-                        >
-                          Valider
-                        </button>
-                      )}
+                      {!inst.emissionDate &&
+                        nextUnvalidatedInstallment?.id === inst.id && (
+                          <button
+                            onClick={openValidateModal}
+                            className="ml-1 text-xs text-amber-600 underline hover:text-amber-800"
+                          >
+                            Valider
+                          </button>
+                        )}
                     </div>
 
                     {inst.paidAt && (
                       <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-emerald-50 border border-emerald-200">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                         <span className="text-gray-600">Réglée le :</span>
-                        <span className="font-medium text-emerald-700">{fmtDate(inst.paidAt)}</span>
+                        <span className="font-medium text-emerald-700">
+                          {fmtDate(inst.paidAt)}
+                        </span>
                         {inst.paymentMethod && (
                           <span className="text-gray-400">·</span>
                         )}
                         {inst.paymentMethod && (
-                          <span className="text-gray-600">{PAYMENT_METHOD_LABELS[inst.paymentMethod] ?? inst.paymentMethod}</span>
+                          <span className="text-gray-600">
+                            {PAYMENT_METHOD_LABELS[inst.paymentMethod] ??
+                              inst.paymentMethod}
+                          </span>
                         )}
                       </div>
                     )}
@@ -612,20 +792,27 @@ export default function AppelDePrimeTab({
                     <div className="flex items-center justify-center py-24 bg-gray-50">
                       <div className="flex flex-col items-center">
                         <RefreshCw className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
-                        <span className="text-gray-500 text-sm">Génération du document…</span>
+                        <span className="text-gray-500 text-sm">
+                          Génération du document…
+                        </span>
                       </div>
                     </div>
                   ) : pdfUrl ? (
                     <iframe
                       src={pdfUrl}
                       className="w-full"
-                      style={{ height: "calc(100vh - 400px)", minHeight: "700px" }}
+                      style={{
+                        height: "calc(100vh - 400px)",
+                        minHeight: "700px",
+                      }}
                       title={`Appel de prime — Échéance ${inst.installmentNumber}`}
                     />
                   ) : (
                     <div className="flex items-center justify-center py-24 bg-gray-50">
                       <div className="text-center">
-                        <p className="text-gray-500 mb-2">Document non disponible</p>
+                        <p className="text-gray-500 mb-2">
+                          Document non disponible
+                        </p>
                         <p className="text-sm text-gray-400">
                           {!calculationResult
                             ? "Le calcul de prime est requis"
@@ -654,14 +841,21 @@ export default function AppelDePrimeTab({
                   Valider la prochaine échéance
                 </h3>
               </div>
-              <button onClick={() => setShowValidateModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setShowValidateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
-              <strong>Action :</strong> définit la date d'émission de l'appel de prime pour l'échéance sélectionnée et passe le devis en statut{" "}
-              <span className="font-mono bg-amber-100 px-1 rounded">APPEL DE PRIME ÉMIS</span>.
+              <strong>Action :</strong> définit la date d'émission de l'appel de
+              prime pour l'échéance sélectionnée et passe le devis en statut{" "}
+              <span className="font-mono bg-amber-100 px-1 rounded">
+                APPEL DE PRIME ÉMIS
+              </span>
+              .
             </div>
 
             <div className="space-y-4">
@@ -675,10 +869,16 @@ export default function AppelDePrimeTab({
                   onChange={(e) => setValidateInstallmentId(e.target.value)}
                 >
                   {installments
-                    .filter((i) => !i.emissionDate && i.status !== "PAID" && i.status !== "CANCELLED")
+                    .filter(
+                      (i) =>
+                        !i.emissionDate &&
+                        i.status !== "PAID" &&
+                        i.status !== "CANCELLED",
+                    )
                     .map((i) => (
                       <option key={i.id} value={i.id}>
-                        Échéance n°{i.installmentNumber} — {fmtDate(i.dueDate)} — {fmtEuro(i.amountTTC)}
+                        Échéance n°{i.installmentNumber} — {fmtDate(i.dueDate)}{" "}
+                        — {fmtEuro(i.amountTTC)}
                       </option>
                     ))}
                 </select>
@@ -689,7 +889,8 @@ export default function AppelDePrimeTab({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date d'émission de l'appel de prime <span className="text-red-500">*</span>
+                  Date d'émission de l'appel de prime{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -698,7 +899,9 @@ export default function AppelDePrimeTab({
                   onChange={(e) => setValidateEmissionDate(e.target.value)}
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Cette date sera utilisée comme <span className="font-mono">DATE_ETAT_POLICE</span> dans le bordereau.
+                  Cette date sera utilisée comme{" "}
+                  <span className="font-mono">DATE_ETAT_POLICE</span> dans le
+                  bordereau.
                 </p>
               </div>
             </div>
@@ -712,10 +915,16 @@ export default function AppelDePrimeTab({
               </button>
               <button
                 onClick={handleValidate}
-                disabled={!validateInstallmentId || !validateEmissionDate || validating}
+                disabled={
+                  !validateInstallmentId || !validateEmissionDate || validating
+                }
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {validating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                {validating ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
                 Valider l'appel de prime
               </button>
             </div>
@@ -736,20 +945,29 @@ export default function AppelDePrimeTab({
                   Enregistrer un règlement
                 </h3>
               </div>
-              <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 text-sm text-emerald-800">
-              <strong>Action :</strong> marque l'échéance comme <strong>PAYÉE</strong> et passe le devis en statut{" "}
-              <span className="font-mono bg-emerald-100 px-1 rounded">ÉCHÉANCE EN COURS</span>.
+              <strong>Action :</strong> marque l'échéance comme{" "}
+              <strong>PAYÉE</strong> et passe le devis en statut{" "}
+              <span className="font-mono bg-emerald-100 px-1 rounded">
+                ÉCHÉANCE EN COURS
+              </span>
+              .
             </div>
 
             {payableInstallments.length === 0 ? (
               <div className="text-center py-6 text-gray-500 text-sm">
-                Aucune échéance avec appel de prime émis trouvée.<br />
-                Validez d'abord une échéance avec le bouton « Valider la prochaine échéance ».
+                Aucune échéance avec appel de prime émis trouvée.
+                <br />
+                Validez d'abord une échéance avec le bouton « Valider la
+                prochaine échéance ».
               </div>
             ) : (
               <div className="space-y-4">
@@ -764,7 +982,8 @@ export default function AppelDePrimeTab({
                   >
                     {payableInstallments.map((i) => (
                       <option key={i.id} value={i.id}>
-                        Échéance n°{i.installmentNumber} — émission : {fmtDate(i.emissionDate)} — {fmtEuro(i.amountTTC)}
+                        Échéance n°{i.installmentNumber} — émission :{" "}
+                        {fmtDate(i.emissionDate)} — {fmtEuro(i.amountTTC)}
                       </option>
                     ))}
                   </select>
@@ -792,7 +1011,9 @@ export default function AppelDePrimeTab({
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   >
                     {Object.entries(PAYMENT_METHOD_LABELS).map(([val, lbl]) => (
-                      <option key={val} value={val}>{lbl}</option>
+                      <option key={val} value={val}>
+                        {lbl}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -812,7 +1033,11 @@ export default function AppelDePrimeTab({
                   disabled={!paymentInstallmentId || !paymentDate || paying}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {paying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  {paying ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-4 h-4" />
+                  )}
                   Enregistrer le règlement
                 </button>
               )}

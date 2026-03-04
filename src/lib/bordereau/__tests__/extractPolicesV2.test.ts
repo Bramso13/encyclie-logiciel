@@ -21,7 +21,7 @@ const POLICES_ROW_KEYS: (keyof FidelidadePolicesRow)[] = [
   "ETAT_POLICE",
   "DATE_ETAT_POLICE",
   "MOTIF_ETAT",
-  "MOTIF_STATUT",
+  "MOTIF_ETAT",
   "FRACTIONNEMENT",
   "NOM_ENTREPRISE_ASSURE",
   "SIREN",
@@ -82,7 +82,15 @@ describe("getPolicesV2", () => {
             updatedAt: new Date("2025-01-10"),
             acceptedAt: new Date("2025-01-05"),
             product: { name: "RC Décennale" },
-            companyData: { companyName: "Société A", siret: "12345678901234", address: "1 rue X", city: "Paris", postalCode: "75001", revenue: 100000, employeeCount: 5 },
+            companyData: {
+              companyName: "Société A",
+              siret: "12345678901234",
+              address: "1 rue X",
+              city: "Paris",
+              postalCode: "75001",
+              revenue: 100000,
+              employeeCount: 5,
+            },
             formData: {
               dateDeffet: new Date("2025-01-01"),
               periodicity: "trimestriel",
@@ -91,7 +99,12 @@ describe("getPolicesV2", () => {
                 { code: 2, caSharePercent: 40 },
               ],
             },
-            contract: { startDate: new Date("2025-01-01"), endDate: new Date("2025-12-31"), status: "ACTIVE", updatedAt: new Date("2025-01-15") },
+            contract: {
+              startDate: new Date("2025-01-01"),
+              endDate: new Date("2025-12-31"),
+              status: "ACTIVE",
+              updatedAt: new Date("2025-01-15"),
+            },
           },
         },
       };
@@ -152,7 +165,10 @@ describe("getPolicesV2", () => {
             acceptedAt: null,
             product: null,
             companyData: {},
-            formData: { dateDeffet: new Date("2025-01-15"), periodicity: "trimestriel" },
+            formData: {
+              dateDeffet: new Date("2025-01-15"),
+              periodicity: "trimestriel",
+            },
             contract: null,
           },
         },
@@ -166,7 +182,7 @@ describe("getPolicesV2", () => {
       expect(result[0].FRACTIONNEMENT).toBe("trimestriel");
     });
 
-    it("NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT sont vides ; MOTIF_STATUT = EN_COURS si non payé", async () => {
+    it("NUMERO_AVENANT, MOTIF_AVENANT, DATE_EFFET_AVENANT sont vides ; MOTIF_ETAT = EN_COURS si non payé", async () => {
       const mockInst = {
         id: "pi1",
         scheduleId: "ps1",
@@ -194,7 +210,7 @@ describe("getPolicesV2", () => {
       expect(result[0].NUMERO_AVENANT).toBe("");
       expect(result[0].MOTIF_AVENANT).toBe("");
       expect(result[0].DATE_EFFET_AVENANT).toBe("");
-      expect(result[0].MOTIF_STATUT).toBe("EN_COURS");
+      expect(result[0].MOTIF_ETAT).toBe("EN_COURS");
     });
   });
 

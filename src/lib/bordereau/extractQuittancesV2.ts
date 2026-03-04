@@ -98,6 +98,7 @@ export async function getQuittancesV2(
       status: true,
       installmentNumber: true,
       paymentMethod: true,
+      emissionDate: true,
       schedule: {
         select: {
           // resiliationDate sera disponible après migration + prisma generate
@@ -106,6 +107,7 @@ export async function getQuittancesV2(
               reference: true,
               formData: true,
               companyData: true,
+              acceptedAt: true,
             },
           },
         },
@@ -219,8 +221,11 @@ export async function getQuittancesV2(
       paymentMethod = "OTHER";
     }
 
+    const dateEmissionQuittance =
+      inst.emissionDate ?? quote.acceptedAt ?? null;
     const row = mapInstallmentToQuittancesRow({
       inst,
+      dateEmissionQuittance,
       identifiantPolice,
       identifiantQuittance,
       apporteur,
@@ -276,6 +281,7 @@ function mapInstallmentToQuittancesRow(params: {
     status: import("@prisma/client").PaymentScheduleStatus;
     dueDate: Date;
   };
+  dateEmissionQuittance: Date | null;
   identifiantPolice: string;
   identifiantQuittance: string;
   apporteur: string;
@@ -285,6 +291,7 @@ function mapInstallmentToQuittancesRow(params: {
 }): FidelidadeQuittancesRow {
   const {
     inst,
+    dateEmissionQuittance,
     identifiantPolice,
     identifiantQuittance,
     apporteur,
@@ -295,6 +302,9 @@ function mapInstallmentToQuittancesRow(params: {
 
   const dateEffet = formatDate(inst.periodStart);
   const dateFin = formatDate(inst.periodEnd);
+  const dateEmission = dateEmissionQuittance
+    ? formatDate(dateEmissionQuittance)
+    : DEFAULT_STRING;
   const dateEncaissement = inst.paidAt
     ? formatDate(inst.paidAt)
     : DEFAULT_STRING;
@@ -311,6 +321,7 @@ function mapInstallmentToQuittancesRow(params: {
     IDENTIFIANT_QUITTANCE: identifiantQuittance,
     DATE_EFFET_QUITTANCE: dateEffet,
     DATE_FIN_QUITTANCE: dateFin,
+    DATE_EMISSION_QUITTANCE: dateEmission,
     DATE_ENCAISSEMENT: dateEncaissement,
     STATUT_QUITTANCE: mapPaymentStatusToStatutQuittance(inst.status),
     GARANTIE: GARANTIE_RC_RCD,
