@@ -169,9 +169,15 @@ export default function FormDataTab({
     }
     setIsRecalculatingEcheances(true);
     try {
+      // Fusion complète : tous les champs du devis + éventuelles modifications locales.
+      // Ainsi date d'effet, fractionnement, CA, activités, territoire, etc. sont bien pris en compte.
+      const fullFormData = {
+        ...quote.formData,
+        ...tempFormData,
+      };
       const modifiedQuote = {
         ...quote,
-        formData: tempFormData,
+        formData: fullFormData,
       };
       const result = calculateWithMapping(
         modifiedQuote,
@@ -232,6 +238,17 @@ export default function FormDataTab({
           throw new Error(msg);
         }
       }
+
+      // Mettre à jour le champ calculatedPremium du devis avec le nouveau calcul (prime + échéancier)
+      const premiumRes = await fetch(`/api/quotes/${quote.id}/calculated-premium`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ calculatedPremium: result }),
+      });
+      if (!premiumRes.ok) {
+        console.warn("Échéancier enregistré mais échec de la mise à jour du calcul (calculatedPremium)");
+      }
+
       alert("Échéances recalculées et enregistrées.");
       onEcheancesRecalculated?.();
     } catch (error) {

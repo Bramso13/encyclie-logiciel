@@ -22,15 +22,18 @@ export const calculateWithMapping = (
     const mappedParams: any = {};
 
     Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
-      if (fieldKey && (formFields[fieldKey] || quoteData.formData[paramKey])) {
+      if (fieldKey && (formFields[fieldKey] || quoteData.formData[paramKey] || quoteData.formData[fieldKey])) {
         const field = formFields[fieldKey];
-        const value = quoteData.formData[fieldKey] || field.default;
+        const value =
+          quoteData.formData[fieldKey] ??
+          quoteData.formData[paramKey] ??
+          field?.default;
 
         // Conversion selon le type de champ et le paramètre
         switch (paramKey) {
           case "honoraireGestion":
             console.log("value", value, "paramKeyOuai", paramKey);
-            if (field.type === "number") {
+            if (field?.type === "number" || value !== undefined) {
               mappedParams[paramKey] = Number(value) || 0;
             }
             break;
@@ -40,26 +43,26 @@ export const calculateWithMapping = (
 
             break;
           case "territory":
-            if (field.type === "select") {
-              mappedParams[paramKey] = value || "";
+            if (field?.type === "select" || value !== undefined) {
+              mappedParams[paramKey] = value ?? "";
             }
             mappedParams.taxeAssurance = getTaxeByRegion(value);
             mappedParams.taxeProtectionJuridique =
               getTaxeProtectionJuridiqueByRegion(value);
             break;
           case "directorName":
-            if (field.type === "text" || field.type === "select") {
-              mappedParams[paramKey] = value || "";
+            if (field?.type === "text" || field?.type === "select" || value !== undefined) {
+              mappedParams[paramKey] = value ?? "";
             }
             break;
           case "reprisePasse":
-            if (field.type === "checkbox") {
+            if (field?.type === "checkbox" || value !== undefined) {
               mappedParams[paramKey] = Boolean(value);
             }
             break;
           case "enCreation":
             console.log("value", value, "paramKey", paramKey);
-            if (field.type === "checkbox") {
+            if (field?.type === "checkbox" || value !== undefined) {
               mappedParams[paramKey] = Boolean(value);
             }
             break;
@@ -72,14 +75,14 @@ export const calculateWithMapping = (
           case "nombreAnneeAssuranceContinue":
           case "partSoutraitance":
           case "partNegoce":
-            if (field.type === "number") {
+            if (field?.type === "number" || value !== undefined) {
               mappedParams[paramKey] = Number(value) || 0;
             }
             break;
 
           case "dateCreation":
           case "dateEffet":
-            if (field.type === "date") {
+            if (field?.type === "date" || value !== undefined) {
               mappedParams[paramKey] = value ? new Date(value) : new Date();
             }
             break;
@@ -87,28 +90,49 @@ export const calculateWithMapping = (
           case "tempsSansActivite":
           case "sansActiviteDepuisPlusDe12MoisSansFermeture":
           case "absenceDeSinistreSurLes5DernieresAnnees":
-          case "fractionnementPrime":
             mappedParams[paramKey] = value;
             break;
+          case "fractionnementPrime": {
+            // Normaliser pour RCD : annuel | mensuel | trimestriel | semestriel
+            const raw = String(value ?? "").toLowerCase().trim();
+            const allowed: Array<"annuel" | "mensuel" | "trimestriel" | "semestriel"> = [
+              "annuel",
+              "mensuel",
+              "trimestriel",
+              "semestriel",
+            ];
+            if (allowed.includes(raw as any)) {
+              mappedParams[paramKey] = raw;
+            } else if (raw === "annual" || raw === "annuelle") {
+              mappedParams[paramKey] = "annuel";
+            } else if (raw === "monthly" || raw === "mensuelle") {
+              mappedParams[paramKey] = "mensuel";
+            } else if (raw === "quarterly" || raw === "trimestrielle") {
+              mappedParams[paramKey] = "trimestriel";
+            } else if (raw === "half-yearly" || raw === "semestrielle") {
+              mappedParams[paramKey] = "semestriel";
+            } else {
+              mappedParams[paramKey] = "annuel";
+            }
+            break;
+          }
 
           case "qualif":
           case "assureurDefaillant":
           case "protectionJuridique":
-
-          case "reprisePasse":
-            if (field.type === "checkbox") {
+            if (field?.type === "checkbox" || value !== undefined) {
               mappedParams[paramKey] = Boolean(value);
             }
             break;
 
           case "nomDeLAsurreur":
-            if (field.type === "text" || field.type === "select") {
-              mappedParams[paramKey] = value || "";
+            if (field?.type === "text" || field?.type === "select" || value !== undefined) {
+              mappedParams[paramKey] = value ?? "";
             }
             break;
 
           case "dateFinCouverturePrecedente":
-            if (field.type === "date") {
+            if (field?.type === "date" || value !== undefined) {
               mappedParams[paramKey] = value ? new Date(value) : new Date();
             }
             break;
@@ -133,16 +157,6 @@ export const calculateWithMapping = (
           case "sinistresPrecedents":
             // Pour les sinistres, utiliser les données du formulaire
             mappedParams[paramKey] = quoteData.formData.lossHistory || [];
-            break;
-          case "assureurDefaillant":
-            if (field.type === "checkbox") {
-              mappedParams[paramKey] = Boolean(value);
-            }
-            break;
-          case "qualif":
-            if (field.type === "checkbox") {
-              mappedParams[paramKey] = Boolean(value);
-            }
             break;
         }
       }

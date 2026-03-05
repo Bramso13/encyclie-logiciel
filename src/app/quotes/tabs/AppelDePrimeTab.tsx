@@ -139,6 +139,64 @@ function buildSingleInstallmentCalcResult(
   } as CalculationResult;
 }
 
+/** Construit un calculationResult pour le PDF "toutes échéances" (une seule page avec tout l'échéancier) */
+function buildAllInstallmentsCalcResult(
+  installments: LocalInstallment[],
+  baseCalcResult: CalculationResult | null,
+): CalculationResult | null {
+  if (!baseCalcResult || installments.length === 0) return null;
+
+  const fraisGestion = (baseCalcResult as any)?.fraisGestion ?? 0;
+  const echeances = installments.map((inst, index) => {
+    const isFirst = inst.installmentNumber === 1;
+    return {
+      date: inst.dueDate
+        ? new Date(inst.dueDate).toLocaleDateString("fr-FR")
+        : "—",
+      totalHT: inst.amountHT,
+      taxe: inst.taxAmount,
+      totalTTC: inst.amountTTC,
+      rcd: inst.rcdAmount ?? 0,
+      pj: inst.pjAmount ?? 0,
+      frais: inst.feesAmount ?? 0,
+      reprise: inst.resumeAmount ?? 0,
+      debutPeriode: inst.periodStart
+        ? new Date(inst.periodStart).toLocaleDateString("fr-FR")
+        : "—",
+      finPeriode: inst.periodEnd
+        ? new Date(inst.periodEnd).toLocaleDateString("fr-FR")
+        : "—",
+      isFirstInstallment: isFirst,
+    };
+  });
+
+  const totalHT = installments.reduce((s, i) => s + i.amountHT, 0);
+  const totalTax = installments.reduce((s, i) => s + i.taxAmount, 0);
+  const totalTTC = installments.reduce((s, i) => {
+    if (i.installmentNumber === 1)
+      return s + i.amountTTC + fraisGestion + (i.pjAmount ?? 0);
+    return s + i.amountTTC;
+  }, 0);
+
+  return {
+    ...baseCalcResult,
+    primeTotal: totalHT,
+    totalTTC,
+    isFirstInstallment: false,
+    autres: {
+      ...((baseCalcResult as any).autres ?? {}),
+      taxeAssurance: totalTax,
+    },
+    echeancier: {
+      ...((baseCalcResult as any).echeancier ?? {}),
+      echeances,
+    },
+  } as CalculationResult;
+}
+
+/** Id de l'onglet "toutes les échéances" */
+const TAB_ID_ALL = "all";
+
 // ─── Composant principal ─────────────────────────────────────────────────────
 
 export default function AppelDePrimeTab({
@@ -216,7 +274,7 @@ export default function AppelDePrimeTab({
           );
         setInstallments(sorted);
         if (sorted.length > 0 && !activeTab) {
-          setActiveTab(sorted[0].id);
+          setActiveTab(TAB_ID_ALL);
         }
       }
     } finally {
@@ -260,12 +318,46 @@ export default function AppelDePrimeTab({
     [calculationResult, quote, pdfUrls, pdfLoading],
   );
 
+  // Charger le PDF "toutes échéances" pour l'onglet combiné
+  const loadPdfForAllInstallments = useCallback(async () => {
+    if (pdfUrls[TAB_ID_ALL] || pdfLoading[TAB_ID_ALL]) return;
+    setPdfLoading((prev) => ({ ...prev, [TAB_ID_ALL]: true }));
+    try {
+      const allCalcResult = buildAllInstallmentsCalcResult(
+        installments,
+        calculationResult,
+      );
+      if (!allCalcResult) return;
+      const res = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "premium-call",
+          quote,
+          calculationResult: allCalcResult,
+        }),
+      });
+      if (!res.ok) throw new Error("Erreur PDF");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrls((prev) => ({ ...prev, [TAB_ID_ALL]: url }));
+    } catch {
+      // silencieux
+    } finally {
+      setPdfLoading((prev) => ({ ...prev, [TAB_ID_ALL]: false }));
+    }
+  }, [calculationResult, quote, installments, pdfUrls, pdfLoading]);
+
   // Charger le PDF dès qu'un onglet devient actif
   useEffect(() => {
     if (!activeTab) return;
+    if (activeTab === TAB_ID_ALL) {
+      loadPdfForAllInstallments();
+      return;
+    }
     const inst = installments.find((i) => i.id === activeTab);
     if (inst) loadPdfForInstallment(inst);
-  }, [activeTab, installments]);
+  }, [activeTab, installments, loadPdfForAllInstallments, loadPdfForInstallment]);
 
   // ── Helpers pour les modales ─────────────────────────────────────────────
 
@@ -387,6 +479,43 @@ export default function AppelDePrimeTab({
       const a = document.createElement("a");
       a.href = url;
       a.download = `appel-prime-${quote.reference || "devis"}-echeance${inst.installmentNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      setActionMsg({ type: "error", text: "Erreur lors du téléchargement" });
+    }
+  };
+
+  const handleDownloadAllPdf = async () => {
+    try {
+      const allCalcResult = buildAllInstallmentsCalcResult(
+        installments,
+        calculationResult,
+      );
+      if (!allCalcResult) {
+        setActionMsg({
+          type: "error",
+          text: "Impossible de générer le PDF (calcul ou échéances manquants)",
+        });
+        return;
+      }
+      const res = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "premium-call",
+          quote,
+          calculationResult: allCalcResult,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `appel-prime-${quote.reference || "devis"}-toutes-echeances.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -560,6 +689,18 @@ export default function AppelDePrimeTab({
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {/* ── Onglets par échéance ─────────────────────────────────────── */}
           <div className="flex border-b border-gray-200 overflow-x-auto">
+            {/* Onglet "Toutes les échéances" */}
+            <button
+              onClick={() => setActiveTab(TAB_ID_ALL)}
+              className={`flex-shrink-0 flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === TAB_ID_ALL
+                  ? "border-indigo-600 text-indigo-700 bg-indigo-50"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <FileText className="w-4 h-4 text-indigo-500" />
+              Toutes les échéances
+            </button>
             {installments.map((inst) => {
               const isActive = activeTab === inst.id;
               const statusInfo = STATUS_LABELS[inst.status] ?? {
@@ -596,6 +737,99 @@ export default function AppelDePrimeTab({
           </div>
 
           {/* ── Contenu de l'onglet actif ─────────────────────────────────── */}
+          {activeTab === TAB_ID_ALL && (
+            <div className="flex flex-col">
+              <div className="p-5 border-b border-gray-100">
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-700 font-bold text-lg">
+                      {installments.length}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-900">
+                        Toutes les échéances
+                      </span>
+                      <div className="text-sm text-gray-500 mt-0.5">
+                        {installments.length} échéance
+                        {installments.length > 1 ? "s" : ""} — Période globale :{" "}
+                        {fmtDate(installments[0]?.periodStart)} →{" "}
+                        {fmtDate(installments[installments.length - 1]?.periodEnd)}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleDownloadAllPdf}
+                    disabled={!calculationResult}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" />
+                    Télécharger PDF (toutes échéances)
+                  </button>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {installments.map((inst) => {
+                    const statusInfo = STATUS_LABELS[inst.status] ?? {
+                      label: inst.status,
+                      color: "bg-gray-100 text-gray-600",
+                    };
+                    return (
+                      <span
+                        key={inst.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 text-sm text-gray-700 border border-gray-200"
+                      >
+                        <span className="font-medium">
+                          Éch. {inst.installmentNumber}
+                        </span>
+                        <span className="text-gray-500">
+                          {fmtDate(inst.dueDate)} — {fmtEuro(inst.amountTTC)}
+                        </span>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded-full ${statusInfo.color}`}
+                        >
+                          {statusInfo.label}
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                {pdfLoading[TAB_ID_ALL] ? (
+                  <div className="flex items-center justify-center py-24 bg-gray-50">
+                    <div className="flex flex-col items-center">
+                      <RefreshCw className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
+                      <span className="text-gray-500 text-sm">
+                        Génération du document…
+                      </span>
+                    </div>
+                  </div>
+                ) : pdfUrls[TAB_ID_ALL] ? (
+                  <iframe
+                    src={pdfUrls[TAB_ID_ALL]}
+                    className="w-full"
+                    style={{
+                      height: "calc(100vh - 400px)",
+                      minHeight: "700px",
+                    }}
+                    title="Appel de prime — Toutes les échéances"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center py-24 bg-gray-50">
+                    <div className="text-center">
+                      <p className="text-gray-500 mb-2">
+                        Document non disponible
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {!calculationResult
+                          ? "Le calcul de prime est requis"
+                          : "Erreur lors du chargement"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {installments.map((inst) => {
             if (activeTab !== inst.id) return null;
             const pdfUrl = pdfUrls[inst.id];

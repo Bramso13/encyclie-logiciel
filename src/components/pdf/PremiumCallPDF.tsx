@@ -422,6 +422,7 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
               {calculationResult.echeancier.echeances.map(
                 (echeance: any, index: number) => {
                   const isFirst =
+                    echeance?.isFirstInstallment ??
                     calculationResult?.isFirstInstallment === true;
                   const fraisGestion = isFirst
                     ? Number(calculationResult?.fraisGestion ?? 0)
@@ -480,27 +481,32 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                     </Text>
                   </View>
                   {calculationResult.echeancier.echeances.map(
-                    (echeance: any, index: number) => (
-                      <View key={index} style={styles.detailRow}>
-                        <Text style={styles.detailCell}>
-                          {formatNumber(echeance.rcd)} €
-                        </Text>
-                        <Text style={styles.detailCell}>
-                          {formatNumber(echeance.pj)} €
-                        </Text>
-                        <Text style={styles.detailCell}>
-                          {formatNumber(echeance.frais)} €
-                        </Text>
-                        <Text style={styles.detailCell}>
-                          {formatNumber(echeance.reprise)} €
-                        </Text>
-                        <Text style={styles.detailCell}>
-                          {calculationResult?.isFirstInstallment === true
-                            ? `${formatNumber(calculationResult?.fraisGestion ?? 0)} €`
-                            : "0 €"}
-                        </Text>
-                      </View>
-                    )
+                    (echeance: any, index: number) => {
+                      const isFirst =
+                        echeance?.isFirstInstallment ??
+                        calculationResult?.isFirstInstallment === true;
+                      return (
+                        <View key={index} style={styles.detailRow}>
+                          <Text style={styles.detailCell}>
+                            {formatNumber(echeance.rcd)} €
+                          </Text>
+                          <Text style={styles.detailCell}>
+                            {formatNumber(echeance.pj)} €
+                          </Text>
+                          <Text style={styles.detailCell}>
+                            {formatNumber(echeance.frais)} €
+                          </Text>
+                          <Text style={styles.detailCell}>
+                            {formatNumber(echeance.reprise)} €
+                          </Text>
+                          <Text style={styles.detailCell}>
+                            {isFirst
+                              ? `${formatNumber(calculationResult?.fraisGestion ?? 0)} €`
+                              : "0 €"}
+                          </Text>
+                        </View>
+                      );
+                    }
                   )}
                 </View>
               </View>
