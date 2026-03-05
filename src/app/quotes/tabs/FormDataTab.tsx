@@ -2,10 +2,11 @@
 
 import { Quote } from "@/lib/types";
 import { useState } from "react";
-import { Pencil, Check, X, Save } from "lucide-react";
+import { Pencil, Check, X, Save, RefreshCw } from "lucide-react";
 import ActivityBreakdownField from "@/components/quotes/ActivityBreakdown";
 import { tableauTax } from "@/lib/tarificateurs/rcd";
 import { useSession } from "@/lib/auth-client";
+import { calculateWithMapping } from "@/lib/utils";
 
 function formatFieldValue(value: any, fieldType: string): string {
   if (value === null || value === undefined) return "Non renseigné";
@@ -67,7 +68,19 @@ function prettifyKeyFr(key: string): string {
   return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 }
 
-export default function FormDataTab({ quote }: { quote: Quote }) {
+type FormDataTabProps = {
+  quote: Quote;
+  parameterMapping?: Record<string, string>;
+  formFields?: Record<string, any>;
+  onEcheancesRecalculated?: () => void;
+};
+
+export default function FormDataTab({
+  quote,
+  parameterMapping = {},
+  formFields = {},
+  onEcheancesRecalculated,
+}: FormDataTabProps) {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const [activeTab, setActiveTab] = useState(0);
@@ -77,6 +90,7 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [isRecalculatingEcheances, setIsRecalculatingEcheances] = useState(false);
 
   // Récupérer la configuration depuis quote.product
   const stepConfig = quote.product?.stepConfig as any;
@@ -142,6 +156,91 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
       alert("Erreur réseau");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  /** Recalcule l'échéancier via le tarificateur RCD et met à jour les PaymentInstallment. */
+  const handleRecalculerEcheances = async () => {
+    if (!quote?.id || !Object.keys(parameterMapping).length) {
+      alert(
+        "Impossible de recalculer : mapping des paramètres du produit non disponible.",
+      );
+      return;
+    }
+    setIsRecalculatingEcheances(true);
+    try {
+      const modifiedQuote = {
+        ...quote,
+        formData: tempFormData,
+      };
+      const result = calculateWithMapping(
+        modifiedQuote,
+        parameterMapping,
+        formFields,
+      );
+      const echeances = result?.echeancier?.echeances;
+      if (!echeances?.length) {
+        alert(
+          "Le calcul n'a pas produit d'échéances. Vérifiez les données du formulaire (date d'effet, périodicité, etc.).",
+        );
+        return;
+      }
+
+      const scheduleRes = await fetch(`/api/quotes/${quote.id}/payment-schedule`);
+      const scheduleData = scheduleRes.ok ? await scheduleRes.json() : null;
+      const existingSchedule = scheduleData?.data;
+
+      if (existingSchedule?.id) {
+        const payments = echeances.map((e: any, i: number) => ({
+          id: `new-${i}`,
+          dueDate: e.date,
+          amountHT: e.totalHT ?? 0,
+          taxAmount: e.taxe ?? 0,
+          amountTTC: e.totalTTC ?? 0,
+          rcdAmount: e.rcd ?? 0,
+          pjAmount: e.pj ?? 0,
+          feesAmount: e.frais ?? 0,
+          resumeAmount: e.reprise ?? 0,
+          periodStart: e.debutPeriode,
+          periodEnd: e.finPeriode,
+        }));
+        const patchRes = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payments }),
+        });
+        if (!patchRes.ok) {
+          const err = await patchRes.json().catch(() => ({}));
+          const msg =
+            typeof err?.error === "string"
+              ? err.error
+              : "Erreur lors de la mise à jour de l'échéancier";
+          throw new Error(msg);
+        }
+      } else {
+        const postRes = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ calculationResult: result }),
+        });
+        if (!postRes.ok) {
+          const err = await postRes.json().catch(() => ({}));
+          const msg =
+            typeof err?.error === "string"
+              ? err.error
+              : "Erreur lors de la création de l'échéancier";
+          throw new Error(msg);
+        }
+      }
+      alert("Échéances recalculées et enregistrées.");
+      onEcheancesRecalculated?.();
+    } catch (error) {
+      console.error("Recalcul échéances:", error);
+      alert(
+        error instanceof Error ? error.message : "Erreur lors du recalcul des échéances",
+      );
+    } finally {
+      setIsRecalculatingEcheances(false);
     }
   };
 
@@ -372,20 +471,41 @@ export default function FormDataTab({ quote }: { quote: Quote }) {
               Informations saisies lors de la création du devis
             </p>
           </div>
-          {hasChanges && (
-            <button
-              onClick={updateQuote}
-              disabled={isSaving}
-              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white transition-colors ${
-                isSaving
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              }`}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? "Sauvegarde..." : "Mettre à jour le devis"}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {Object.keys(parameterMapping).length > 0 && (
+              <button
+                onClick={handleRecalculerEcheances}
+                disabled={isRecalculatingEcheances}
+                className={`inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md transition-colors ${
+                  isRecalculatingEcheances
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                }`}
+                title="Recalcule l'échéancier à partir des données du formulaire (tarificateur RCD) et met à jour les échéances enregistrées."
+              >
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${isRecalculatingEcheances ? "animate-spin" : ""}`}
+                />
+                {isRecalculatingEcheances
+                  ? "Recalcul..."
+                  : "Recalculer les échéances"}
+              </button>
+            )}
+            {hasChanges && (
+              <button
+                onClick={updateQuote}
+                disabled={isSaving}
+                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white transition-colors ${
+                  isSaving
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                }`}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? "Sauvegarde..." : "Mettre à jour le devis"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

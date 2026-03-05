@@ -710,7 +710,17 @@ export default function QuoteDetailPage() {
           <ResumeTab quote={quote} isAdmin={isAdmin} />
         )}
 
-        {activeTab === "form-data" && <FormDataTab quote={quote} />}
+        {activeTab === "form-data" && (
+          <FormDataTab
+            quote={quote}
+            parameterMapping={parameterMapping}
+            formFields={formFields}
+            onEcheancesRecalculated={() => {
+              // Optionnel : rafraîchir le devis ou forcer un re-render des onglets échéancier / appel de prime
+              setQuote((q) => (q ? { ...q } : null));
+            }}
+          />
+        )}
 
         {activeTab === "calculation" && (
           <CalculationTab
