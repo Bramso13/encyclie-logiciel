@@ -149,23 +149,16 @@ export default function CalculationTab({
     if (inst) {
       const pj = inst.pjAmount ?? 0;
       const fraisGestion = fraisGestionAppelDePrime;
-      const totalHT =
-        origIndex === 0
-          ? inst.amountHT + fraisGestion + (inst.pjAmount ?? 0)
-          : inst.amountHT;
-      const totalTTC =
-        origIndex === 0
-          ? inst.amountTTC + fraisGestion + (inst.pjAmount ?? 0)
-          : inst.amountTTC;
+      // amountHT/amountTTC en base = echeance.totalHT/totalTTC (déjà complets) ; ne pas ré-ajouter fraisGestion ni pj
       return {
-        rcdHT: inst.amountHT,
+        rcdHT: inst.rcdAmount ?? 0,
         pj,
         frais: inst.feesAmount ?? 0,
         fraisGestion,
         reprise: inst.resumeAmount ?? 0,
         taxe: inst.taxAmount ?? 0,
-        totalHT,
-        totalTTC,
+        totalHT: inst.amountHT,
+        totalTTC: inst.amountTTC,
       };
     }
     const rcdHT = echeance.rcd ?? 0;

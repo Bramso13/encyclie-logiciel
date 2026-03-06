@@ -595,13 +595,7 @@ const OfferLetterPDF = ({
                   au {formatDate(echeance.finPeriode)}
                 </Text>
                 <Text style={[styles.tableCell, { flex: 1 }]}>
-                  {financial(
-                    echeance.rcd +
-                      echeance.pj +
-                      echeance.fraisGestion +
-                      echeance.reprise -
-                      echeance.taxe
-                  ) || ""}{" "}
+                  {financial(echeance.totalHT ?? 0) || ""}{" "}
                   €
                 </Text>
                 <Text style={[styles.tableCell, { flex: 1 }]}>
