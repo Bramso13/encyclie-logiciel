@@ -22,7 +22,12 @@ export const calculateWithMapping = (
     const mappedParams: any = {};
 
     Object.entries(parameterMapping).forEach(([paramKey, fieldKey]) => {
-      if (fieldKey && (formFields[fieldKey] || quoteData.formData[paramKey] || quoteData.formData[fieldKey])) {
+      if (
+        fieldKey &&
+        (formFields[fieldKey] ||
+          quoteData.formData?.[paramKey] !== undefined ||
+          quoteData.formData?.[fieldKey] !== undefined)
+      ) {
         const field = formFields[fieldKey];
         const value =
           quoteData.formData[fieldKey] ??
@@ -38,9 +43,7 @@ export const calculateWithMapping = (
             }
             break;
           case "nonFournitureBilanN_1":
-            console.log("value", value, "paramKey", paramKey);
             mappedParams[paramKey] = Boolean(value);
-
             break;
           case "territory":
             if (field?.type === "select" || value !== undefined) {

@@ -1,14 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Quote, CalculationResult } from "@/lib/types";
-import { ChevronDown, ChevronRight, Edit2, Check, X, RotateCcw } from "lucide-react";
-import { genererEcheancier, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
-
+import {
+  ChevronDown,
+  ChevronRight,
+  Edit2,
+  Check,
+  X,
+  RotateCcw,
+} from "lucide-react";
 interface SimpleParameterEditorProps {
   quote: Quote;
   calculationResult: CalculationResult;
   originalCalculationResult: CalculationResult | null;
+  onApplyChange: (
+    sectionKey: string,
+    fieldKey: string,
+    value: number,
+    baseResult: CalculationResult
+  ) => CalculationResult | void;
   onUpdate: (newResult: CalculationResult) => void;
   onClose: () => void;
 }
@@ -26,11 +37,26 @@ const EDITABLE_SECTIONS = {
       dateCreation: { label: "Ancienneté", format: "percentage" },
       tempsSansActivite: { label: "Temps sans activité", format: "percentage" },
       anneeExperience: { label: "Expérience", format: "percentage" },
-      assureurDefaillant: { label: "Assureur défaillant", format: "percentage" },
-      nombreAnneeAssuranceContinue: { label: "Années assurance continue", format: "percentage" },
-      nonFournitureBilanN_1: { label: "Non fourniture bilan N-1", format: "percentage" },
-      sansActiviteDepuisPlusDe12MoisSansFermeture: { label: "Sans activité +12 mois", format: "percentage" },
-      absenceDeSinistreSurLes5DernieresAnnees: { label: "Absence sinistre 5 ans", format: "percentage" },
+      assureurDefaillant: {
+        label: "Assureur défaillant",
+        format: "percentage",
+      },
+      nombreAnneeAssuranceContinue: {
+        label: "Années assurance continue",
+        format: "percentage",
+      },
+      nonFournitureBilanN_1: {
+        label: "Non fourniture bilan N-1",
+        format: "percentage",
+      },
+      sansActiviteDepuisPlusDe12MoisSansFermeture: {
+        label: "Sans activité +12 mois",
+        format: "percentage",
+      },
+      absenceDeSinistreSurLes5DernieresAnnees: {
+        label: "Absence sinistre 5 ans",
+        format: "percentage",
+      },
     },
   },
   frais_taxes: {
@@ -46,8 +72,14 @@ const EDITABLE_SECTIONS = {
     fields: {
       fraisGestion: { label: "Frais de gestion", format: "currency" },
       taxeAssurance: { label: "Taxe d'assurance", format: "currency" },
-      protectionJuridique: { label: "Protection juridique TTC", format: "currency" },
-      fraisFractionnement: { label: "Frais de fractionnement", format: "currency" },
+      protectionJuridique: {
+        label: "Protection juridique TTC",
+        format: "currency",
+      },
+      fraisFractionnement: {
+        label: "Frais de fractionnement",
+        format: "currency",
+      },
     },
   },
 };
@@ -56,17 +88,27 @@ export default function SimpleParameterEditor({
   quote,
   calculationResult,
   originalCalculationResult,
+  onApplyChange,
   onUpdate,
   onClose,
 }: SimpleParameterEditorProps) {
-  const [expandedSection, setExpandedSection] = useState<string | null>("majorations");
+  const [expandedSection, setExpandedSection] = useState<string | null>(
+    "majorations",
+  );
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState<number | null>(null);
-  const [localResult, setLocalResult] = useState<CalculationResult>(calculationResult);
+  const [localResult, setLocalResult] =
+    useState<CalculationResult>(calculationResult);
+
+  // Synchroniser localResult quand calculationResult change (ex. switch non fourniture)
+  useEffect(() => {
+    setLocalResult(calculationResult);
+  }, [calculationResult]);
 
   // Obtenir la valeur actuelle d'un champ
   const getCurrentValue = (sectionKey: string, fieldKey: string): number => {
-    const section = EDITABLE_SECTIONS[sectionKey as keyof typeof EDITABLE_SECTIONS];
+    const section =
+      EDITABLE_SECTIONS[sectionKey as keyof typeof EDITABLE_SECTIONS];
     const values = section.getValue(localResult);
     return values[fieldKey] ?? 0;
   };
@@ -83,111 +125,13 @@ export default function SimpleParameterEditor({
     setTempValue(null);
   };
 
-  // Recalculer l'échéancier avec les nouvelles valeurs
-  const recalculateEcheancier = (result: CalculationResult) => {
-    try {
-      const echeancier = genererEcheancier({
-        dateDebut: new Date(quote.formData.dateDeffet),
-        totalHT: result.primeTotal,
-        tauxTaxe: getTaxeByRegion(quote.formData.territory),
-        taxe: result.autres.taxeAssurance,
-        totalTTC: result.totalTTC,
-        rcd: result.primeTotal,
-        pj: result.autres.protectionJuridiqueTTC,
-        frais: result.autres.fraisFractionnementPrimeHT,
-        reprise: result.reprisePasseResult?.primeReprisePasseTTC ?? 0,
-        fraisGestion: result.fraisGestion,
-        periodicite: quote.formData.periodicity as "annuel" | "semestriel" | "trimestriel" | "mensuel",
-        // Données pour l'année N+1
-        totalHTN1: result.primeTotalN1,
-        taxeN1: result.autresN1.taxeAssurance,
-        totalTTCN1: result.totalTTCN1,
-        rcdN1: result.primeTotalN1,
-        pjN1: result.autresN1.protectionJuridiqueTTC,
-        fraisN1: result.autresN1.fraisFractionnementPrimeHT,
-        fraisGestionN1: result.fraisGestionN1,
-      });
-
-      return echeancier;
-    } catch (error) {
-      console.error("Erreur lors du recalcul de l'échéancier:", error);
-      return result.echeancier;
-    }
-  };
-
-  // Appliquer la modification
   const applyChange = (sectionKey: string, fieldKey: string) => {
     if (tempValue === null) return;
-
-    const newResult = { ...localResult };
-
-    // Appliquer la modification selon la section
-    if (sectionKey === "majorations") {
-      newResult.majorations = {
-        ...newResult.majorations,
-        [fieldKey]: tempValue,
-      };
-
-      // Recalculer le total des majorations
-      const totalMaj = Object.entries(newResult.majorations)
-        .filter(([key]) => key !== "nonFournitureBilanN_1")
-        .reduce((sum, [, val]) => sum + (val as number), 1);
-
-      newResult.totalMajorations = totalMaj;
-      newResult.primeTotal = newResult.PrimeHTSansMajorations * totalMaj;
-
-      // Obtenir le taux de frais de gestion (default 10%)
-      const txFraisGestion = 0.1;
-      newResult.fraisGestion = newResult.primeTotal * txFraisGestion;
-
-      // Recalculer aussi pour l'année N+1
-      newResult.primeTotalN1 = newResult.PrimeHTSansMajorationsN1 * totalMaj;
-      newResult.fraisGestionN1 = newResult.primeTotalN1 * txFraisGestion;
-
-      // Recalculer le total autres
-      newResult.autres.total =
-        newResult.autres.taxeAssurance +
-        newResult.autres.protectionJuridiqueTTC +
-        newResult.autres.fraisFractionnementPrimeHT;
-
-      // Recalculer les totaux
-      newResult.totalTTC =
-        newResult.primeTotal +
-        newResult.fraisGestion +
-        newResult.autres.total;
-
-      // Total pour N+1
-      newResult.totalTTCN1 =
-        newResult.primeTotalN1 +
-        newResult.fraisGestionN1 +
-        newResult.autresN1.total;
-    } else if (sectionKey === "frais_taxes") {
-      if (fieldKey === "fraisGestion") {
-        newResult.fraisGestion = tempValue;
-      } else if (fieldKey === "taxeAssurance") {
-        newResult.autres.taxeAssurance = tempValue;
-      } else if (fieldKey === "protectionJuridique") {
-        newResult.autres.protectionJuridiqueTTC = tempValue;
-      } else if (fieldKey === "fraisFractionnement") {
-        newResult.autres.fraisFractionnementPrimeHT = tempValue;
-      }
-
-      // Recalculer le total autres
-      newResult.autres.total =
-        newResult.autres.taxeAssurance +
-        newResult.autres.protectionJuridiqueTTC +
-        newResult.autres.fraisFractionnementPrimeHT;
-
-      // Recalculer le total TTC
-      newResult.totalTTC =
-        newResult.primeTotal + newResult.fraisGestion + newResult.autres.total;
+    const newResult = onApplyChange(sectionKey, fieldKey, tempValue, localResult);
+    if (newResult) {
+      setLocalResult(newResult);
+      onUpdate(newResult);
     }
-
-    // Recalculer l'échéancier avec les nouvelles valeurs
-    newResult.echeancier = recalculateEcheancier(newResult);
-
-    setLocalResult(newResult);
-    onUpdate(newResult);
     setEditingField(null);
     setTempValue(null);
   };
@@ -195,7 +139,8 @@ export default function SimpleParameterEditor({
   // Restaurer l'original
   const restoreOriginal = () => {
     if (!originalCalculationResult) return;
-    if (!confirm("Voulez-vous vraiment restaurer les valeurs originales ?")) return;
+    if (!confirm("Voulez-vous vraiment restaurer les valeurs originales ?"))
+      return;
 
     setLocalResult(originalCalculationResult);
     onUpdate(originalCalculationResult);
@@ -216,7 +161,8 @@ export default function SimpleParameterEditor({
   const isModified = (sectionKey: string, fieldKey: string): boolean => {
     if (!originalCalculationResult) return false;
 
-    const section = EDITABLE_SECTIONS[sectionKey as keyof typeof EDITABLE_SECTIONS];
+    const section =
+      EDITABLE_SECTIONS[sectionKey as keyof typeof EDITABLE_SECTIONS];
     const currentValues = section.getValue(localResult);
     const originalValues = section.getValue(originalCalculationResult);
 
@@ -260,7 +206,7 @@ export default function SimpleParameterEditor({
               <button
                 onClick={() =>
                   setExpandedSection(
-                    expandedSection === sectionKey ? null : sectionKey
+                    expandedSection === sectionKey ? null : sectionKey,
                   )
                 }
                 className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -288,7 +234,8 @@ export default function SimpleParameterEditor({
                 <div className="divide-y divide-gray-100">
                   {Object.entries(section.fields).map(([fieldKey, field]) => {
                     const currentValue = getCurrentValue(sectionKey, fieldKey);
-                    const isEditing = editingField === `${sectionKey}.${fieldKey}`;
+                    const isEditing =
+                      editingField === `${sectionKey}.${fieldKey}`;
                     const modified = isModified(sectionKey, fieldKey);
 
                     return (
@@ -317,15 +264,23 @@ export default function SimpleParameterEditor({
                                   type="number"
                                   value={tempValue ?? ""}
                                   onChange={(e) =>
-                                    setTempValue(parseFloat(e.target.value) || 0)
+                                    setTempValue(
+                                      parseFloat(e.target.value) || 0,
+                                    )
                                   }
-                                  step={field.format === "percentage" ? "0.01" : "0.01"}
+                                  step={
+                                    field.format === "percentage"
+                                      ? "0.01"
+                                      : "0.01"
+                                  }
                                   className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
 
                                 <div className="flex items-center space-x-2">
                                   <button
-                                    onClick={() => applyChange(sectionKey, fieldKey)}
+                                    onClick={() =>
+                                      applyChange(sectionKey, fieldKey)
+                                    }
                                     className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                   >
                                     <Check className="w-3 h-3" />
@@ -346,7 +301,9 @@ export default function SimpleParameterEditor({
                                   {formatValue(currentValue, field.format)}
                                 </span>
                                 <button
-                                  onClick={() => startEditing(sectionKey, fieldKey)}
+                                  onClick={() =>
+                                    startEditing(sectionKey, fieldKey)
+                                  }
                                   className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                                 >
                                   <Edit2 className="w-3 h-3" />

@@ -57,6 +57,7 @@ export default function CalculationTab({
   handleRecalculate,
   session,
   onOpenParameterEditor,
+  installmentsRefreshTrigger = 0,
 }: {
   quote: Quote;
   calculationResult: any;
@@ -73,6 +74,7 @@ export default function CalculationTab({
   handleRecalculate: () => void;
   session: any;
   onOpenParameterEditor: () => void;
+  installmentsRefreshTrigger?: number;
 }) {
   const [paymentInstallments, setPaymentInstallments] = useState<
     PaymentInstallment[]
@@ -120,11 +122,12 @@ export default function CalculationTab({
       }
     };
     fetchInstallments();
-  }, [quote?.id]);
+  }, [quote?.id, installmentsRefreshTrigger]);
 
   /**
    * Valeurs par échéance alignées sur AppelDePrimeTab :
-   * - priorité aux paymentInstallments quand présents
+   * - priorité à calculationResult.echeancier quand des modifications locales existent (originalCalculationResult)
+   * - sinon priorité aux paymentInstallments (données en base) quand présents
    * - frais de gestion uniquement sur l'échéance 1 (calculationResult.fraisGestion)
    * - Total HT / Total TTC comme dans AppelDePrime (échéance 1 : + fraisGestion + pjAmount)
    */
@@ -146,7 +149,9 @@ export default function CalculationTab({
     );
     const fraisGestionAppelDePrime =
       origIndex === 0 ? (calculationResult?.fraisGestion ?? 0) : 0;
-    if (inst) {
+    // Priorité à calculationResult.echeancier quand des modifs locales existent (pas encore sauvegardées)
+    const useEcheance = !!originalCalculationResult;
+    if (inst && !useEcheance) {
       const pj = inst.pjAmount ?? 0;
       const fraisGestion = fraisGestionAppelDePrime;
       // amountHT/amountTTC en base = echeance.totalHT/totalTTC (déjà complets) ; ne pas ré-ajouter fraisGestion ni pj

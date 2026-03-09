@@ -27,6 +27,7 @@ import ContratTab from "../tabs/ContratTab";
 import AggravationTab from "../tabs/AggravationTab";
 import BordereauTab from "../tabs/BordereauTab";
 import { calculateWithMapping } from "@/lib/utils";
+import { applyCalculationChange } from "@/lib/calculation-apply";
 
 export default function QuoteDetailPage() {
   const params = useParams();
@@ -47,6 +48,10 @@ export default function QuoteDetailPage() {
 
   // État simplifié pour l'éditeur de paramètres
   const [showParameterEditor, setShowParameterEditor] = useState(false);
+
+  // Déclencheur pour forcer le rechargement des échéances après sauvegarde
+  const [installmentsRefreshTrigger, setInstallmentsRefreshTrigger] =
+    useState(0);
 
   // États pour l'édition
 
@@ -363,6 +368,10 @@ export default function QuoteDetailPage() {
               );
               setCalculationResult(result);
               setCalculationError(null);
+              setNonFournitureBilanEnabled(
+                result.majorations?.nonFournitureBilanN_1 === 0.5
+              );
+              setReprisePasseEnabled(!!result.reprisePasseResult);
             } catch (error) {
               console.error("=== ERREUR CALCUL DYNAMIQUE ===");
               console.error("Type erreur:", typeof error);
@@ -402,31 +411,34 @@ export default function QuoteDetailPage() {
     }
   }, [params.id, activeProducts]);
 
-  // Charger ou calculer la prime
+  // Charger ou calculer la prime (ne pas écraser les modifs locales : switches ou SimpleParameterEditor)
+  const hasLocalCalculationChanges = !!originalCalculationResult;
+
   useEffect(() => {
     const loadOrCalculatePremium = async () => {
       if (!quote || !Object.keys(parameterMapping).length || !quote.formData) {
         return;
       }
+      if (hasLocalCalculationChanges) return;
 
       try {
-        // D'abord essayer de récupérer calculatedPremium de la DB
         const response = await fetch(
           `/api/quotes/${params.id}/calculated-premium`
         );
         if (response.ok) {
           const data = await response.json();
-          console.log("data///", data);
-          if (data.data.calculatedPremium) {
-            console.log("Utilisation calculatedPremium depuis DB");
-            setCalculationResult(data.data.calculatedPremium);
+          if (data.data?.calculatedPremium) {
+            const premium = data.data.calculatedPremium;
+            setCalculationResult(premium);
             setCalculationError(null);
+            setNonFournitureBilanEnabled(
+              premium.majorations?.nonFournitureBilanN_1 === 0.5
+            );
+            setReprisePasseEnabled(!!premium.reprisePasseResult);
             return;
           }
         }
 
-        // Si pas de calculatedPremium en DB, faire le calcul
-        console.log("Calcul");
         const result = calculateWithMapping(
           quote,
           parameterMapping,
@@ -434,6 +446,10 @@ export default function QuoteDetailPage() {
         );
         setCalculationResult(result);
         setCalculationError(null);
+        setNonFournitureBilanEnabled(
+          result.majorations?.nonFournitureBilanN_1 === 0.5
+        );
+        setReprisePasseEnabled(!!result.reprisePasseResult);
       } catch (error) {
         console.error("Erreur chargement/calcul:", error);
         setCalculationError(
@@ -443,9 +459,14 @@ export default function QuoteDetailPage() {
     };
 
     loadOrCalculatePremium();
-  }, [parameterMapping, quote, params.id]);
+  }, [
+    parameterMapping,
+    quote,
+    params.id,
+    hasLocalCalculationChanges,
+  ]);
 
-  // Fonction pour recalculer côté client (sans sauvegarder)
+  // Fonction pour recalculer côté client (prend en compte les switches)
   const handleRecalculate = () => {
     if (!quote) return;
 
@@ -453,8 +474,19 @@ export default function QuoteDetailPage() {
     setCalculationError(null);
 
     try {
-      console.log("Recalcul côté client");
-      const result = calculateWithMapping(quote, parameterMapping, formFields);
+      const modifiedQuote = {
+        ...quote,
+        formData: {
+          ...quote.formData,
+          nonFournitureBilanN_1: nonFournitureBilanEnabled,
+          reprisePasse: reprisePasseEnabled,
+        },
+      };
+      const result = calculateWithMapping(
+        modifiedQuote,
+        parameterMapping,
+        formFields
+      );
       setCalculationResult(result);
     } catch (error) {
       console.error("Erreur recalcul:", error);
@@ -466,63 +498,64 @@ export default function QuoteDetailPage() {
     }
   };
 
-  // Fonctions pour gérer les switches
+  // Logique remontée : utilisé par SimpleParameterEditor et le toggle Non fourniture
+  const handleApplyChange = (
+    sectionKey: string,
+    fieldKey: string,
+    value: number,
+    baseResult?: CalculationResult
+  ): CalculationResult | void => {
+    if (fieldKey === "nonFournitureBilanN_1") {
+      setNonFournitureBilanEnabled(value === 0.5);
+    }
+
+    const base = baseResult ?? calculationResult;
+    if (!base || !quote) return;
+    setOriginalCalculationResult(calculationResult ?? null);
+    const newResult = applyCalculationChange(
+      base,
+      quote,
+      sectionKey,
+      fieldKey,
+      value
+    );
+    setCalculationResult(newResult);
+    return newResult;
+  };
+
   const handleReprisePasseChange = (enabled: boolean) => {
     setReprisePasseEnabled(enabled);
-    // Recalcul automatique
-    setTimeout(() => {
-      if (quote) {
-        const modifiedQuote = {
-          ...quote,
-          formData: {
-            ...quote.formData,
-            reprisePasse: enabled,
-            nonFournitureBilanN_1: nonFournitureBilanEnabled,
-          },
-        };
-        try {
-          const result = calculateWithMapping(
-            modifiedQuote,
-            parameterMapping,
-            formFields
-          );
-          setCalculationResult(result);
-        } catch (error) {
-          console.error("Erreur recalcul automatique:", error);
-        }
-      }
-    }, 100);
+    if (!quote || !Object.keys(parameterMapping).length) return;
+    setOriginalCalculationResult(calculationResult ?? null);
+    const modifiedQuote = {
+      ...quote,
+      formData: {
+        ...quote.formData,
+        nonFournitureBilanN_1: nonFournitureBilanEnabled,
+        reprisePasse: enabled,
+      },
+    };
+    try {
+      const result = calculateWithMapping(
+        modifiedQuote,
+        parameterMapping,
+        formFields
+      );
+      setCalculationResult(result);
+    } catch (error) {
+      console.error("Erreur recalcul reprise passe:", error);
+    }
   };
 
   const handleNonFournitureBilanChange = (enabled: boolean) => {
-    setNonFournitureBilanEnabled(enabled);
-    // Recalcul automatique
-    setTimeout(() => {
-      if (quote) {
-        const modifiedQuote = {
-          ...quote,
-          formData: {
-            ...quote.formData,
-            reprisePasse: reprisePasseEnabled,
-            nonFournitureBilanN_1: enabled,
-          },
-        };
-        console.log("modifiedQuote", modifiedQuote);
-        try {
-          const result = calculateWithMapping(
-            modifiedQuote,
-            parameterMapping,
-            formFields
-          );
-          setCalculationResult(result);
-        } catch (error) {
-          console.error("Erreur recalcul automatique:", error);
-        }
-      }
-    }, 100);
+    handleApplyChange(
+      "majorations",
+      "nonFournitureBilanN_1",
+      enabled ? 0.5 : 0
+    );
   };
 
-  // Fonction pour sauvegarder le calcul actuel en DB
+  // Fonction pour sauvegarder le calcul actuel en DB (y compris l'échéancier dans paymentInstallments)
   const saveCalculationToDatabase = async () => {
     if (!calculationResult) {
       alert("Aucun calcul à sauvegarder");
@@ -531,11 +564,64 @@ export default function QuoteDetailPage() {
 
     setRecalculating(true);
     try {
+      // 1. Sauvegarder le calcul (calculatedPremium)
       await fetch(`/api/quotes/${params.id}/calculated-premium`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ calculatedPremium: calculationResult }),
       });
+
+      // 2. Mettre à jour l'échéancier dans paymentInstallments si présent
+      const echeances =
+        calculationResult?.echeancier?.echeances;
+      if (echeances && Array.isArray(echeances) && echeances.length > 0) {
+        const scheduleRes = await fetch(
+          `/api/quotes/${params.id}/payment-schedule`
+        );
+        const scheduleData = scheduleRes.ok
+          ? await scheduleRes.json()
+          : null;
+        const existingSchedule = scheduleData?.data;
+
+        if (existingSchedule?.payments?.length > 0) {
+          // PATCH : mettre à jour les échéances existantes
+          const payments = echeances.map((echeance: any, index: number) => {
+            const existingPayment = existingSchedule.payments.find(
+              (p: any) => p.installmentNumber === index + 1
+            );
+            return {
+              id: existingPayment?.id,
+              installmentNumber: index + 1,
+              dueDate: echeance.date,
+              amountHT: echeance.totalHT ?? 0,
+              taxAmount: echeance.taxe ?? 0,
+              amountTTC: echeance.totalTTC ?? 0,
+              rcdAmount: echeance.rcd ?? 0,
+              pjAmount: echeance.pj ?? 0,
+              feesAmount: echeance.frais ?? 0,
+              resumeAmount: echeance.reprise ?? 0,
+              periodStart: echeance.debutPeriode,
+              periodEnd: echeance.finPeriode,
+            };
+          });
+
+          await fetch(`/api/quotes/${params.id}/payment-schedule`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payments }),
+          });
+        } else {
+          // POST : créer l'échéancier
+          await fetch(`/api/quotes/${params.id}/payment-schedule`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ calculationResult }),
+          });
+        }
+      }
+
+      setInstallmentsRefreshTrigger((t) => t + 1);
+      setOriginalCalculationResult(null); // Réinitialiser les modifs après sauvegarde
       alert("Calcul sauvegardé en base de données");
     } catch (error) {
       console.error("Erreur sauvegarde:", error);
@@ -739,6 +825,7 @@ export default function QuoteDetailPage() {
             handleRecalculate={handleRecalculate}
             session={session}
             onOpenParameterEditor={() => setShowParameterEditor(true)}
+            installmentsRefreshTrigger={installmentsRefreshTrigger}
           />
         )}
 
@@ -912,6 +999,7 @@ export default function QuoteDetailPage() {
               quote={quote}
               calculationResult={calculationResult}
               originalCalculationResult={originalCalculationResult}
+              onApplyChange={handleApplyChange}
               onUpdate={setCalculationResult}
               onClose={() => setShowParameterEditor(false)}
             />
