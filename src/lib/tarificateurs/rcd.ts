@@ -1191,7 +1191,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
 
       const fraisEcheance = fraisAnnee / nbEcheances;
 
-      const rcdEcheance = ((rcdAnnee + fraisAnnee) / nbEcheances) * ratio;
+      const rcdEcheance = (rcdAnnee / nbEcheances) * ratio;
       console.log(
         rcdAnnee,
         taxeAnnee,

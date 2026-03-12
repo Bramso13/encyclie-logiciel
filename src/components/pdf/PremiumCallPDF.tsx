@@ -427,8 +427,7 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                   const fraisGestion = isFirst
                     ? Number(calculationResult?.fraisGestion ?? 0)
                     : 0;
-                  const totalTTC =
-                    Number(echeance?.totalTTC ?? 0) + fraisGestion;
+                  const totalTTC = Number(echeance?.totalTTC ?? 0);
                   return (
                     <View key={index} style={styles.tableRow}>
                       <Text
@@ -458,7 +457,7 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                       <Text style={styles.tableCell}>{echeance.date}</Text>
                     </View>
                   );
-                }
+                },
               )}
             </View>
           )}
@@ -506,7 +505,7 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                           </Text>
                         </View>
                       );
-                    }
+                    },
                   )}
                 </View>
               </View>
@@ -531,7 +530,7 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
                           {echeance.finPeriode}
                         </Text>
                       </View>
-                    )
+                    ),
                   )}
                 </View>
               </View>

@@ -95,46 +95,31 @@ function fmtEuro(n: number | null | undefined): string {
 
 /** Construit un echeancier "simulé" pour le PDF à partir d'une seule échéance */
 function buildSingleInstallmentCalcResult(
-  inst: LocalInstallment,
+  instNumber: number,
   baseCalcResult: CalculationResult | null,
 ): CalculationResult | null {
   if (!baseCalcResult) return null;
 
-  const echeance = {
-    date: inst.dueDate
-      ? new Date(inst.dueDate).toLocaleDateString("fr-FR")
-      : "—",
-    totalHT: inst.amountHT,
-    taxe: inst.taxAmount,
-    totalTTC: inst.amountTTC,
-    rcd: inst.rcdAmount ?? 0,
-    pj: inst.pjAmount ?? 0,
-    frais: inst.feesAmount ?? 0,
-    reprise: inst.resumeAmount ?? 0,
-    debutPeriode: inst.periodStart
-      ? new Date(inst.periodStart).toLocaleDateString("fr-FR")
-      : "—",
-    finPeriode: inst.periodEnd
-      ? new Date(inst.periodEnd).toLocaleDateString("fr-FR")
-      : "—",
-  };
-
-  const fraisGestion = (baseCalcResult as any)?.fraisGestion ?? 0;
-  const isFirstInstallment = inst.installmentNumber === 1;
   return {
     ...baseCalcResult,
-    primeTotal: inst.amountHT,
-    totalTTC: isFirstInstallment
-      ? inst.amountTTC + fraisGestion
-      : inst.amountTTC,
-    isFirstInstallment,
+    primeTotal:
+      (baseCalcResult as any).echeancier?.echeances[instNumber - 1]?.totalHT ??
+      0,
+    totalTTC:
+      (baseCalcResult as any).echeancier?.echeances[instNumber - 1]?.totalTTC ??
+      0,
+    isFirstInstallment: instNumber === 1,
     autres: {
       ...((baseCalcResult as any).autres ?? {}),
-      taxeAssurance: inst.taxAmount,
+      taxeAssurance:
+        (baseCalcResult as any).echeancier?.echeances[instNumber - 1]?.taxe ??
+        0,
     },
     echeancier: {
       ...((baseCalcResult as any).echeancier ?? {}),
-      echeances: [echeance],
+      echeances: [
+        (baseCalcResult as any).echeancier?.echeances[instNumber - 1],
+      ],
     },
   } as CalculationResult;
 }
@@ -293,7 +278,7 @@ export default function AppelDePrimeTab({
       setPdfLoading((prev) => ({ ...prev, [inst.id]: true }));
       try {
         const singleCalcResult = buildSingleInstallmentCalcResult(
-          inst,
+          inst.installmentNumber,
           calculationResult,
         );
         const res = await fetch("/api/generate-pdf", {
@@ -323,18 +308,13 @@ export default function AppelDePrimeTab({
     if (pdfUrls[TAB_ID_ALL] || pdfLoading[TAB_ID_ALL]) return;
     setPdfLoading((prev) => ({ ...prev, [TAB_ID_ALL]: true }));
     try {
-      const allCalcResult = buildAllInstallmentsCalcResult(
-        installments,
-        calculationResult,
-      );
-      if (!allCalcResult) return;
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "premium-call",
           quote,
-          calculationResult: allCalcResult,
+          calculationResult: calculationResult,
         }),
       });
       if (!res.ok) throw new Error("Erreur PDF");
@@ -357,7 +337,12 @@ export default function AppelDePrimeTab({
     }
     const inst = installments.find((i) => i.id === activeTab);
     if (inst) loadPdfForInstallment(inst);
-  }, [activeTab, installments, loadPdfForAllInstallments, loadPdfForInstallment]);
+  }, [
+    activeTab,
+    installments,
+    loadPdfForAllInstallments,
+    loadPdfForInstallment,
+  ]);
 
   // ── Helpers pour les modales ─────────────────────────────────────────────
 
@@ -461,7 +446,7 @@ export default function AppelDePrimeTab({
   const handleDownloadPdf = async (inst: LocalInstallment) => {
     try {
       const singleCalcResult = buildSingleInstallmentCalcResult(
-        inst,
+        inst.installmentNumber,
         calculationResult,
       );
       const res = await fetch("/api/generate-pdf", {
@@ -529,7 +514,7 @@ export default function AppelDePrimeTab({
     try {
       const brokerInfo = await getBrokerInfo(session?.user?.id);
       const singleCalcResult = buildSingleInstallmentCalcResult(
-        inst,
+        inst.installmentNumber,
         calculationResult,
       );
       const pdfBlob = await pdf(
@@ -753,7 +738,9 @@ export default function AppelDePrimeTab({
                         {installments.length} échéance
                         {installments.length > 1 ? "s" : ""} — Période globale :{" "}
                         {fmtDate(installments[0]?.periodStart)} →{" "}
-                        {fmtDate(installments[installments.length - 1]?.periodEnd)}
+                        {fmtDate(
+                          installments[installments.length - 1]?.periodEnd,
+                        )}
                       </div>
                     </div>
                   </div>
@@ -918,7 +905,7 @@ export default function AppelDePrimeTab({
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="text-xs text-gray-500 mb-1">RCD</div>
                       <div className="font-semibold text-gray-900">
-                        {fmtEuro(inst.amountHT + inst.taxAmount)}
+                        {fmtEuro(inst.rcdAmount ?? 0)}
                       </div>
                     </div>
                     <div className="bg-indigo-50 rounded-lg p-3">
@@ -928,9 +915,7 @@ export default function AppelDePrimeTab({
                       <div className="font-bold text-indigo-700 text-lg">
                         {fmtEuro(
                           inst.installmentNumber === 1
-                            ? inst.amountTTC +
-                                (calculationResult?.fraisGestion ?? 0) +
-                                (inst.pjAmount ?? 0)
+                            ? inst.amountTTC
                             : inst.amountTTC,
                         )}
                       </div>
@@ -942,9 +927,7 @@ export default function AppelDePrimeTab({
                       <div className="font-bold text-indigo-700 text-lg">
                         {fmtEuro(
                           inst.installmentNumber === 1
-                            ? inst.amountHT +
-                                (calculationResult?.fraisGestion ?? 0) +
-                                (inst.pjAmount ?? 0)
+                            ? inst.amountHT
                             : inst.amountHT,
                         )}
                       </div>
