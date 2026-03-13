@@ -1162,7 +1162,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       let ratio: number;
       if (j === i - 1) {
         // Première période : calculer le ratio basé sur les jours réels
-        const joursTheorique = 365.25 / nbEcheances;
+        const joursTheorique = Math.round(365.25 / nbEcheances) - 1;
         const joursReel =
           Math.ceil(
             (dateFinPeriode.getTime() - dateDebutPeriode.getTime()) /
@@ -1253,6 +1253,25 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       premierPaiementDeLAnnee = false;
     }
   }
+
+  // Corriger l'écart d'arrondi : répartir la différence sur la TAXE de la dernière échéance.
+  // CalculationTab.getEcheanceRowValues recalcule totalTTC = totalHT + taxe (il n'utilise pas
+  // echeance.totalTTC). En corrigeant taxe, l'affichage reflète la correction.
+  if (echeances.length > 0) {
+    const sommeTTC = echeances.reduce(
+      (acc, e) => acc + (e.totalHT + e.taxe),
+      0,
+    );
+    const ecart = parseFloat((totalTTC - sommeTTC).toFixed(5));
+    if (ecart !== 0) {
+      const derniere = echeances[echeances.length - 1];
+      derniere.taxe = parseFloat((derniere.taxe + ecart).toFixed(2));
+      derniere.totalTTC = parseFloat(
+        (derniere.totalHT + derniere.taxe).toFixed(2),
+      );
+    }
+  }
+
   console.log("echeances", echeances);
   return {
     echeances,
