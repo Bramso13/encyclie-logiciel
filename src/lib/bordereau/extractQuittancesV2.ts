@@ -94,6 +94,7 @@ export async function getQuittancesV2(
       amountHT: true,
       amountTTC: true,
       taxAmount: true,
+      rcdAmount: true,
       paidAt: true,
       status: true,
       installmentNumber: true,
@@ -108,6 +109,7 @@ export async function getQuittancesV2(
               formData: true,
               companyData: true,
               acceptedAt: true,
+              modifieAlaMain: true,
             },
           },
         },
@@ -208,7 +210,13 @@ export async function getQuittancesV2(
     const identifiantQuittance = letter
       ? `${identifiantPolice}${letter}${inst.installmentNumber}-${year}`
       : `${identifiantPolice}${inst.installmentNumber}-${year}`;
-    const commission = Math.round(inst.amountHT * TAUX_COMMISSION * 100) / 100;
+    const modifieAlaMain = quote.modifieAlaMain === true;
+    // Pour devis non modifié à la main : PRIME_HT = RCD_HT (rcdAmount), PRIME_TTC = PRIME_HT + taxe
+    // Fallback amountHT si rcdAmount null (données legacy)
+    const rcdHt = inst.rcdAmount ?? inst.amountHT ?? 0;
+    const primeHT = modifieAlaMain ? inst.amountHT : rcdHt;
+    const primeTTC = modifieAlaMain ? inst.amountTTC : rcdHt + inst.taxAmount;
+    const commission = Math.round(primeHT * TAUX_COMMISSION * 100) / 100;
     const tauxTaxe = computeTauxTaxe(formData);
     const fromTransaction = inst.transactions?.[0]?.method;
     let paymentMethod:
@@ -224,7 +232,11 @@ export async function getQuittancesV2(
     const dateEmissionQuittance =
       inst.emissionDate ?? quote.acceptedAt ?? null;
     const row = mapInstallmentToQuittancesRow({
-      inst,
+      inst: {
+        ...inst,
+        amountHT: primeHT,
+        amountTTC: primeTTC,
+      },
       dateEmissionQuittance,
       identifiantPolice,
       identifiantQuittance,

@@ -346,6 +346,7 @@ function computeQuittancesRows(
   installments: LocalInstallment[],
   fd: Record<string, any>,
   quoteRef: string,
+  modifieAlaMain: boolean,
 ): QuittancesRow[] {
   const region = fd.territory ?? fd.region;
   const rate =
@@ -365,7 +366,12 @@ function computeQuittancesRows(
     const identifiantQuittance = letter
       ? `${quoteRef}${letter}${inst.installmentNumber}-${year}`
       : `${quoteRef}${inst.installmentNumber}-${year}`;
-    const commission = Math.round(inst.amountHT * 0.24 * 100) / 100;
+    // Pour devis non modifié à la main : PRIME_HT = RCD_HT (rcdAmount), PRIME_TTC = PRIME_HT + taxe
+    // Fallback amountHT si rcdAmount null (données legacy)
+    const rcdHt = inst.rcdAmount ?? inst.amountHT ?? 0;
+    const primeHT = modifieAlaMain ? inst.amountHT : rcdHt;
+    const primeTTC = modifieAlaMain ? inst.amountTTC : rcdHt + inst.taxAmount;
+    const commission = Math.round(primeHT * 0.24 * 100) / 100;
     let modePaiement = inst.paymentMethod
       ? (PAYMENT_METHOD_LABELS[inst.paymentMethod] ?? inst.paymentMethod)
       : "";
@@ -381,14 +387,20 @@ function computeQuittancesRows(
       DATE_ENCAISSEMENT: inst.paidAt ? fmtDate(inst.paidAt) : "",
       STATUT_QUITTANCE: QUITTANCE_STATUS[inst.status] ?? "EMISE",
       GARANTIE: "RC_RCD",
-      PRIME_TTC: String(inst.amountTTC),
-      PRIME_HT: String(inst.amountHT),
+      PRIME_TTC: String(primeTTC),
+      PRIME_HT: String(primeHT),
       TAXES: String(inst.taxAmount),
       TAXE_POURCENTAGE: tauxTaxe,
       COMMISSIONS: String(commission),
       MODE_PAIEMENT: modePaiement,
     };
   });
+}
+
+/** Valeurs numériques affichées dans la feuille quittances (alignées sur l’export CSV). */
+function parseQuittanceCellNumber(v: string | undefined): number {
+  const n = Number.parseFloat(String(v ?? "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
 }
 
 // ─── Section component ───────────────────────────────────────────────────────
@@ -769,8 +781,14 @@ export default function BordereauTab({
   const policesRow = policesRows[0] ?? null;
 
   const quittancesRows = useMemo(
-    () => computeQuittancesRows(installments, editFd, quote.reference),
-    [installments, editFd, quote.reference],
+    () =>
+      computeQuittancesRows(
+        installments,
+        editFd,
+        quote.reference,
+        quote.modifieAlaMain === true,
+      ),
+    [installments, editFd, quote.reference, quote.modifieAlaMain],
   );
 
   // ── Field update helpers ──────────────────────────────────────────────────
@@ -1936,13 +1954,22 @@ export default function BordereauTab({
                         >
                           Date émission ⓘ
                         </th>
-                        <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">
+                        <th
+                          className="px-3 py-2 text-right font-semibold whitespace-nowrap"
+                          title="Ligne du haut = montant retenu pour l’export quittance ; champ jaune = montant HT en base"
+                        >
                           Prime HT (€)
                         </th>
-                        <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">
+                        <th
+                          className="px-3 py-2 text-right font-semibold whitespace-nowrap"
+                          title="Export quittance + taxe en base (éditable)"
+                        >
                           Taxes (€)
                         </th>
-                        <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">
+                        <th
+                          className="px-3 py-2 text-right font-semibold whitespace-nowrap"
+                          title="Ligne du haut = Prime TTC export ; champ jaune = amountTTC en base"
+                        >
                           Prime TTC (€)
                         </th>
                         <th className="px-3 py-2 text-center font-semibold whitespace-nowrap">
@@ -2052,50 +2079,92 @@ export default function BordereauTab({
                                 title="DATE_ETAT_POLICE si prime non payée"
                               />
                             </td>
-                            {/* Prime HT */}
-                            <td className="px-1 py-1">
-                              <input
-                                type="number"
-                                className="border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-24"
-                                value={inst.amountHT}
-                                onChange={(e) =>
-                                  setInst(
-                                    idx,
-                                    "amountHT",
-                                    parseFloat(e.target.value) || 0,
-                                  )
-                                }
-                              />
+                            {/* Prime HT : export quittance + saisie base */}
+                            <td className="px-1 py-1 align-top">
+                              <div className="flex flex-col items-end gap-0.5">
+                                <div
+                                  className="text-xs font-semibold text-emerald-800 tabular-nums"
+                                  title="Montant PRIME_HT dans l’export quittance"
+                                >
+                                  {parseQuittanceCellNumber(
+                                    row?.PRIME_HT,
+                                  ).toLocaleString("fr-FR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </div>
+                                <input
+                                  type="number"
+                                  className="border border-gray-200 rounded px-2 py-0.5 text-[10px] text-right focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-24"
+                                  title="amountHT en base"
+                                  value={inst.amountHT}
+                                  onChange={(e) =>
+                                    setInst(
+                                      idx,
+                                      "amountHT",
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                />
+                              </div>
                             </td>
                             {/* Taxes */}
-                            <td className="px-1 py-1">
-                              <input
-                                type="number"
-                                className="border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-20"
-                                value={inst.taxAmount}
-                                onChange={(e) =>
-                                  setInst(
-                                    idx,
-                                    "taxAmount",
-                                    parseFloat(e.target.value) || 0,
-                                  )
-                                }
-                              />
+                            <td className="px-1 py-1 align-top">
+                              <div className="flex flex-col items-end gap-0.5">
+                                <div
+                                  className="text-xs font-semibold text-emerald-800 tabular-nums"
+                                  title="Montant TAXES dans l’export quittance"
+                                >
+                                  {parseQuittanceCellNumber(
+                                    row?.TAXES,
+                                  ).toLocaleString("fr-FR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </div>
+                                <input
+                                  type="number"
+                                  className="border border-gray-200 rounded px-2 py-0.5 text-[10px] text-right focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-20"
+                                  title="taxAmount en base"
+                                  value={inst.taxAmount}
+                                  onChange={(e) =>
+                                    setInst(
+                                      idx,
+                                      "taxAmount",
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                />
+                              </div>
                             </td>
                             {/* Prime TTC */}
-                            <td className="px-1 py-1">
-                              <input
-                                type="number"
-                                className="border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-24"
-                                value={inst.amountTTC}
-                                onChange={(e) =>
-                                  setInst(
-                                    idx,
-                                    "amountTTC",
-                                    parseFloat(e.target.value) || 0,
-                                  )
-                                }
-                              />
+                            <td className="px-1 py-1 align-top">
+                              <div className="flex flex-col items-end gap-0.5">
+                                <div
+                                  className="text-xs font-semibold text-emerald-800 tabular-nums"
+                                  title="Montant PRIME_TTC dans l’export quittance"
+                                >
+                                  {parseQuittanceCellNumber(
+                                    row?.PRIME_TTC,
+                                  ).toLocaleString("fr-FR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </div>
+                                <input
+                                  type="number"
+                                  className="border border-gray-200 rounded px-2 py-0.5 text-[10px] text-right focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-yellow-50 w-24"
+                                  title="amountTTC en base"
+                                  value={inst.amountTTC}
+                                  onChange={(e) =>
+                                    setInst(
+                                      idx,
+                                      "amountTTC",
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                />
+                              </div>
                             </td>
                             {/* Taux taxe % */}
                             <td className="px-3 py-1.5 text-center text-gray-600">
@@ -2172,36 +2241,81 @@ export default function BordereauTab({
                     {/* Totals footer */}
                     {installments.length > 0 && (
                       <tfoot>
-                        <tr className="bg-gray-50 font-semibold text-gray-700 border-t-2 border-gray-300">
+                        <tr className="bg-emerald-50 font-semibold text-emerald-900 border-t-2 border-emerald-200 text-[11px]">
                           <td
-                            className="px-3 py-2 text-right text-xs"
+                            className="px-3 py-2 text-right"
                             colSpan={5}
                           >
-                            TOTAUX
+                            TOTAUX (export quittance)
                           </td>
-                          <td className="px-3 py-2 text-right text-xs">
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {quittancesRows
+                              .reduce(
+                                (s, r) => s + parseQuittanceCellNumber(r.PRIME_HT),
+                                0,
+                              )
+                              .toLocaleString("fr-FR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {quittancesRows
+                              .reduce(
+                                (s, r) => s + parseQuittanceCellNumber(r.TAXES),
+                                0,
+                              )
+                              .toLocaleString("fr-FR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {quittancesRows
+                              .reduce(
+                                (s, r) => s + parseQuittanceCellNumber(r.PRIME_TTC),
+                                0,
+                              )
+                              .toLocaleString("fr-FR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                          </td>
+                          <td />
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {quittancesRows
+                              .reduce(
+                                (s, r) =>
+                                  s + parseQuittanceCellNumber(r.COMMISSIONS),
+                                0,
+                              )
+                              .toLocaleString("fr-FR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                          </td>
+                          <td colSpan={4} />
+                        </tr>
+                        <tr className="bg-gray-50 text-gray-600 border-t border-gray-200 text-[10px]">
+                          <td className="px-3 py-1.5 text-right" colSpan={5}>
+                            TOTAUX (montants en base)
+                          </td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">
                             {installments
                               .reduce((s, i) => s + i.amountHT, 0)
                               .toFixed(2)}
                           </td>
-                          <td className="px-3 py-2 text-right text-xs">
+                          <td className="px-3 py-1.5 text-right tabular-nums">
                             {installments
                               .reduce((s, i) => s + i.taxAmount, 0)
                               .toFixed(2)}
                           </td>
-                          <td className="px-3 py-2 text-right text-xs">
+                          <td className="px-3 py-1.5 text-right tabular-nums">
                             {installments
                               .reduce((s, i) => s + i.amountTTC, 0)
                               .toFixed(2)}
                           </td>
-                          <td />
-                          <td className="px-3 py-2 text-right text-xs">
-                            {(
-                              installments.reduce((s, i) => s + i.amountHT, 0) *
-                              0.24
-                            ).toFixed(2)}
-                          </td>
-                          <td colSpan={4} />
+                          <td colSpan={7} />
                         </tr>
                       </tfoot>
                     )}
@@ -2220,10 +2334,16 @@ export default function BordereauTab({
                 {/* Legend */}
                 <div className="mt-3 flex items-center gap-4 text-xs text-gray-400 flex-wrap">
                   <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 bg-yellow-50 border border-gray-200 rounded inline-block" />
-                    Cellule éditable
+                    <span className="w-3 h-3 bg-emerald-100 border border-emerald-300 rounded inline-block" />
+                    Montants export quittance (ligne du haut)
                   </span>
-                  <span>Commission = Prime HT × 24%</span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-3 h-3 bg-yellow-50 border border-gray-200 rounded inline-block" />
+                    Montants en base (champ éditable sous la ligne export)
+                  </span>
+                  <span className="text-emerald-700">
+                    Commission = 24 % de la prime HT export (colonne)
+                  </span>
                   {resiliationDate && (
                     <span className="flex items-center gap-1 text-red-400">
                       <span className="w-3 h-3 bg-red-50 border border-red-200 rounded inline-block opacity-40" />

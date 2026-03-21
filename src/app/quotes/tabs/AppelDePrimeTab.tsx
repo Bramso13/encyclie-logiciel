@@ -124,61 +124,6 @@ function buildSingleInstallmentCalcResult(
   } as CalculationResult;
 }
 
-/** Construit un calculationResult pour le PDF "toutes échéances" (une seule page avec tout l'échéancier) */
-function buildAllInstallmentsCalcResult(
-  installments: LocalInstallment[],
-  baseCalcResult: CalculationResult | null,
-): CalculationResult | null {
-  if (!baseCalcResult || installments.length === 0) return null;
-
-  const fraisGestion = (baseCalcResult as any)?.fraisGestion ?? 0;
-  const echeances = installments.map((inst, index) => {
-    const isFirst = inst.installmentNumber === 1;
-    return {
-      date: inst.dueDate
-        ? new Date(inst.dueDate).toLocaleDateString("fr-FR")
-        : "—",
-      totalHT: inst.amountHT,
-      taxe: inst.taxAmount,
-      totalTTC: inst.amountTTC,
-      rcd: inst.rcdAmount ?? 0,
-      pj: inst.pjAmount ?? 0,
-      frais: inst.feesAmount ?? 0,
-      reprise: inst.resumeAmount ?? 0,
-      debutPeriode: inst.periodStart
-        ? new Date(inst.periodStart).toLocaleDateString("fr-FR")
-        : "—",
-      finPeriode: inst.periodEnd
-        ? new Date(inst.periodEnd).toLocaleDateString("fr-FR")
-        : "—",
-      isFirstInstallment: isFirst,
-    };
-  });
-
-  const totalHT = installments.reduce((s, i) => s + i.amountHT, 0);
-  const totalTax = installments.reduce((s, i) => s + i.taxAmount, 0);
-  const totalTTC = installments.reduce((s, i) => {
-    if (i.installmentNumber === 1)
-      return s + i.amountTTC + fraisGestion + (i.pjAmount ?? 0);
-    return s + i.amountTTC;
-  }, 0);
-
-  return {
-    ...baseCalcResult,
-    primeTotal: totalHT,
-    totalTTC,
-    isFirstInstallment: false,
-    autres: {
-      ...((baseCalcResult as any).autres ?? {}),
-      taxeAssurance: totalTax,
-    },
-    echeancier: {
-      ...((baseCalcResult as any).echeancier ?? {}),
-      echeances,
-    },
-  } as CalculationResult;
-}
-
 /** Id de l'onglet "toutes les échéances" */
 const TAB_ID_ALL = "all";
 
@@ -303,46 +248,55 @@ export default function AppelDePrimeTab({
     [calculationResult, quote, pdfUrls, pdfLoading],
   );
 
-  // Charger le PDF "toutes échéances" pour l'onglet combiné
-  const loadPdfForAllInstallments = useCallback(async () => {
-    if (pdfUrls[TAB_ID_ALL] || pdfLoading[TAB_ID_ALL]) return;
-    setPdfLoading((prev) => ({ ...prev, [TAB_ID_ALL]: true }));
-    try {
-      const res = await fetch("/api/generate-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "premium-call",
-          quote,
-          calculationResult: calculationResult,
-        }),
-      });
-      if (!res.ok) throw new Error("Erreur PDF");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrls((prev) => ({ ...prev, [TAB_ID_ALL]: url }));
-    } catch {
-      // silencieux
-    } finally {
-      setPdfLoading((prev) => ({ ...prev, [TAB_ID_ALL]: false }));
-    }
-  }, [calculationResult, quote, installments, pdfUrls, pdfLoading]);
-
-  // Charger le PDF dès qu'un onglet devient actif
+  // Aperçu PDF « toutes échéances » : `calculationResult` tel quel (identique au téléchargement)
   useEffect(() => {
-    if (!activeTab) return;
-    if (activeTab === TAB_ID_ALL) {
-      loadPdfForAllInstallments();
-      return;
-    }
+    if (activeTab !== TAB_ID_ALL) return;
+    if (!calculationResult) return;
+
+    let cancelled = false;
+    setPdfLoading((prev) => ({ ...prev, [TAB_ID_ALL]: true }));
+
+    (async () => {
+      try {
+        const res = await fetch("/api/generate-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "premium-call",
+            quote,
+            calculationResult,
+          }),
+        });
+        if (!res.ok) throw new Error("Erreur PDF");
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        if (!cancelled) {
+          setPdfUrls((prev) => {
+            const prevUrl = prev[TAB_ID_ALL];
+            if (prevUrl) window.URL.revokeObjectURL(prevUrl);
+            return { ...prev, [TAB_ID_ALL]: url };
+          });
+        } else {
+          window.URL.revokeObjectURL(url);
+        }
+      } catch {
+        // silencieux
+      } finally {
+        setPdfLoading((prev) => ({ ...prev, [TAB_ID_ALL]: false }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, quote, calculationResult]);
+
+  // Charger le PDF dès qu'un onglet d'échéance individuelle devient actif
+  useEffect(() => {
+    if (!activeTab || activeTab === TAB_ID_ALL) return;
     const inst = installments.find((i) => i.id === activeTab);
     if (inst) loadPdfForInstallment(inst);
-  }, [
-    activeTab,
-    installments,
-    loadPdfForAllInstallments,
-    loadPdfForInstallment,
-  ]);
+  }, [activeTab, installments, loadPdfForInstallment]);
 
   // ── Helpers pour les modales ─────────────────────────────────────────────
 
@@ -475,14 +429,10 @@ export default function AppelDePrimeTab({
 
   const handleDownloadAllPdf = async () => {
     try {
-      const allCalcResult = buildAllInstallmentsCalcResult(
-        installments,
-        calculationResult,
-      );
-      if (!allCalcResult) {
+      if (!calculationResult) {
         setActionMsg({
           type: "error",
-          text: "Impossible de générer le PDF (calcul ou échéances manquants)",
+          text: "Impossible de générer le PDF (calcul manquant)",
         });
         return;
       }
@@ -492,7 +442,7 @@ export default function AppelDePrimeTab({
         body: JSON.stringify({
           type: "premium-call",
           quote,
-          calculationResult: allCalcResult,
+          calculationResult,
         }),
       });
       if (!res.ok) throw new Error();

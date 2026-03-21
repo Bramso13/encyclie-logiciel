@@ -378,6 +378,9 @@ model Quote {
   // Additional document requests from admin
   documentRequests DocumentRequest[]
 
+  /// Devis dont l’échéancier a été jugé corrigé / affiché manuellement par l’admin (écarts amountHT)
+  modifieAlaMain Boolean @default(false) @map("modifie_a_la_main")
+
   @@map("quotes")
 }
 

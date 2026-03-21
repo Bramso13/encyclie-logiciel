@@ -76,25 +76,21 @@ const ModificationForm = React.memo(
         "echeancier",
         genererEcheancier({
           dateDebut: new Date(quote.formData.dateDeffet),
-          totalHT: calculationResult.primeTotal,
           tauxTaxe: getTaxeByRegion(quote.formData.territory),
           taxe: calculationResult.autres.taxeAssurance,
           totalTTC: calculationResult.totalTTC,
           rcd: calculationResult.primeTotal,
-          pj: calculationResult.autres.protectionJuridiqueTTC,
           frais: calculationResult.autres.fraisFractionnementPrimeHT,
-          reprise: calculationResult.reprisePasseResult?.reprise,
+          reprise: calculationResult.reprisePasseResult?.reprise ?? 0,
           fraisGestion: calculationResult.fraisGestion,
           periodicite: quote.formData.periodicity as
             | "annuel"
             | "semestriel"
             | "trimestriel"
             | "mensuel",
-          totalHTN1: calculationResult.primeTotalN1,
           taxeN1: calculationResult.autresN1.taxeAssurance,
           totalTTCN1: calculationResult.totalTTCN1,
           rcdN1: calculationResult.primeTotalN1,
-          pjN1: calculationResult.autresN1.protectionJuridiqueTTC,
           fraisN1: calculationResult.autresN1.fraisFractionnementPrimeHT,
           fraisGestionN1: calculationResult.fraisGestionN1,
         })

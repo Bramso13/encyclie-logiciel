@@ -92,6 +92,8 @@ export interface Quote {
   };
   createdAt: string;
   updatedAt: string;
+  /** Affichage échéancier / bordereaux « corrigé manuellement » (admin) */
+  modifieAlaMain?: boolean;
 }
 
 // Types pour le système de suivi des paiements

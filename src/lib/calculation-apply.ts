@@ -74,12 +74,10 @@ export function applyCalculationChange(
   try {
     newResult.echeancier = genererEcheancier({
       dateDebut: new Date(quote.formData.dateDeffet),
-      totalHT: newResult.primeTotal,
       tauxTaxe: getTaxeByRegion(quote.formData.territory),
       taxe: newResult.autres.taxeAssurance,
       totalTTC: newResult.totalTTC,
       rcd: newResult.primeTotal,
-      pj: newResult.autres.protectionJuridiqueTTC,
       frais: newResult.autres.fraisFractionnementPrimeHT,
       reprise: newResult.reprisePasseResult?.primeReprisePasseTTC ?? 0,
       fraisGestion: newResult.fraisGestion,
@@ -88,11 +86,9 @@ export function applyCalculationChange(
         | "semestriel"
         | "trimestriel"
         | "mensuel",
-      totalHTN1: newResult.primeTotalN1,
       taxeN1: newResult.autresN1.taxeAssurance,
       totalTTCN1: newResult.totalTTCN1,
       rcdN1: newResult.primeTotalN1,
-      pjN1: newResult.autresN1.protectionJuridiqueTTC,
       fraisN1: newResult.autresN1.fraisFractionnementPrimeHT,
       fraisGestionN1: newResult.fraisGestionN1,
     });
