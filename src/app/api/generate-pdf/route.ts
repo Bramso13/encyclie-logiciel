@@ -46,6 +46,22 @@ export async function POST(request: NextRequest) {
       let filename: string;
       const baseUrl = request.headers.get("origin") || request.nextUrl.origin;
 
+      const resolveOfferLetterBrokerName = async (q: typeof quote) => {
+        const fromQuote =
+          typeof q?.broker?.name === "string" ? q.broker.name.trim() : "";
+        if (fromQuote) return fromQuote;
+        const brokerId = q?.brokerId as string | undefined;
+        if (brokerId) {
+          const brokerUser = await prisma.user.findUnique({
+            where: { id: brokerId },
+            select: { name: true },
+          });
+          const n = brokerUser?.name?.trim();
+          if (n) return n;
+        }
+        return "";
+      };
+
       switch (type) {
         case "letter-of-intent":
           pdfDocument = React.createElement(LetterOfIntentPDF, {
@@ -64,17 +80,19 @@ export async function POST(request: NextRequest) {
           });
           filename = `appel-prime-${quote.reference || "devis"}.pdf`;
           break;
-        case "offer-letter":
+        case "offer-letter": {
+          const brokerName = await resolveOfferLetterBrokerName(quote);
           pdfDocument = React.createElement(OfferLetterPDF, {
             quote,
             calculationResult,
             formData,
-            brokerCode: brokerProfile.code,
+            brokerName,
             selectedDocuments,
             baseUrl,
           });
           filename = `proposition-offre-${quote.reference || "devis"}.pdf`;
           break;
+        }
         case "contrat":
           pdfDocument = React.createElement(ContratPDF, {
             baseUrl,
