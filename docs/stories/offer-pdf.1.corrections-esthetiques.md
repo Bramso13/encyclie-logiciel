@@ -18,7 +18,7 @@ Ready for Review
 4. **Page 4 — Suppression du doublon de tableau de primes** : Pour chaque année, un seul tableau de primes est affiché (supprimer `renderPrimesAnnuellesTable`, conserver uniquement `renderPrimesTable`).
 5. **Page 4 — Ajout de « CFDP » à la ligne PJ** : Dans le tableau de Primes, la ligne 2 « Prime Protection Juridique Complément RCD » est renommée en « Prime Protection Juridique Complément RCD CFDP ».
 6. **Page 5 — Nombre d'échéances reprise du passé** : Le champ « Nombre d'échéances pour la reprise du passé si incluse » affiche une valeur : `0` si `garantieReprisePasse` est `false`/non souscrit, `1` si souscrit (la reprise est une prime unique à la souscription).
-7. **Page 5 — Suppression de « Dont TTC € ______ »** : Le placeholder `Dont TTC € __________` est supprimé car il n'est connecté à aucune source de données.
+7. **Page 5 — Suppression de « Dont TTC € **\_\_** »** : Le placeholder `Dont TTC € __________` est supprimé car il n'est connecté à aucune source de données.
 
 ## Tasks / Subtasks
 
@@ -46,17 +46,17 @@ Ready for Review
   - [x] Dans la section « Modalités de gestion » (Page 5), ajouter la valeur après le libellé « Nombre d'échéances pour la reprise du passé si incluse »
   - [x] Logique : si `formData.garantieReprisePasse` est `true` → afficher `1`, sinon → afficher `0`
 
-- [x] **Task 7 — Supprimer « Dont TTC € ______ »** (AC: 7)
+- [x] **Task 7 — Supprimer « Dont TTC € **\_\_** »** (AC: 7)
   - [x] Supprimer le bloc `<View>` contenant `Dont TTC € __________` (lignes ~1504-1514)
 
 ## Dev Notes
 
 ### Fichiers impactés
 
-| Fichier | Nature du changement |
-|---------|---------------------|
+| Fichier                                 | Nature du changement                                                |
+| --------------------------------------- | ------------------------------------------------------------------- |
 | `src/components/pdf/OfferLetterPDF.tsx` | Composant principal — toutes les modifications esthétiques (AC 1-7) |
-| `src/app/api/generate-pdf/route.ts` | Passage de la prop `brokerName` au composant (AC 1) |
+| `src/app/api/generate-pdf/route.ts`     | Passage de la prop `brokerName` au composant (AC 1)                 |
 
 ### Contexte technique
 
@@ -71,14 +71,14 @@ Ready for Review
 
 ### Structure des pages PDF (correspondance code ↔ document)
 
-| Page PDF | Contenu | Début dans le code (ligne approx.) |
-|----------|---------|-------------------------------------|
-| Page 1 | Déclaration du proposant | L.910 |
-| Page 2 | Activités garanties | L.1219 |
-| Page 3 | Montant des garanties et des franchises | L.1269 |
-| Page 4 | Produits d'assurances + Détails de la prime | L.1447 |
-| Page 5 | Échéancier et modalités | L.1497 |
-| Page 6 | Conditions et déclarations + RGPD + Signature | L.1701 |
+| Page PDF | Contenu                                       | Début dans le code (ligne approx.) |
+| -------- | --------------------------------------------- | ---------------------------------- |
+| Page 1   | Déclaration du proposant                      | L.910                              |
+| Page 2   | Activités garanties                           | L.1219                             |
+| Page 3   | Montant des garanties et des franchises       | L.1269                             |
+| Page 4   | Produits d'assurances + Détails de la prime   | L.1447                             |
+| Page 5   | Échéancier et modalités                       | L.1497                             |
+| Page 6   | Conditions et déclarations + RGPD + Signature | L.1701                             |
 
 ### Testing
 
@@ -123,7 +123,7 @@ Cursor agent (Claude)
 
 ## Change Log
 
-| Date | Version | Description | Author |
-|------|---------|-------------|--------|
-| 2026-03-25 | 1.0 | Création initiale de la story | PO (Sarah) |
-| 2026-03-25 | 1.1 | Implémentation corrections esthétiques / fonctionnelles PDF offre (dev) | Dev Agent |
+| Date       | Version | Description                                                             | Author     |
+| ---------- | ------- | ----------------------------------------------------------------------- | ---------- |
+| 2026-03-25 | 1.0     | Création initiale de la story                                           | PO (Sarah) |
+| 2026-03-25 | 1.1     | Implémentation corrections esthétiques / fonctionnelles PDF offre (dev) | Dev Agent  |

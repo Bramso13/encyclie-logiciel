@@ -2,9 +2,17 @@ import { Quote, CalculationResult, PaymentInstallment } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
 import { buildGetEcheanceRowValues } from "@/lib/quotes/echeance-row-values";
 import { genererEcheancier, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
-import { validateEcheancierInvariants, type TestResult } from "@/lib/tarificateurs/validateEcheancierInvariants";
+import {
+  validateEcheancierInvariants,
+  type TestResult,
+} from "@/lib/tarificateurs/validateEcheancierInvariants";
 
-type UnitTestResult = { suite: string; test: string; ok: boolean; detail: string };
+type UnitTestResult = {
+  suite: string;
+  test: string;
+  ok: boolean;
+  detail: string;
+};
 
 /** Échéance issue du tarificateur (ligne + index d’origine pour le tableau détaillé). */
 type EcheanceTarifRow = {
@@ -29,26 +37,57 @@ function TestRecalculButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [loadingTests, setLoadingTests] = useState(false);
-  const [validationResults, setValidationResults] = useState<TestResult[] | null>(null);
-  const [unitTestResults, setUnitTestResults] = useState<UnitTestResult[] | null>(null);
-  const [rectifiedEcheances, setRectifiedEcheances] = useState<Array<{ date: string; totalHT: number; taxe: number; totalTTC: number; rcd: number; pj: number; frais: number; reprise: number; fraisGestion: number }> | null>(null);
+  const [validationResults, setValidationResults] = useState<
+    TestResult[] | null
+  >(null);
+  const [unitTestResults, setUnitTestResults] = useState<
+    UnitTestResult[] | null
+  >(null);
+  const [rectifiedEcheances, setRectifiedEcheances] = useState<Array<{
+    date: string;
+    totalHT: number;
+    taxe: number;
+    totalTTC: number;
+    rcd: number;
+    pj: number;
+    frais: number;
+    reprise: number;
+    fraisGestion: number;
+  }> | null>(null);
   const [showPanel, setShowPanel] = useState(false);
 
   const handleTest = () => {
     const formData = quote.formData as unknown as Record<string, unknown>;
     const dateDeffet = formData?.dateDeffet as string | undefined;
     const territory = formData?.territory as string | undefined;
-    const periodicity = formData?.periodicity as "annuel" | "semestriel" | "trimestriel" | "mensuel" | undefined;
+    const periodicity = formData?.periodicity as
+      | "annuel"
+      | "semestriel"
+      | "trimestriel"
+      | "mensuel"
+      | undefined;
 
     if (!dateDeffet || !territory || !periodicity) {
-      setValidationResults([{ nom: "Erreur", ok: false, detail: "Paramètres manquants (dateDeffet, territory, periodicity)" }]);
+      setValidationResults([
+        {
+          nom: "Erreur",
+          ok: false,
+          detail: "Paramètres manquants (dateDeffet, territory, periodicity)",
+        },
+      ]);
       setShowPanel(true);
       return;
     }
 
     const tauxTaxe = getTaxeByRegion(territory);
     if (tauxTaxe == null) {
-      setValidationResults([{ nom: "Erreur", ok: false, detail: `Territoire "${territory}" inconnu` }]);
+      setValidationResults([
+        {
+          nom: "Erreur",
+          ok: false,
+          detail: `Territoire "${territory}" inconnu`,
+        },
+      ]);
       setShowPanel(true);
       return;
     }
@@ -63,7 +102,8 @@ function TestRecalculButton({
         totalTTC: calculationResult?.totalTTC ?? 0,
         rcd: calculationResult?.primeTotal ?? 0,
         frais: calculationResult?.autres?.fraisFractionnementPrimeHT ?? 0,
-        reprise: calculationResult?.reprisePasseResult?.primeReprisePasseTTC ?? 0,
+        reprise:
+          calculationResult?.reprisePasseResult?.primeReprisePasseTTC ?? 0,
         fraisGestion: calculationResult?.fraisGestion ?? 0,
         periodicite: periodicity,
         taxeN1: calculationResult?.autresN1?.taxeAssurance ?? 0,
@@ -74,17 +114,29 @@ function TestRecalculButton({
       });
       setCalculationResult({ ...calculationResult, echeancier });
       setRectifiedEcheances(
-        echeancier.echeances.map((e: { date: string; totalHT: number; taxe: number; totalTTC: number; rcd: number; pj: number; frais: number; reprise: number; fraisGestion: number }) => ({
-          date: e.date,
-          totalHT: e.totalHT,
-          taxe: e.taxe,
-          totalTTC: e.totalTTC,
-          rcd: e.rcd,
-          pj: e.pj,
-          frais: e.frais,
-          reprise: e.reprise ?? 0,
-          fraisGestion: e.fraisGestion,
-        }))
+        echeancier.echeances.map(
+          (e: {
+            date: string;
+            totalHT: number;
+            taxe: number;
+            totalTTC: number;
+            rcd: number;
+            pj: number;
+            frais: number;
+            reprise: number;
+            fraisGestion: number;
+          }) => ({
+            date: e.date,
+            totalHT: e.totalHT,
+            taxe: e.taxe,
+            totalTTC: e.totalTTC,
+            rcd: e.rcd,
+            pj: e.pj,
+            frais: e.frais,
+            reprise: e.reprise ?? 0,
+            fraisGestion: e.fraisGestion,
+          }),
+        ),
       );
 
       const validation = validateEcheancierInvariants(echeancier.echeances, {
@@ -92,7 +144,8 @@ function TestRecalculButton({
         taxe: calculationResult?.autres?.taxeAssurance ?? 0,
         frais: calculationResult?.autres?.fraisFractionnementPrimeHT ?? 0,
         fraisGestion: calculationResult?.fraisGestion ?? 0,
-        reprise: calculationResult?.reprisePasseResult?.primeReprisePasseTTC ?? 0,
+        reprise:
+          calculationResult?.reprisePasseResult?.primeReprisePasseTTC ?? 0,
         totalTTC: calculationResult?.totalTTC ?? 0,
         periodicite: periodicity,
       });
@@ -117,20 +170,36 @@ function TestRecalculButton({
         setUnitTestResults(json.data.results);
         setShowPanel(true);
       } else {
-        setUnitTestResults([{ suite: "Erreur", test: "API", ok: false, detail: json.error ?? "Erreur inconnue" }]);
+        setUnitTestResults([
+          {
+            suite: "Erreur",
+            test: "API",
+            ok: false,
+            detail: json.error ?? "Erreur inconnue",
+          },
+        ]);
         setShowPanel(true);
       }
     } catch (err) {
-      setUnitTestResults([{ suite: "Erreur", test: "Fetch", ok: false, detail: String(err) }]);
+      setUnitTestResults([
+        { suite: "Erreur", test: "Fetch", ok: false, detail: String(err) },
+      ]);
       setShowPanel(true);
     } finally {
       setLoadingTests(false);
     }
   };
 
-  const hasResults = validationResults !== null || unitTestResults !== null || rectifiedEcheances !== null;
-  const validationPassed = validationResults ? validationResults.every((r) => r.ok) : null;
-  const unitTestsPassed = unitTestResults ? unitTestResults.filter((r) => r.ok).length : null;
+  const hasResults =
+    validationResults !== null ||
+    unitTestResults !== null ||
+    rectifiedEcheances !== null;
+  const validationPassed = validationResults
+    ? validationResults.every((r) => r.ok)
+    : null;
+  const unitTestsPassed = unitTestResults
+    ? unitTestResults.filter((r) => r.ok).length
+    : null;
   const unitTestsTotal = unitTestResults ? unitTestResults.length : null;
 
   return (
@@ -179,42 +248,83 @@ function TestRecalculButton({
                   <thead>
                     <tr className="bg-gray-100 border-b">
                       <th className="px-2 py-1.5 text-left font-medium">#</th>
-                      <th className="px-2 py-1.5 text-left font-medium">Date</th>
-                      <th className="px-2 py-1.5 text-right font-medium">RCD</th>
+                      <th className="px-2 py-1.5 text-left font-medium">
+                        Date
+                      </th>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        RCD
+                      </th>
                       <th className="px-2 py-1.5 text-right font-medium">PJ</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Frais</th>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        Frais
+                      </th>
                       <th className="px-2 py-1.5 text-right font-medium">FG</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Reprise</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Total HT</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Taxe</th>
-                      <th className="px-2 py-1.5 text-right font-medium">Total TTC</th>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        Reprise
+                      </th>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        Total HT
+                      </th>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        Taxe
+                      </th>
+                      <th className="px-2 py-1.5 text-right font-medium">
+                        Total TTC
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {rectifiedEcheances.map((e, i) => (
-                      <tr key={i} className="border-b border-gray-100 last:border-0">
+                      <tr
+                        key={i}
+                        className="border-b border-gray-100 last:border-0"
+                      >
                         <td className="px-2 py-1.5">{i + 1}</td>
                         <td className="px-2 py-1.5">{e.date}</td>
-                        <td className="px-2 py-1.5 text-right">{e.rcd.toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right">{e.pj.toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right">{e.frais.toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right">{e.fraisGestion.toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right">{e.reprise.toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right font-medium">{e.totalHT.toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right">{e.taxe.toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right font-medium">{e.totalTTC.toFixed(2)}</td>
+                        <td className="px-2 py-1.5 text-right">
+                          {e.rcd.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {e.pj.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {e.frais.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {e.fraisGestion.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {e.reprise.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-medium">
+                          {e.totalHT.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {e.taxe.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-medium">
+                          {e.totalTTC.toFixed(2)}
+                        </td>
                       </tr>
                     ))}
                     <tr className="bg-gray-50 font-medium">
-                      <td colSpan={7} className="px-2 py-1.5 text-right">Somme</td>
-                      <td className="px-2 py-1.5 text-right">
-                        {rectifiedEcheances.reduce((s, e) => s + e.totalHT, 0).toFixed(2)}
+                      <td colSpan={7} className="px-2 py-1.5 text-right">
+                        Somme
                       </td>
                       <td className="px-2 py-1.5 text-right">
-                        {rectifiedEcheances.reduce((s, e) => s + e.taxe, 0).toFixed(2)}
+                        {rectifiedEcheances
+                          .reduce((s, e) => s + e.totalHT, 0)
+                          .toFixed(2)}
                       </td>
                       <td className="px-2 py-1.5 text-right">
-                        {rectifiedEcheances.reduce((s, e) => s + e.totalTTC, 0).toFixed(2)}
+                        {rectifiedEcheances
+                          .reduce((s, e) => s + e.taxe, 0)
+                          .toFixed(2)}
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        {rectifiedEcheances
+                          .reduce((s, e) => s + e.totalTTC, 0)
+                          .toFixed(2)}
                       </td>
                     </tr>
                   </tbody>
@@ -225,22 +335,34 @@ function TestRecalculButton({
 
           {validationResults && (
             <div className="mb-4 text-gray-900">
-              <div className={`font-semibold mb-1 ${validationPassed ? "text-green-800" : "text-red-800"}`}>
-                Invariants sur ce devis : {validationPassed ? "✓ TOUS OK" : "✗ ÉCHEC"}
+              <div
+                className={`font-semibold mb-1 ${validationPassed ? "text-green-800" : "text-red-800"}`}
+              >
+                Invariants sur ce devis :{" "}
+                {validationPassed ? "✓ TOUS OK" : "✗ ÉCHEC"}
               </div>
               <pre className="whitespace-pre-wrap break-words text-gray-900">
-                {validationResults.map((r) => `${r.ok ? "✓" : "✗"} ${r.nom}: ${r.detail}`).join("\n")}
+                {validationResults
+                  .map((r) => `${r.ok ? "✓" : "✗"} ${r.nom}: ${r.detail}`)
+                  .join("\n")}
               </pre>
             </div>
           )}
 
           {unitTestResults && (
             <div className="text-gray-900">
-              <div className={`font-semibold mb-1 ${unitTestsPassed === unitTestsTotal ? "text-green-800" : "text-red-800"}`}>
+              <div
+                className={`font-semibold mb-1 ${unitTestsPassed === unitTestsTotal ? "text-green-800" : "text-red-800"}`}
+              >
                 Tests unitaires : {unitTestsPassed}/{unitTestsTotal} OK
               </div>
               <pre className="whitespace-pre-wrap break-words text-gray-900">
-                {unitTestResults.map((r) => `[${r.suite}] ${r.ok ? "✓" : "✗"} ${r.test}: ${r.detail}`).join("\n")}
+                {unitTestResults
+                  .map(
+                    (r) =>
+                      `[${r.suite}] ${r.ok ? "✓" : "✗"} ${r.test}: ${r.detail}`,
+                  )
+                  .join("\n")}
               </pre>
             </div>
           )}
@@ -386,20 +508,48 @@ export default function CalculationTab({
   /** Même périmètre que le tableau « Échéancier de paiement détaillé » (filtrage année fin de période). */
   const ECHEANCIER_DETAIL_YEAR = 2026;
 
-  const echeancesPourAffichageDetaille = useMemo((): EcheanceAvecOrigIndex[] => {
-    const list = calculationResult?.echeancier?.echeances as
-      | EcheanceTarifRow[]
-      | undefined;
-    if (!list?.length) return [];
-    console.log("echeancesPourAffichageDetaille//", list);
-    return list
-      .map((echeance, origIndex) => ({ echeance, origIndex }))
-      .filter(
-        ({ echeance }) =>
-          new Date(echeance.finPeriode).getFullYear() ===
-          ECHEANCIER_DETAIL_YEAR,
-      );
-  }, [calculationResult?.echeancier?.echeances]);
+  const echeancesPourAffichageDetaille =
+    useMemo((): EcheanceAvecOrigIndex[] => {
+      if (quote.modifieAlaMain === true) {
+        const sorted = [...paymentInstallments].sort(
+          (a, b) => a.installmentNumber - b.installmentNumber,
+        );
+        return sorted
+          .filter((inst) => {
+            if (!inst.periodEnd) return false;
+            return (
+              new Date(inst.periodEnd).getFullYear() === ECHEANCIER_DETAIL_YEAR
+            );
+          })
+          .map((inst) => ({
+            echeance: {
+              finPeriode: inst.periodEnd,
+              rcd: inst.rcdAmount ?? undefined,
+              pj: inst.pjAmount ?? undefined,
+              frais: inst.feesAmount ?? undefined,
+              reprise: inst.resumeAmount ?? undefined,
+              taxe: inst.taxAmount ?? undefined,
+            } satisfies EcheanceTarifRow,
+            origIndex: inst.installmentNumber - 1,
+          }));
+      }
+
+      const list = calculationResult?.echeancier?.echeances as
+        | EcheanceTarifRow[]
+        | undefined;
+      if (!list?.length) return [];
+      return list
+        .map((echeance, origIndex) => ({ echeance, origIndex }))
+        .filter(
+          ({ echeance }) =>
+            new Date(echeance.finPeriode).getFullYear() ===
+            ECHEANCIER_DETAIL_YEAR,
+        );
+    }, [
+      quote.modifieAlaMain,
+      calculationResult?.echeancier?.echeances,
+      paymentInstallments,
+    ]);
 
   /** Somme des Total TTC des lignes affichées dans l’échéancier détaillé — source de vérité pour les totaux TTC affichés. */
   const sommeTotalTTCEcheancierDetaille = useMemo(() => {
@@ -1558,9 +1708,9 @@ export default function CalculationTab({
 
           {/* Échéancier - Visible pour tous les utilisateurs */}
           {!calculationResult.refus &&
-            calculationResult.echeancier &&
-            calculationResult.echeancier.echeances &&
-            calculationResult.echeancier.echeances.length > 0 &&
+            ((quote.modifieAlaMain === true &&
+              paymentInstallments.length > 0) ||
+              (calculationResult.echeancier?.echeances?.length ?? 0) > 0) &&
             (loadingInstallments ? (
               <div className="flex justify-center items-center py-16">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
@@ -1912,12 +2062,7 @@ export default function CalculationTab({
                         <tbody className="divide-y divide-gray-200">
                           {(() => {
                             const echeancesAvecIndex =
-                              calculationResult.echeancier.echeances.map(
-                                (echeance: any, origIndex: number) => ({
-                                  echeance,
-                                  origIndex,
-                                }),
-                              );
+                              echeancesPourAffichageDetaille;
                             const echeances2026 = echeancesAvecIndex.filter(
                               ({ echeance }: { echeance: any }) =>
                                 new Date(echeance.finPeriode).getFullYear() ===
