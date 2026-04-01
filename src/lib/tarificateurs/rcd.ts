@@ -127,6 +127,26 @@ function calculateMajorations(params: {
     }
     return 0;
   };
+  const calculAbsenceSinistre = (
+    absenceDeSinistreSurLes5DernieresAnnees: string,
+  ) => {
+    if (absenceDeSinistreSurLes5DernieresAnnees === "OUI") {
+      const diffMs = dateEffet.getTime() - dateCreation.getTime();
+      console.log("diffMs", diffMs);
+      const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
+      console.log("diffYears", diffYears);
+      if (diffYears < 3) return 0;
+      if (diffYears >= 3 && diffYears < 7) return -0.1;
+      if (diffYears >= 7) return -0.2;
+    }
+    if (
+      absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT" &&
+      !enCreation
+    )
+      return 0.2;
+    if (absenceDeSinistreSurLes5DernieresAnnees === "A_DEFINIR") return 0;
+    return 0;
+  };
   const majorations = {
     etp: calculMajETP(etp, nbActivites),
     qualif: qualif ? -0.05 : 0,
@@ -149,13 +169,9 @@ function calculateMajorations(params: {
       sansActiviteDepuisPlusDe12MoisSansFermeture === "OUI" && !enCreation
         ? 0.2
         : 0,
-    absenceDeSinistreSurLes5DernieresAnnees:
-      absenceDeSinistreSurLes5DernieresAnnees === "ASSUREUR_DEFAILLANT" &&
-      !enCreation
-        ? 0.2
-        : absenceDeSinistreSurLes5DernieresAnnees === "OUI" && !enCreation
-          ? -0.1
-          : 0,
+    absenceDeSinistreSurLes5DernieresAnnees: calculAbsenceSinistre(
+      absenceDeSinistreSurLes5DernieresAnnees,
+    ),
   };
 
   return majorations;
