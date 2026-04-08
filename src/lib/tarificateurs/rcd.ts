@@ -467,6 +467,13 @@ export function getTaxeProtectionJuridiqueByRegion(region: string) {
   };
   return taxeByRegion[regionRea];
 }
+export function getTaxePJByTauxTaxe(tauxTaxe: number) {
+  if (tauxTaxe === 0.09) return 0.134;
+  if (tauxTaxe === 0.045) return 0.067;
+  if (tauxTaxe === 0.05) return 0.05;
+  if (tauxTaxe === 0.0) return 0.0;
+  return 0.0;
+}
 export function calculPrimeRCD(params: {
   enCreation: boolean;
   caDeclared: number;
@@ -1052,18 +1059,32 @@ function genererPeriodes(
     // Premier paiement = soit première période du calendrier, soit première période d'une année N+1
     const estPremier = premierPaiementDeLAnnee;
 
+    // Début théorique de cette période (1er jour du mois calendaire)
+    const debutTheoriquePeriode = new Date(
+      year,
+      moisParPeriode * (j < 0 ? 0 : j),
+      1,
+    );
+    // Nombre de jours de la période calendaire complète (ex: mars = 31, avril = 30)
+    const nbJoursPeriodeComplete = Math.ceil(
+      (dateFinPeriode.getTime() - debutTheoriquePeriode.getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+    // Nombre de jours réellement couverts
+    const nbJoursCouverts =
+      Math.ceil(
+        (dateFinPeriode.getTime() - dateDebutPeriode.getTime()) /
+          (1000 * 60 * 60 * 24),
+      ) + 1;
+
+    console.log("nbJoursCouverts", nbJoursCouverts);
+    console.log("nbJoursPeriodeComplete", nbJoursPeriodeComplete);
+
+    // Ratio = proportion de la période couverte × poids d'une période pleine
     const ratio =
-      j === i - 1
-        ? Math.min(
-            (Math.ceil(
-              (dateFinPeriode.getTime() - dateDebutPeriode.getTime()) /
-                (1000 * 60 * 60 * 24),
-            ) +
-              2) /
-              (Math.round(365.25 / nbEcheancesParAn) - 1),
-            1,
-          )
-        : 1;
+      (nbJoursCouverts / nbJoursPeriodeComplete) * (1 / nbEcheancesParAn);
+
+    console.log("ratio", ratio);
 
     periodes.push({
       dateDebut: dateDebutPeriode,
@@ -1094,6 +1115,7 @@ type CalculParamsAnnuels = {
   taxeN1: number;
   fraisN1: number;
   fraisGestionN1: number;
+  tauxTaxePJ: number;
 };
 
 /** Calcule les montants d'une échéance à partir d'une période et des params annuels */
@@ -1120,11 +1142,17 @@ function calculerMontantsEcheance(
     : params.fraisGestion;
 
   const fraisEcheance = fraisAnnee / params.nbEcheances;
-  const rcdEcheance = (rcdAnnee / params.nbEcheances) * periode.ratio;
+  const rcdEcheance = rcdAnnee * periode.ratio;
+  console.log(
+    "rcd / nbEcheance / ratio",
+    rcdAnnee,
+    params.nbEcheances,
+    periode.ratio,
+  );
   const pjEcheance = periode.estPremierPaiementAnnee ? PJ_HT : 0;
   const taxeEcheance =
-    (taxeAnnee / params.nbEcheances) * periode.ratio +
-    pjEcheance * params.tauxTaxe;
+    (rcdEcheance + fraisEcheance) * params.tauxTaxe +
+    pjEcheance * params.tauxTaxePJ;
   const repriseEcheance = periode.estPremierPaiementAnnee ? params.reprise : 0;
   const fraisGestionEcheance = periode.estPremierPaiementAnnee
     ? fraisGestionAnnee
@@ -1245,6 +1273,7 @@ export function genererEcheancier(params: EcheancierParams): EcheancierResult {
       reprise,
       fraisGestion,
       tauxTaxe,
+      tauxTaxePJ: getTaxePJByTauxTaxe(tauxTaxe),
       nbEcheances: nbEcheancesParAn,
       rcdN1,
       taxeN1,

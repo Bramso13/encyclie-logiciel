@@ -382,19 +382,37 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Montant HT</Text>
                 <Text style={styles.summaryValue}>
-                  {formatNumber(calculationResult.primeTotal)} €
+                  {formatNumber(
+                    calculationResult.echeancier.echeances.reduce(
+                      (acc: number, echeance: any) => acc + echeance.totalHT,
+                      0,
+                    ),
+                  )}{" "}
+                  €
                 </Text>
               </View>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Taxe €</Text>
                 <Text style={styles.summaryValue}>
-                  {formatNumber(calculationResult.autres?.taxeAssurance)} €
+                  {formatNumber(
+                    calculationResult.echeancier.echeances.reduce(
+                      (acc: number, echeance: any) => acc + echeance.taxe,
+                      0,
+                    ),
+                  )}{" "}
+                  €
                 </Text>
               </View>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>MONTANT TTC</Text>
                 <Text style={[styles.summaryValue, styles.totalValue]}>
-                  {formatNumber(calculationResult.totalTTC)} €
+                  {formatNumber(
+                    calculationResult.echeancier.echeances.reduce(
+                      (acc: number, echeance: any) => acc + echeance.totalTTC,
+                      0,
+                    ),
+                  )}{" "}
+                  €
                 </Text>
               </View>
             </View>
