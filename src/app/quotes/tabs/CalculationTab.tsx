@@ -486,23 +486,18 @@ export default function CalculationTab({
   }, [quote?.id, installmentsRefreshTrigger]);
 
   /**
-   * Valeurs par échéance alignées sur AppelDePrimeTab ;
-   * branche `modifieAlaMain` : recalcul affichage (voir story écarts montants).
+   * Valeurs par échéance alignées sur le résultat du tarificateur (`calculationResult.echeancier`).
+   * (L’ancienne branche `modifieAlaMain` est désactivée — voir `echeance-row-values.ts`.)
    */
   const getEcheanceRowValues = useMemo(
     () =>
       buildGetEcheanceRowValues({
-        modifieAlaMain: quote.modifieAlaMain === true,
+        modifieAlaMain: false,
         paymentInstallments,
         calculationResult,
         originalCalculationResult,
       }),
-    [
-      quote.modifieAlaMain,
-      paymentInstallments,
-      calculationResult,
-      originalCalculationResult,
-    ],
+    [paymentInstallments, calculationResult, originalCalculationResult],
   );
 
   /** Même périmètre que le tableau « Échéancier de paiement détaillé » (filtrage année fin de période). */
@@ -510,29 +505,30 @@ export default function CalculationTab({
 
   const echeancesPourAffichageDetaille =
     useMemo((): EcheanceAvecOrigIndex[] => {
-      if (quote.modifieAlaMain === true) {
-        const sorted = [...paymentInstallments].sort(
-          (a, b) => a.installmentNumber - b.installmentNumber,
-        );
-        return sorted
-          .filter((inst) => {
-            if (!inst.periodEnd) return false;
-            return (
-              new Date(inst.periodEnd).getFullYear() === ECHEANCIER_DETAIL_YEAR
-            );
-          })
-          .map((inst) => ({
-            echeance: {
-              finPeriode: inst.periodEnd,
-              rcd: inst.rcdAmount ?? undefined,
-              pj: inst.pjAmount ?? undefined,
-              frais: inst.feesAmount ?? undefined,
-              reprise: inst.resumeAmount ?? undefined,
-              taxe: inst.taxAmount ?? undefined,
-            } satisfies EcheanceTarifRow,
-            origIndex: inst.installmentNumber - 1,
-          }));
-      }
+      // Ancienne source « modifieAlaMain » : échéances issues uniquement de `paymentInstallments`.
+      // if (quote.modifieAlaMain === true) {
+      //   const sorted = [...paymentInstallments].sort(
+      //     (a, b) => a.installmentNumber - b.installmentNumber,
+      //   );
+      //   return sorted
+      //     .filter((inst) => {
+      //       if (!inst.periodEnd) return false;
+      //       return (
+      //         new Date(inst.periodEnd).getFullYear() === ECHEANCIER_DETAIL_YEAR
+      //       );
+      //     })
+      //     .map((inst) => ({
+      //       echeance: {
+      //         finPeriode: inst.periodEnd,
+      //         rcd: inst.rcdAmount ?? undefined,
+      //         pj: inst.pjAmount ?? undefined,
+      //         frais: inst.feesAmount ?? undefined,
+      //         reprise: inst.resumeAmount ?? undefined,
+      //         taxe: inst.taxAmount ?? undefined,
+      //       } satisfies EcheanceTarifRow,
+      //       origIndex: inst.installmentNumber - 1,
+      //     }));
+      // }
 
       const list = calculationResult?.echeancier?.echeances as
         | EcheanceTarifRow[]
@@ -545,11 +541,7 @@ export default function CalculationTab({
             new Date(echeance.finPeriode).getFullYear() ===
             ECHEANCIER_DETAIL_YEAR,
         );
-    }, [
-      quote.modifieAlaMain,
-      calculationResult?.echeancier?.echeances,
-      paymentInstallments,
-    ]);
+    }, [calculationResult?.echeancier?.echeances, paymentInstallments]);
 
   /** Somme des Total TTC des lignes affichées dans l’échéancier détaillé — source de vérité pour les totaux TTC affichés. */
   const sommeTotalTTCEcheancierDetaille = useMemo(() => {
@@ -584,7 +576,7 @@ export default function CalculationTab({
       return (originalCalculationResult.totalTTC as number) ?? undefined;
     }
     const getter = buildGetEcheanceRowValues({
-      modifieAlaMain: quote.modifieAlaMain === true,
+      modifieAlaMain: false,
       paymentInstallments,
       calculationResult: originalCalculationResult,
       originalCalculationResult: null,
@@ -594,7 +586,7 @@ export default function CalculationTab({
         sum + getter(echeance, origIndex).totalTTC,
       0,
     );
-  }, [originalCalculationResult, quote.modifieAlaMain, paymentInstallments]);
+  }, [originalCalculationResult, paymentInstallments]);
 
   // Fonction pour obtenir des labels lisibles pour les champs
 
@@ -1741,9 +1733,7 @@ export default function CalculationTab({
 
           {/* Échéancier - Visible pour tous les utilisateurs */}
           {!calculationResult.refus &&
-            ((quote.modifieAlaMain === true &&
-              paymentInstallments.length > 0) ||
-              (calculationResult.echeancier?.echeances?.length ?? 0) > 0) &&
+            (calculationResult.echeancier?.echeances?.length ?? 0) > 0 &&
             (loadingInstallments ? (
               <div className="flex justify-center items-center py-16">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />

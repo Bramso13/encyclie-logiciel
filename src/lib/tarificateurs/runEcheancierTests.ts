@@ -3,7 +3,7 @@
  * Retourne les résultats pour affichage (API / UI).
  */
 
-import { genererEcheancier } from "./rcd";
+import { genererEcheancier, getTaxePJByTauxTaxe } from "./rcd";
 
 const TOLERANCE = 0.02;
 
@@ -51,12 +51,13 @@ export function runEcheancierUnitTests(): UnitTestResult[] {
   for (const { key, nbEcheances } of periodicités) {
     try {
       const rcd = 1200;
-      const taxe = 108;
       const tauxTaxe = 0.09;
+      const tauxTaxePJ = getTaxePJByTauxTaxe(tauxTaxe);
       const frais = 24;
       const fraisGestion = 60;
       const reprise = 0;
-      const pjTTC = 106 + 106 * tauxTaxe;
+      const taxe = (rcd + frais) * tauxTaxe;
+      const pjTTC = 106 + 106 * tauxTaxePJ;
       const totalTTC = rcd + taxe + pjTTC + frais + fraisGestion + reprise;
 
       const { echeances } = genererEcheancier(
@@ -86,8 +87,8 @@ export function runEcheancierUnitTests(): UnitTestResult[] {
       const sumTaxe = echeances.reduce((a, e) => a + e.taxe, 0);
       const sumTotalTTC = echeances.reduce((a, e) => a + e.totalTTC, 0);
 
-      const expectedRcd = key === "semestriel" ? (rcd / 2) * (181 / 182 + 1) : rcd;
-      const ttcTolerance = key === "semestriel" ? 5.0 : TOLERANCE;
+      const expectedRcd = rcd;
+      const ttcTolerance = TOLERANCE;
       const ok =
         assertNear(sumRcd, expectedRcd) &&
         assertNear(sumFrais, frais) &&

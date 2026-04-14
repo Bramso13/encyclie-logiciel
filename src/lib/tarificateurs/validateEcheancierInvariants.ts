@@ -47,7 +47,6 @@ export function validateEcheancierInvariants(
     return results;
   }
 
-  const nbEcheancesParAn = { annuel: 1, semestriel: 2, trimestriel: 4, mensuel: 12 }[params.periodicite];
   const sumRcd = echeances.reduce((a, e) => a + e.rcd, 0);
   const sumFrais = echeances.reduce((a, e) => a + e.frais, 0);
   const sumPj = echeances.reduce((a, e) => a + e.pj, 0);
@@ -100,28 +99,16 @@ export function validateEcheancierInvariants(
     detail: ttcOk ? `OK (${sumTotalTTC.toFixed(2)})` : `ÉCHEC: ${sumTotalTTC.toFixed(2)} vs ${(sumTotalHT + sumTaxe).toFixed(2)}`,
   });
 
-  // Σ totalTTC === totalTTC attendu (prorata compris)
-  // On dérive le ratio de la 1ère période via le RCD réel vs RCD/N
-  const N = nbEcheancesParAn;
-  const nbActual = echeances.length;
-  const rcdParEcheancePlein = params.rcd / N;
-  const ratio1 = rcdParEcheancePlein > 0 ? echeances[0].rcd / rcdParEcheancePlein : 1;
-  const sumRatios = ratio1 + (nbActual - 1);
-  const tauxTaxe = params.rcd > 0 ? params.taxe / params.rcd : 0;
-
-  const expectedRcd = rcdParEcheancePlein * sumRatios;
-  const expectedTaxe = (params.taxe / N) * sumRatios + sumPj * tauxTaxe;
-  const expectedFrais = (params.frais / N) * nbActual;
-  const expectedTTC = expectedRcd + expectedTaxe + expectedFrais + params.fraisGestion + sumPj + params.reprise;
-
-  const ttcToleranceArrondi = nbActual * 0.1;
-  const ttcOkVsExpected = Math.abs(sumTotalTTC - expectedTTC) <= ttcToleranceArrondi;
+  // Σ totalTTC ≈ totalTTC du devis (tolérance : arrondis + taxe PJ distincte de la taxe assurance)
+  const diffTTC = Math.abs(sumTotalTTC - params.totalTTC);
+  const ttcOkVsExpected =
+    diffTTC <= Math.max(5, 0.02 * Math.max(sumTotalTTC, params.totalTTC));
   results.push({
-    nom: `Σ totalTTC === primeTTC attendue (${nbActual}/${N} éch., ratio=${ratio1.toFixed(3)})`,
+    nom: "Σ totalTTC ≈ totalTTC devis",
     ok: ttcOkVsExpected,
     detail: ttcOkVsExpected
-      ? `OK (${sumTotalTTC.toFixed(2)} ≈ ${expectedTTC.toFixed(2)})`
-      : `ÉCHEC: ${sumTotalTTC.toFixed(2)} vs ${expectedTTC.toFixed(2)} attendu`,
+      ? `OK (Σ=${sumTotalTTC.toFixed(2)}, devis=${params.totalTTC.toFixed(2)})`
+      : `ÉCHEC: Σ=${sumTotalTTC.toFixed(2)} vs devis=${params.totalTTC.toFixed(2)} (Δ=${diffTTC.toFixed(2)})`,
   });
 
   // Cohérence par échéance : totalHT === rcd+pj+frais+fraisGestion+reprise

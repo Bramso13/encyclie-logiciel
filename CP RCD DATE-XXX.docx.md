@@ -8,8 +8,12 @@
 | Nom du souscripteur : Numéro Client : | NOM Prenom xxx                                     |
 | Indice de référence                   | 992,7                                              |
 
-**ASSUREUR** : WAKAM , Société́ Anonyme au capital de 4 658 992 €, siège social 120-122 rue Réaumur, 75002 PARIS, Immatriculée au Registre du Commerce et des Sociétés de Paris, sous le numéro 562 117 085  
-**CFDP Assurances SA –** Entreprise régie par le Code des Assurances – Immatriculée au registre du commerce et des Sociétés de Lyon sous le numéro 958 506 156 – Siège social : Immeuble l'Europe \- 62 Rue de Bonnel \- 69003 LYON  
+**ASSUREUR(S) :**
+
+• **FIDELIDADE :** FIDELIDADE, succursale française de la société FIDELIDADE Companhia de Seguros, S.A, société anonyme de droit portugais, au capital de 150 000 000 euros, dont le siège social est situé Av. da Boavista, 1269-076 Lisboa, Portugal, immatriculée au Registre du commerce de Lisbonne sous le numéro 500 276 280, établissement principal en France situé 12-14, rond-point des Champs-Élysées 75008 Paris, immatriculée au RCS Paris sous le numéro 422 443 128.
+
+• **Cfdp Assurances :** Cfdp Assurances, société anonyme au capital de 3 000 000 euros, dont le siège social est situé 43 avenue du Général de Gaulle 69006 Lyon, immatriculée au RCS Lyon sous le numéro 414 233 723, régie par le code des assurances
+
 **DISTRIBUTEUR ET GESTIONNAIRE DES CONTRATS** : ENCYCLIE CONSTRUCTION – 21 Rue de l’Eglise 44210 Pornic \- SAS au capital de 1 000 € \- SIREN 897 796 785 – RCS ST NAZAIRE – N° ORIAS : 21 004 564
 
 **GESTIONNAIRE DES SINISTRES** : ACS Solutions SAS – Le Carillon, 6 Esplanade Charles de Gaulle, 92000 NANTERRE   
@@ -30,7 +34,7 @@ _CP Ville du siège social :_ XXX
 _N°Immatriculation au répertoire des métiers :_ xxx xxx xxx  
 _Tél :_ xx.xx.xx.xx.xx  
 _Email :_ xxx@xxx  
-et l’**ASSUREUR** : WAKAM (nouveau nom de LA PARISIENNE ASSURANCES), Société Anonyme au capital de 4 658 992 €, siège social 120-122 rue Réaumur, 75002 PARIS, Immatriculée au Registre du Commerce et des Sociétés de Paris, sous le numéro 562 117 085
+et l’**ASSUREUR** : **FIDELIDADE**, succursale française de la société FIDELIDADE Companhia de Seguros, S.A, société anonyme de droit portugais, au capital de 150 000 000 euros, dont le siège social est situé Av. da Boavista, 1269-076 Lisboa, Portugal, immatriculée au Registre du commerce de Lisbonne sous le numéro 500 276 280, établissement principal en France situé 12-14, rond-point des Champs-Élysées 75008 Paris, immatriculée au RCS Paris sous le numéro 422 443 128 ; et **Cfdp Assurances**, société anonyme au capital de 3 000 000 euros, dont le siège social est situé 43 avenue du Général de Gaulle 69006 Lyon, immatriculée au RCS Lyon sous le numéro 414 233 723, régie par le code des assurances
 
 L’autorité française chargée du contrôle de la Compagnie d’assurance ci-dessus désignée est l’Autorité de Contrôle Prudentiel et de Résolution (ACPR), dont le siège est 4 Place de Budapest \- CS 92459 \- 75436 Paris Cedex 09; cet organisme public exerce son contrôle sur les sociétés d’assurances listées à l’article L. 310-2 du Code des Assurances.
 
@@ -242,19 +246,18 @@ Toutes les réclamations doivent être adressées au Service Gestion des Réclam
 Ou par mail à : [contact@encyclie-construction.com](mailto:contact@encyclie-construction.com)
 
 Encyclie s’engage à accuser réception de votre correspondance dans un délai de 10 jours ouvrables (sauf si Encyclie vous a déjà apporté une réponse au cours de ce délai), et à traiter votre réclamation dans un délai maximal de 2 mois à compter de la réception de votre courrier.  
-En cas de non-satisfaction sur la réponse apportée, vous pouvez vous adresser à Wakam, en écrivant à l’adresse suivante :
+En cas de non-satisfaction sur la réponse apportée, vous pouvez vous adresser à FIDELIDADE, en écrivant à l’adresse suivante :
 
-WAKAM  
+FIDELIDADE  
 Service Réclamations  
-120-122 Rue Réaumur  
-TSA 60235  
-75083 PARIS Cedex 02
+12-14, rond-point des Champs-Élysées  
+75008 PARIS  
 
-Wakam s’engage à accuser réception de votre correspondance dans un délai de 10 jours ouvrables (sauf si Wakam vous a déjà apporté une réponse au cours de ce délai), et à traiter votre réclamation dans un délai maximal de 2 mois à compter de la réception de votre courrier.
+FIDELIDADE s’engage à accuser réception de votre correspondance dans un délai de 10 jours ouvrables (sauf si FIDELIDADE vous a déjà apporté une réponse au cours de ce délai), et à traiter votre réclamation dans un délai maximal de 2 mois à compter de la réception de votre courrier.
 
 Les réclamations portant sur une prestation d’assistance sont à adresser au prestataire d’assistance dont les coordonnées sont indiquées sur vos Conditions Particulières. Il vous répondra directement dans les délais cités ci-dessus et vous précisera, en cas de refus de faire droit en totalité ou partiellement à votre réclamation, les voies de recours possibles, notamment l’existence et les coordonnées du (des) médiateur(s) compétent(s), lorsqu’il(s) existe(nt).
 
-Après épuisement des procédures internes de réclamations propres à Wakam, vous pouvez saisir par écrit le Médiateur de France Assureurs :
+Après épuisement des procédures internes de réclamations propres à FIDELIDADE, vous pouvez saisir par écrit le Médiateur de France Assureurs :
 
 Soit directement sur le site du médiateur de l’assurance :  
 http://www.mediation-assurance.org/Saisir+le+mediateur
@@ -265,7 +268,7 @@ La Médiation de l’Assurance
 TSA 50 110  
 75441 Paris cedex 09
 
-Le Médiateur est une personnalité extérieure à Wakam qui exerce sa mission en toute indépendance. Ce recours est gratuit. Il rend un avis motivé dans les 3 mois qui suivent sa saisine.
+Le Médiateur est une personnalité extérieure à FIDELIDADE qui exerce sa mission en toute indépendance. Ce recours est gratuit. Il rend un avis motivé dans les 3 mois qui suivent sa saisine.
 
 La procédure de recours au médiateur et la « Charte de la médiation » de France Assureurs sont librement consultables sur le site : www.franceassureurs.fr
 
@@ -285,12 +288,12 @@ Le souscripteur certifie que les informations données (recueillies dans la dema
 
 - Toute(s) omission(s) ou déclaration(s) inexacte(s) peut vous exposer à une révision à la hausse de votre cotisation ou à une résiliation du contrat, entrainer une réduction d’indemnités en cas de sinistre (art L.113-9 du code des assurances).
 
-Vous êtes informé que les données personnelles figurant dans le présent document dans le cadre de l’évaluation du risque et de l’établissement de votre contrat sont collectées par l’intermédiaire d’ENCYCLIE CONSTRUCTION, pour le compte de Wakam agissant en tant que responsable de traitement.
+Vous êtes informé que les données personnelles figurant dans le présent document dans le cadre de l’évaluation du risque et de l’établissement de votre contrat sont collectées par l’intermédiaire d’ENCYCLIE CONSTRUCTION, pour le compte de FIDELIDADE agissant en tant que responsable de traitement.
 
 Pour toute question, renseignement, ou pour exercer vos droits relatifs à vos données personnelles, veuillez contacter notre Délégué à la Protection des Données :  
-à l’adresse suivante : **Délégué à la Protection des Données, Wakam**  
- 120-122 rue Réaumur  
- 75002 Paris \- France
+à l’adresse suivante : **Délégué à la Protection des Données, FIDELIDADE**  
+12-14, rond-point des Champs-Élysées  
+75008 Paris \- France
 
 ou par courriel : [dpo@wakam.fr](mailto:dpo@wakam.fr)
 

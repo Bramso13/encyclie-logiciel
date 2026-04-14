@@ -1020,6 +1020,30 @@ type Periode = {
   annee: number;
 };
 
+/** Nombre de jours calendaires entre deux dates (bornes inclusives), en date locale. */
+function joursCalendairesInclus(debut: Date, fin: Date): number {
+  const d0 = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate());
+  const d1 = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate());
+  return (
+    Math.floor((d1.getTime() - d0.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  );
+}
+
+/** Index k ∈ [0, nb[ du sous-période calendaire (année civile `year`) contenant `dateDebut`. */
+function indexPeriodeCalendaire(
+  dateDebut: Date,
+  year: number,
+  nbPerYear: number,
+): number {
+  const moisParPeriode = 12 / nbPerYear;
+  for (let k = 0; k < nbPerYear; k++) {
+    const periodStart = new Date(year, k * moisParPeriode, 1);
+    const periodEnd = new Date(year, (k + 1) * moisParPeriode, 0);
+    if (dateDebut >= periodStart && dateDebut <= periodEnd) return k;
+  }
+  return nbPerYear - 1;
+}
+
 /** Génère les périodes (dates + ratio + premier paiement année) pour l'échéancier */
 function genererPeriodes(
   dateDebut: Date,
@@ -1032,71 +1056,48 @@ function genererPeriodes(
     trimestriel: 4,
     mensuel: 12,
   }[periodicite];
-  const moisParPeriode = { 1: 12, 2: 6, 4: 3, 12: 1 }[nbEcheancesParAn] ?? 1;
+  const moisParPeriode = 12 / nbEcheancesParAn;
 
-  let dateRef = new Date(year, 0, 1);
-  let i = 0;
-  while (dateRef < dateDebut && i < nbEcheancesParAn) {
-    dateRef = new Date(year, 0 + moisParPeriode * (i + 1), 1);
-    i++;
-  }
+  const kStart = indexPeriodeCalendaire(
+    dateDebut,
+    year,
+    nbEcheancesParAn,
+  );
 
   const periodes: Periode[] = [];
-  let premierPaiementDeLAnnee = true;
+  let indexDansListe = 0;
 
-  for (let j = i - 1; j < nbEcheancesParAn; j++) {
+  for (let k = kStart; k < nbEcheancesParAn; k++) {
+    const periodStart = new Date(year, k * moisParPeriode, 1);
+    const periodEnd = new Date(year, (k + 1) * moisParPeriode, 0);
+
     const dateDebutPeriode =
-      j === i - 1
-        ? new Date(dateDebut)
-        : new Date(year, 0 + moisParPeriode * j, 1);
-    const dateFinPeriode = new Date(year, 0 + moisParPeriode * (j + 1), 0);
+      k === kStart ? new Date(dateDebut) : periodStart;
 
-    const anneeCourante = dateFinPeriode.getFullYear();
-    const estPremierPaiementAnnee =
-      j % nbEcheancesParAn === 0 && anneeCourante > year;
-    if (estPremierPaiementAnnee) premierPaiementDeLAnnee = true;
-
-    // Premier paiement = soit première période du calendrier, soit première période d'une année N+1
-    const estPremier = premierPaiementDeLAnnee;
-
-    // Début théorique de cette période (1er jour du mois calendaire)
-    const debutTheoriquePeriode = new Date(
-      year,
-      moisParPeriode * (j < 0 ? 0 : j),
-      1,
+    const nbJoursPeriodeComplete = joursCalendairesInclus(
+      periodStart,
+      periodEnd,
     );
-    // Nombre de jours de la période calendaire complète (ex: mars = 31, avril = 30)
-    const nbJoursPeriodeComplete = Math.ceil(
-      (dateFinPeriode.getTime() - debutTheoriquePeriode.getTime()) /
-        (1000 * 60 * 60 * 24),
+    const nbJoursCouverts = joursCalendairesInclus(
+      dateDebutPeriode,
+      periodEnd,
     );
-    // Nombre de jours réellement couverts
-    const nbJoursCouverts =
-      Math.ceil(
-        (dateFinPeriode.getTime() - dateDebutPeriode.getTime()) /
-          (1000 * 60 * 60 * 24),
-      ) + 1;
 
-    console.log("nbJoursCouverts", nbJoursCouverts);
-    console.log("nbJoursPeriodeComplete", nbJoursPeriodeComplete);
-
-    // Ratio = proportion de la période couverte × poids d'une période pleine
     const ratio =
       (nbJoursCouverts / nbJoursPeriodeComplete) * (1 / nbEcheancesParAn);
 
-    console.log("ratio", ratio);
+    const estPremier = indexDansListe === 0;
+    indexDansListe += 1;
 
     periodes.push({
       dateDebut: dateDebutPeriode,
-      dateFin: dateFinPeriode,
+      dateFin: periodEnd,
       dateDebutStr: formatDatePeriode(dateDebutPeriode),
-      dateFinStr: formatDatePeriode(dateFinPeriode),
+      dateFinStr: formatDatePeriode(periodEnd),
       ratio,
       estPremierPaiementAnnee: estPremier,
-      annee: dateFinPeriode.getFullYear(),
+      annee: periodEnd.getFullYear(),
     });
-
-    premierPaiementDeLAnnee = false;
   }
 
   return periodes;
@@ -1143,12 +1144,6 @@ function calculerMontantsEcheance(
 
   const fraisEcheance = fraisAnnee / params.nbEcheances;
   const rcdEcheance = rcdAnnee * periode.ratio;
-  console.log(
-    "rcd / nbEcheance / ratio",
-    rcdAnnee,
-    params.nbEcheances,
-    periode.ratio,
-  );
   const pjEcheance = periode.estPremierPaiementAnnee ? PJ_HT : 0;
   const taxeEcheance =
     (rcdEcheance + fraisEcheance) * params.tauxTaxe +

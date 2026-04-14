@@ -17,11 +17,13 @@
 **Numéro de contrat :**   
 **Date d’effet du contrat :** 
 
-## **L’assureur**
+## **Les assureurs**
 
 #### 
 
-**WAKAM (nouveau nom de LA PARISIENNE ASSURANCES)**, Société Anonyme au capital de 4 658 992€, siège social 120-122 rue Réaumur, 75002 PARIS, Immatriculée au Registre du Commerce et des Sociétés de Paris, sous le numéro 562 117 085\.
+• **FIDELIDADE :** FIDELIDADE, succursale française de la société FIDELIDADE Companhia de Seguros, S.A, société anonyme de droit portugais, au capital de 150 000 000 euros, dont le siège social est situé Av. da Boavista, 1269-076 Lisboa, Portugal, immatriculée au Registre du commerce de Lisbonne sous le numéro 500 276 280, établissement principal en France situé 12-14, rond-point des Champs-Élysées 75008 Paris, immatriculée au RCS Paris sous le numéro 422 443 128.
+
+• **Cfdp Assurances :** Cfdp Assurances, société anonyme au capital de 3 000 000 euros, dont le siège social est situé 43 avenue du Général de Gaulle 69006 Lyon, immatriculée au RCS Lyon sous le numéro 414 233 723, régie par le code des assurances
 
 #### **Le xx/xx/xx,**
 

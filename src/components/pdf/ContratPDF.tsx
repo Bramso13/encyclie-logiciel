@@ -333,17 +333,23 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Assureur / Distributeur */}
         <View style={styles.section}>
-          <Text>
-            <Text style={styles.strong}>ASSUREUR</Text> : WAKAM, Société Anonyme
-            au capital de 4 658 992 €, siège social 120-122 rue Réaumur, 75002
-            PARIS, Immatriculée au Registre du Commerce et des Sociétés de
-            Paris, sous le numéro 562 117 085
+          <Text style={styles.strong}>ASSUREUR(S) :</Text>
+          <Text style={{ marginTop: 6, marginBottom: 4 }}>
+            • <Text style={styles.strong}>FIDELIDADE :</Text> FIDELIDADE,
+            succursale française de la société FIDELIDADE Companhia de Seguros,
+            S.A, société anonyme de droit portugais, au capital de 150 000 000
+            euros, dont le siège social est situé Av. da Boavista, 1269-076
+            Lisboa, Portugal, immatriculée au Registre du commerce de Lisbonne
+            sous le numéro 500 276 280, établissement principal en France
+            situé 12-14, rond-point des Champs-Élysées 75008 Paris, immatriculée
+            au RCS Paris sous le numéro 422 443 128.
           </Text>
-          <Text>
-            <Text style={styles.strong}>CFDP Assurances SA</Text> – Entreprise
-            régie par le Code des Assurances – Immatriculée au registre du
-            commerce et des Sociétés de Lyon sous le numéro 958 506 156 – Siège
-            social : Immeuble l'Europe - 62 Rue de Bonnel - 69003 LYON
+          <Text style={{ marginBottom: 4 }}>
+            • <Text style={styles.strong}>Cfdp Assurances :</Text> Cfdp
+            Assurances, société anonyme au capital de 3 000 000 euros, dont le
+            siège social est situé 43 avenue du Général de Gaulle 69006 Lyon,
+            immatriculée au RCS Lyon sous le numéro 414 233 723, régie par le
+            code des assurances
           </Text>
           <Text>
             <Text style={styles.strong}>
@@ -384,11 +390,19 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           <Text>Tél : {telephone}</Text>
           <Text>Email : {email}</Text>
           <Text style={{ marginTop: 8 }}>
-            et l'<Text style={styles.strong}>ASSUREUR</Text> : WAKAM (nouveau
-            nom de LA PARISIENNE ASSURANCES), Société Anonyme au capital de 4
-            658 992 €, siège social 120-122 rue Réaumur, 75002 PARIS,
-            Immatriculée au Registre du Commerce et des Sociétés de Paris, sous
-            le numéro 562 117 085
+            et l'<Text style={styles.strong}>ASSUREUR</Text> :{" "}
+            <Text style={styles.strong}>FIDELIDADE</Text>, succursale française
+            de la société FIDELIDADE Companhia de Seguros, S.A, société anonyme
+            de droit portugais, au capital de 150 000 000 euros, dont le siège
+            social est situé Av. da Boavista, 1269-076 Lisboa, Portugal,
+            immatriculée au Registre du commerce de Lisbonne sous le numéro 500
+            276 280, établissement principal en France situé 12-14, rond-point
+            des Champs-Élysées 75008 Paris, immatriculée au RCS Paris sous le
+            numéro 422 443 128 ; et{" "}
+            <Text style={styles.strong}>Cfdp Assurances</Text>, société anonyme
+            au capital de 3 000 000 euros, dont le siège social est situé 43
+            avenue du Général de Gaulle 69006 Lyon, immatriculée au RCS Lyon sous
+            le numéro 414 233 723, régie par le code des assurances
           </Text>
           <Text style={styles.small}>
             L'autorité française chargée du contrôle de la Compagnie d'assurance
@@ -1048,17 +1062,16 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             une réponse au cours de ce délai), et à traiter votre réclamation
             dans un délai maximal de 2 mois à compter de la réception de votre
             courrier. En cas de non-satisfaction sur la réponse apportée, vous
-            pouvez vous adresser à Wakam, en écrivant à l'adresse suivante :
+            pouvez vous adresser à FIDELIDADE, en écrivant à l'adresse suivante :
           </Text>
-          <Text style={styles.strong}>WAKAM</Text>
+          <Text style={styles.strong}>FIDELIDADE</Text>
           <Text>Service Réclamations</Text>
-          <Text>120-122 Rue Réaumur</Text>
-          <Text>TSA 60235</Text>
-          <Text>75083 PARIS Cedex 02</Text>
+          <Text>12-14, rond-point des Champs-Élysées</Text>
+          <Text>75008 PARIS</Text>
           <Text>
-            Wakam s'engage à accuser réception de votre correspondance dans un
-            délai de 10 jours ouvrables (sauf si Wakam vous a déjà apporté une
-            réponse au cours de ce délai), et à traiter votre réclamation dans
+            FIDELIDADE s'engage à accuser réception de votre correspondance dans
+            un délai de 10 jours ouvrables (sauf si FIDELIDADE vous a déjà apporté
+            une réponse au cours de ce délai), et à traiter votre réclamation dans
             un délai maximal de 2 mois à compter de la réception de votre
             courrier.
           </Text>
@@ -1074,7 +1087,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           </Text>
           <Text>
             Après épuisement des procédures internes de réclamations propres à
-            Wakam, vous pouvez saisir par écrit le Médiateur de France Assureurs
+            FIDELIDADE, vous pouvez saisir par écrit le Médiateur de France Assureurs
             :
           </Text>
           <Text>
@@ -1086,7 +1099,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           <Text>TSA 50 110</Text>
           <Text>75441 Paris cedex 09</Text>
           <Text>
-            Le Médiateur est une personnalité extérieure à Wakam qui exerce sa
+            Le Médiateur est une personnalité extérieure à FIDELIDADE qui exerce sa
             mission en toute indépendance. Ce recours est gratuit. Il rend un
             avis motivé dans les 3 mois qui suivent sa saisine.
           </Text>
@@ -1139,15 +1152,15 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             Vous êtes informé que les données personnelles figurant dans le
             présent document dans le cadre de l'évaluation du risque et de
             l'établissement de votre contrat sont collectées par l'intermédiaire
-            d'ENCYCLIE CONSTRUCTION, pour le compte de Wakam agissant en tant
+            d'ENCYCLIE CONSTRUCTION, pour le compte de FIDELIDADE agissant en tant
             que responsable de traitement.
           </Text>
           <Text>
             Pour toute question, renseignement, ou pour exercer vos droits
             relatifs à vos données personnelles, veuillez contacter notre
             Délégué à la Protection des Données : à l'adresse suivante : Délégué
-            à la Protection des Données, Wakam 120-122 rue Réaumur 75002 Paris -
-            France
+            à la Protection des Données, FIDELIDADE — 12-14, rond-point des
+            Champs-Élysées, 75008 Paris - France
           </Text>
           <Text>ou par courriel : dpo@wakam.fr</Text>
           <Text>

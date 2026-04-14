@@ -61,7 +61,7 @@ describe("computeRowValuesDefault", () => {
 });
 
 describe("buildGetEcheanceRowValues", () => {
-  it("aiguille vers modifieAlaMain quand le flag est true", () => {
+  it("ignore modifieAlaMain : chemin défaut (fraisGestion global sur échéance 1)", () => {
     const get = buildGetEcheanceRowValues({
       modifieAlaMain: true,
       paymentInstallments: [baseInst],
@@ -69,7 +69,7 @@ describe("buildGetEcheanceRowValues", () => {
       originalCalculationResult: null,
     });
     const row = get({}, 0);
-    expect(row.rcdHT).toBe(500);
-    expect(row.fraisGestion).toBe(50);
+    expect(row.rcdHT).toBe(100);
+    expect(row.fraisGestion).toBe(99);
   });
 });

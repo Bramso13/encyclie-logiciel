@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { genererEcheancier } from "../rcd";
+import { genererEcheancier, getTaxePJByTauxTaxe } from "../rcd";
 
 const TOLERANCE = 0.02;
 
@@ -48,12 +48,13 @@ describe("genererEcheancier", () => {
     for (const { key, nbEcheances } of periodicités) {
       it(`${key}: invariants sur sommes vs totaux annuels`, () => {
         const rcd = 1200;
-        const taxe = 108; // 9% sur RCD
         const tauxTaxe = 0.09;
+        const tauxTaxePJ = getTaxePJByTauxTaxe(tauxTaxe);
         const frais = 24;
         const fraisGestion = 60;
         const reprise = 0;
-        const pjTTC = 106 + 106 * tauxTaxe;
+        const taxe = (rcd + frais) * tauxTaxe;
+        const pjTTC = 106 + 106 * tauxTaxePJ;
         const totalTTC = rcd + taxe + pjTTC + frais + fraisGestion + reprise;
 
         const { echeances } = genererEcheancier(
@@ -83,11 +84,7 @@ describe("genererEcheancier", () => {
         const sumTaxe = echeances.reduce((a, e) => a + e.taxe, 0);
         const sumTotalTTC = echeances.reduce((a, e) => a + e.totalTTC, 0);
 
-        // Σ rcd ≈ rcd annuel (semestriel 1er janv : ratio S1 ≈ 181/182)
-        const expectedRcd =
-          key === "semestriel"
-            ? (rcd / 2) * (181 / 182 + 1)
-            : rcd;
+        const expectedRcd = rcd;
         assertNear(sumRcd, expectedRcd, `Σ rcd (${key})`);
 
         assertNear(sumFrais, frais, `Σ frais (${key})`);
@@ -100,8 +97,7 @@ describe("genererEcheancier", () => {
         assertNear(sumTotalHT, sumComposantes, `Σ totalHT vs composantes (${key})`);
         assertNear(sumTotalTTC, sumTotalHT + sumTaxe, `Σ totalTTC (${key})`);
 
-        // Σ totalTTC ≈ totalTTC annuel (semestriel a un petit écart dû au ratio)
-        const toleranceTTC = key === "semestriel" ? 5.0 : TOLERANCE;
+        const toleranceTTC = TOLERANCE;
         expect(
           Math.abs(sumTotalTTC - totalTTC),
           `Σ totalTTC vs totalTTC annuel (${key}): ${sumTotalTTC} vs ${totalTTC}`

@@ -30,6 +30,10 @@ export type PaymentInstallmentForEcheanceRow = Pick<
 
 const FRAIS_GESTION_RATE = 0.1;
 
+/**
+ * @deprecated Branche `modifieAlaMain` désactivée dans `buildGetEcheanceRowValues` :
+ * conserver la fonction pour référence / réactivation éventuelle (10 % du amountHT sur l’échéance 1).
+ */
 export function computeRowValuesModifieAlaMain(
   inst: PaymentInstallmentForEcheanceRow,
   origIndex: number,
@@ -138,9 +142,10 @@ export function buildGetEcheanceRowValues(ctx: {
     );
     const useSavedInstallment = !ctx.originalCalculationResult && !!inst;
 
-    if (ctx.modifieAlaMain && inst) {
-      return computeRowValuesModifieAlaMain(inst, origIndex);
-    }
+    // modifieAlaMain : logique retirée de l’affichage — toujours le chemin tarificateur / échéancier calculé.
+    // if (ctx.modifieAlaMain && inst) {
+    //   return computeRowValuesModifieAlaMain(inst, origIndex);
+    // }
 
     return computeRowValuesDefault(
       inst,

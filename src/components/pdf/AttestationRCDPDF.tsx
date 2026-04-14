@@ -249,32 +249,41 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
           </View>
         </View>
 
-        {/* L'assureur */}
+        {/* Les assureurs */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>L'assureur</Text>
-          <Text style={styles.paragraph}>
-            <Text style={styles.bold}>
-              WAKAM (nouveau nom de LA PARISIENNE ASSURANCES)
-            </Text>
-            , Société Anonyme au capital de 4 658 992€, siège social 120-122
-            rue Réaumur, 75002 PARIS, Immatriculée au Registre du Commerce et
-            des Sociétés de Paris, sous le numéro 562 117 085.
+          <Text style={styles.sectionTitle}>Les assureurs</Text>
+          <Text style={[styles.paragraph, styles.listItem]}>
+            <Text style={styles.bold}>• FIDELIDADE :</Text> FIDELIDADE,
+            succursale française de la société FIDELIDADE Companhia de Seguros,
+            S.A, société anonyme de droit portugais, au capital de 150 000 000
+            euros, dont le siège social est situé Av. da Boavista, 1269-076
+            Lisboa, Portugal, immatriculée au Registre du commerce de Lisbonne
+            sous le numéro 500 276 280, établissement principal en France
+            situé 12-14, rond-point des Champs-Élysées 75008 Paris, immatriculée
+            au RCS Paris sous le numéro 422 443 128.
+          </Text>
+          <Text style={[styles.paragraph, styles.listItem]}>
+            <Text style={styles.bold}>• Cfdp Assurances :</Text> Cfdp
+            Assurances, société anonyme au capital de 3 000 000 euros, dont le
+            siège social est situé 43 avenue du Général de Gaulle 69006 Lyon,
+            immatriculée au RCS Lyon sous le numéro 414 233 723, régie par le
+            code des assurances
           </Text>
           <Text style={[styles.paragraph, { marginTop: 10 }]}>
             Le {attestationDateFormatted},
           </Text>
           <Text style={styles.paragraph}>
-            <Text style={styles.bold}>L'assureur atteste</Text> que la personne
-            dont l'identité est mentionnée ci-dessus est titulaire du contrat
-            d'Assurance responsabilité civile professionnelle et décennale n°{" "}
-            {contractNumber}, pour la période du {startDateFormatted} au{" "}
-            {endDateFormatted}.
+            <Text style={styles.bold}>Les assureurs attestent</Text> que la
+            personne dont l'identité est mentionnée ci-dessus est titulaire du
+            contrat d'Assurance responsabilité civile professionnelle et
+            décennale n° {contractNumber}, pour la période du{" "}
+            {startDateFormatted} au {endDateFormatted}.
           </Text>
           <Text style={styles.paragraph}>
             La présente attestation est valable du {validityStartFormatted}{" "}
             jusqu'au {validityEndFormatted} et ne constitue qu'une présomption
-            de garantie à la charge de l'Assureur. Elle ne peut engager
-            l'assureur au-delà des clauses et conditions du contrat auxquelles
+            de garantie à la charge des assureurs. Elle ne peut engager les
+            assureurs au-delà des clauses et conditions du contrat auxquelles
             elle se réfère
           </Text>
         </View>
