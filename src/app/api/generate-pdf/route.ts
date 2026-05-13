@@ -9,6 +9,56 @@ import { ApiError, withAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import OfferLetterPDF from "@/components/pdf/OfferLetterPDF";
 
+const PDF_LOG_PREFIX = "[generate-pdf]";
+const DEBUG_PDF = false;
+
+/** Données non sensibles pour suivre quel devis plante sans tout logger */
+function summarizePayload(
+  type: string,
+  quote: Record<string, unknown>,
+  calculationResult?: unknown,
+) {
+  const fd = quote?.formData as Record<string, unknown> | undefined;
+  const activities = fd?.activities;
+  const cr =
+    calculationResult && typeof calculationResult === "object"
+      ? (calculationResult as Record<string, unknown>)
+      : null;
+  return {
+    type,
+    quoteRef: quote?.reference,
+    quoteId: quote?.id,
+    hasFormData: Boolean(fd),
+    activityCount: Array.isArray(activities) ? activities.length : null,
+    hasCalculationResult: Boolean(calculationResult),
+    ...(DEBUG_PDF && cr
+      ? { calculationResultKeys: Object.keys(cr).slice(0, 32) }
+      : {}),
+    ...(DEBUG_PDF ? { quoteKeys: Object.keys(quote).slice(0, 32) } : {}),
+  };
+}
+
+function logPdfError(stage: string, error: unknown) {
+  console.error(`${PDF_LOG_PREFIX} FAIL stage=${stage}`);
+  if (error instanceof Error) {
+    console.error(`${PDF_LOG_PREFIX}`, error.message);
+    console.error(`${PDF_LOG_PREFIX}`, error.stack);
+    let cause = error.cause as unknown;
+    let depth = 0;
+    while (cause instanceof Error && depth++ < 5) {
+      console.error(`${PDF_LOG_PREFIX} cause[${depth}]:`, cause.message);
+      cause = cause.cause as unknown;
+    }
+  } else {
+    console.error(`${PDF_LOG_PREFIX}`, String(error));
+    try {
+      console.error(`${PDF_LOG_PREFIX}`, JSON.stringify(error));
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   return withAuth(async (userId, userRole) => {
     try {
@@ -21,7 +71,14 @@ export async function POST(request: NextRequest) {
         markdownContent,
       } = await request.json();
 
-      console.log("selectedDocuments", selectedDocuments);
+      console.log(
+        `${PDF_LOG_PREFIX}`,
+        summarizePayload(
+          type || "",
+          (quote || {}) as Record<string, unknown>,
+          calculationResult,
+        ),
+      );
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -38,7 +95,7 @@ export async function POST(request: NextRequest) {
       if (!type || !quote) {
         return NextResponse.json(
           { success: false, error: "Type et quote requis" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -106,28 +163,61 @@ export async function POST(request: NextRequest) {
         default:
           return NextResponse.json(
             { success: false, error: "Type de document non supporté" },
-            { status: 400 }
+            { status: 400 },
           );
       }
 
-      // Générer le PDF
-      const pdfStream = await pdf(pdfDocument).toBlob();
-      const pdfBuffer = Buffer.from(await pdfStream.arrayBuffer());
-
-      // Retourner le PDF
-      return new NextResponse(pdfBuffer, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Length": pdfBuffer.length.toString(),
-        },
+      console.log(`${PDF_LOG_PREFIX}`, {
+        phase: "react-tree-ready",
+        filename,
+        baseUrlOrigin: baseUrl.replace(/\/?$/, ""),
+        ...(DEBUG_PDF ? { selectedDocuments } : {}),
       });
+
+      const started = Date.now();
+
+      try {
+        const pdfInstance = pdf(pdfDocument as Parameters<typeof pdf>[0]);
+        const pdfStream = await pdfInstance.toBlob();
+        const pdfBuffer = Buffer.from(await pdfStream.arrayBuffer());
+
+        console.log(`${PDF_LOG_PREFIX}`, {
+          phase: "generated",
+          ms: Date.now() - started,
+          bytes: pdfBuffer.length,
+          type,
+          filename,
+        });
+
+        return new NextResponse(pdfBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Content-Length": pdfBuffer.length.toString(),
+          },
+        });
+      } catch (renderErr) {
+        logPdfError(`pdf().toBlob type=${type}`, renderErr);
+        throw renderErr;
+      }
     } catch (error) {
-      console.error("Erreur génération PDF:", error);
+      logPdfError("route", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la génération du PDF";
       return NextResponse.json(
-        { success: false, error: "Erreur lors de la génération du PDF" },
-        { status: 500 }
+        {
+          success: false,
+          error: DEBUG_PDF
+            ? `PDF: ${message}`
+            : "Erreur lors de la génération du PDF",
+          ...(DEBUG_PDF && error instanceof Error
+            ? { detail: message, name: error.name }
+            : {}),
+        },
+        { status: 500 },
       );
     }
   });

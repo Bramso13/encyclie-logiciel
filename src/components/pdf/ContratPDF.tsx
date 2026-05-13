@@ -15,8 +15,11 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     backgroundColor: "#FFFFFF",
     padding: 40,
+    paddingBottom: 52,
     fontSize: 11,
-    lineHeight: 1.4,
+    lineHeight: 1.45,
+    /* Bordure page retirée : combine mal avec pagination Yoga sur gros flux (PDFKit unsupported number).
+       Charte : bordures des tableaux / cases signature restent orange. */
   },
   header: {
     marginBottom: 20,
@@ -26,20 +29,24 @@ const styles = StyleSheet.create({
     height: 45,
     marginBottom: 10,
   },
+  coverTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000000",
+    marginBottom: 10,
+    marginTop: 4,
+    textAlign: "center",
+  },
   title: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#1f2937",
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: "#6b7280",
+    color: "#000000",
     marginBottom: 10,
+    marginTop: 14,
+    textAlign: "left",
   },
   section: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   box: {
     backgroundColor: "#f9fafb",
@@ -66,35 +73,52 @@ const styles = StyleSheet.create({
     backgroundColor: "#F39200",
     borderBottom: "1px solid #C36C0B",
   },
-  th: {
+  /** Toujours un <View flex> puis <Text> : flex sur <Text> en ligne ⇒ mesures Yoga corrompues (PDFKit unsupported number). */
+  thCell: {
     flex: 1,
     padding: 6,
+    borderRight: "1px solid #C36C0B",
+    justifyContent: "center",
+  },
+  thCellWide: {
+    flex: 2,
+    padding: 6,
+    borderRight: "1px solid #C36C0B",
+    justifyContent: "center",
+  },
+  thLabel: {
     fontSize: 9,
     fontWeight: "bold",
     color: "#374151",
     textAlign: "center",
-    borderRight: "1px solid #C36C0B",
   },
   row: {
     flexDirection: "row",
     borderBottom: "1px solid #e5e7eb",
   },
-  td: {
+  tdCell: {
     flex: 1,
     padding: 6,
+    borderRight: "1px solid #e5e7eb",
+  },
+  tdCellWide: {
+    flex: 2,
+    padding: 6,
+    borderRight: "1px solid #e5e7eb",
+  },
+  tdLabel: {
     fontSize: 9,
     color: "#374151",
     textAlign: "left",
-    borderRight: "1px solid #e5e7eb",
   },
   listItem: {
     marginBottom: 3,
     fontSize: 10,
   },
   footer: {
-    marginTop: 30,
+    marginTop: 36,
     paddingTop: 20,
-    borderTop: "1px solid #e5e7eb",
+    borderTop: "1px solid #F39200",
   },
   footerText: {
     fontSize: 11,
@@ -112,7 +136,31 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 12,
   },
+  signatureRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  signatureBox: {
+    width: 240,
+    border: "2px solid #F39200",
+    borderRadius: 4,
+    padding: 12,
+    minHeight: 110,
+  },
+  signatureLine: {
+    marginTop: 28,
+    borderTop: "1px solid #9ca3af",
+    paddingTop: 6,
+    fontSize: 9,
+    color: "#6b7280",
+  },
 });
+
+/** Bloc Page du contrat (pas de pied fixe + render : source fréquente de crash Yoga/PDFKit sur gros flux). */
+const ContratPdfPageChrome: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => <Page size="A4" style={styles.page}>{children}</Page>;
 
 interface ContractRCDPDFProps {
   baseUrl?: string;
@@ -300,11 +348,11 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <ContratPdfPageChrome>
         {/* En-tête */}
         <View style={styles.header}>
           <Image src={logoSrc} style={styles.logo} />
-          <Text style={styles.subtitle}>
+          <Text style={styles.coverTitle}>
             Conditions particulières – Responsabilité Civile Professionnelle et
             Décennale
           </Text>
@@ -335,14 +383,15 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
         <View style={styles.section}>
           <Text style={styles.strong}>ASSUREUR(S) :</Text>
           <Text style={{ marginTop: 6, marginBottom: 4 }}>
-            • <Text style={styles.strong}>FIDELIDADE :</Text> FIDELIDADE,
-            succursale française de la société FIDELIDADE Companhia de Seguros,
-            S.A, société anonyme de droit portugais, au capital de 150 000 000
-            euros, dont le siège social est situé Av. da Boavista, 1269-076
-            Lisboa, Portugal, immatriculée au Registre du commerce de Lisbonne
-            sous le numéro 500 276 280, établissement principal en France
-            situé 12-14, rond-point des Champs-Élysées 75008 Paris, immatriculée
-            au RCS Paris sous le numéro 422 443 128.
+            • <Text style={styles.strong}>FIDELIDADE :</Text> Succursale française
+            de la société FIDELIDADE Companhia de Seguros, S.A, Société Anonyme au
+            capital de 509 263 524 euros, dont le siège social est sis à Lisbonne,
+            Largo de Calhariz, 30, 1249-01 Lisboa, Portugal, prise en sa succursale
+            française sise Tour Aurore – 19ème étage, 18, place des Reflets – CS
+            90462 – 92976 Paris La Défense Cedex, immatriculée au Registre du
+            Commerce et des Sociétés de Nanterre sous le numéro 413 175 191,
+            soumise au contrôle de l'ACPR. Tél. FIDELIDADE : 01 40 17 67 20 –{" "}
+            https://www.fidelidade.fr
           </Text>
           <Text style={{ marginBottom: 4 }}>
             • <Text style={styles.strong}>Cfdp Assurances :</Text> Cfdp
@@ -355,9 +404,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             <Text style={styles.strong}>
               DISTRIBUTEUR ET GESTIONNAIRE DES CONTRATS
             </Text>{" "}
-            : ENCYCLIE CONSTRUCTION – 21 Rue de l'Eglise 44210 Pornic - SAS au
-            capital de 1 000 € - SIREN 897 796 785 – RCS ST NAZAIRE – N° ORIAS :
-            21 004 564
+            : ENCYCLIE CONSTRUCTION – 42, rue Notre-Dame des Victoires 75002
+            Paris - SAS au capital de 1 000 € - SIREN 897 796 785 – RCS PARIS –
+            N° ORIAS : 21 004 564 – www.orias.fr
           </Text>
           <Text>
             <Text style={styles.strong}>GESTIONNAIRE DES SINISTRES</Text> : ACS
@@ -371,9 +420,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
         <View style={styles.section}>
           <Text>
             Les présentes Conditions Particulières prévalent sur les Conditions
-            Générales jointes (Réf. ENCYCLIE BAT-CG_WAKAM_082022), dont le
-            souscripteur reconnaît avoir reçu un exemplaire, constituent le
-            contrat d'assurance conclu entre :
+            Générales jointes (Réf. ENCYCLIE BAT-CG_FIDELIDADE_01052025) dont
+            le souscripteur reconnaît avoir reçu un exemplaire, constituent le
+            Contrat d'assurance conclu entre :
           </Text>
         </View>
 
@@ -392,13 +441,12 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           <Text style={{ marginTop: 8 }}>
             et l'<Text style={styles.strong}>ASSUREUR</Text> :{" "}
             <Text style={styles.strong}>FIDELIDADE</Text>, succursale française
-            de la société FIDELIDADE Companhia de Seguros, S.A, société anonyme
-            de droit portugais, au capital de 150 000 000 euros, dont le siège
-            social est situé Av. da Boavista, 1269-076 Lisboa, Portugal,
-            immatriculée au Registre du commerce de Lisbonne sous le numéro 500
-            276 280, établissement principal en France situé 12-14, rond-point
-            des Champs-Élysées 75008 Paris, immatriculée au RCS Paris sous le
-            numéro 422 443 128 ; et{" "}
+            de la société FIDELIDADE Companhia de Seguros, S.A, Société Anonyme au
+            capital de 509 263 524 euros, dont le siège social est sis à Lisbonne,
+            Largo de Calhariz, 30, 1249-01 Lisboa, Portugal, prise en sa succursale
+            française sise Tour Aurore – 19ème étage, 18, place des Reflets – CS
+            90462 – 92976 Paris La Défense Cedex, immatriculée au Registre du
+            Commerce et des Sociétés de Nanterre sous le numéro 413 175 191 ; et{" "}
             <Text style={styles.strong}>Cfdp Assurances</Text>, société anonyme
             au capital de 3 000 000 euros, dont le siège social est situé 43
             avenue du Général de Gaulle 69006 Lyon, immatriculée au RCS Lyon sous
@@ -623,138 +671,226 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           </Text>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 2 }]}>COUVERTURE</Text>
-              <Text style={styles.th}>LIMITES</Text>
-              <Text style={styles.th}>FRANCHISE</Text>
+              <View style={styles.thCellWide}>
+                <Text style={styles.thLabel}>COUVERTURE</Text>
+              </View>
+              <View style={styles.thCell}>
+                <Text style={styles.thLabel}>LIMITES</Text>
+              </View>
+              <View style={styles.thCell}>
+                <Text style={styles.thLabel}>FRANCHISE</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                RC AVANT/APRÈS RÉCEPTION dont :
-              </Text>
-              <Text style={styles.td}>2 000 000€ PAR SINISTRE</Text>
-              <Text style={styles.td}>1 000€</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  RC AVANT/APRÈS RÉCEPTION dont :
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>2 000 000€ PAR SINISTRE</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>DOMMAGES MATÉRIELS</Text>
-              <Text style={styles.td}>1 500 000€ PAR SINISTRE</Text>
-              <Text style={styles.td}>1 000€</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>DOMMAGES MATÉRIELS</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 500 000€ PAR SINISTRE</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>DOMMAGES IMMATÉRIELS</Text>
-              <Text style={styles.td}>
-                200 000€ PAR SINISTRE / 400 000€ PAR ANNÉE D'ASSURANCE
-              </Text>
-              <Text style={styles.td}>1 000€</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>DOMMAGES IMMATÉRIELS</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  200 000€ PAR SINISTRE / 400 000€ PAR ANNÉE D'ASSURANCE
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                ATTEINTES À L'ENVIRONNEMENT
-              </Text>
-              <Text style={styles.td}>
-                200 000€ PAR SINISTRE / 400 000€ PAR ANNÉE D'ASSURANCE
-              </Text>
-              <Text style={styles.td}>1 000€</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  ATTEINTES À L'ENVIRONNEMENT
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  200 000€ PAR SINISTRE / 400 000€ PAR ANNÉE D'ASSURANCE
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>FAUTES INEXCUSABLES</Text>
-              <Text style={styles.td}>750 000€ PAR SINISTRE</Text>
-              <Text style={styles.td}>1 000€</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>FAUTES INEXCUSABLES</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>750 000€ PAR SINISTRE</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>RC DECENNALE</Text>
-              <Text style={styles.td}>
-                Montant max du chantier : 15 000 000€
-              </Text>
-              <Text style={styles.td}>-</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>RC DECENNALE</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  Montant max du chantier : 15 000 000€
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                R.C DECENNALE pour travaux de construction soumis à l'obligation
-                d'assurance
-              </Text>
-              <Text style={styles.td}>
-                En Habitation : Le montant de la garantie couvre le coût des
-                travaux de réparation des dommages à l'ouvrage. Hors habitation
-                : Le montant de la garantie couvre le coût des travaux de
-                réparation des dommages à l'ouvrage dans la limite du coût total
-                de construction déclaré par le maître d'ouvrage et sans pouvoir
-                être supérieur au montant prévu au I de l'article R. 243-3 du
-                code des assurances. En présence d'un CCRD : Lorsqu'un Contrat
-                Collectif de Responsabilité Décennale (CCRD) est souscrit au
-                bénéfice de l'assuré, le montant de la garantie est égal au
-                montant de la franchise absolue stipulée par ledit contrat
-                collectif.
-              </Text>
-              <Text style={styles.td}>1 000€ (*)</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  R.C DECENNALE pour travaux de construction soumis à l'obligation
+                  d'assurance
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  En Habitation : Le montant de la garantie couvre le coût des
+                  travaux de réparation des dommages à l'ouvrage. Hors habitation
+                  : Le montant de la garantie couvre le coût des travaux de
+                  réparation des dommages à l'ouvrage dans la limite du coût total
+                  de construction déclaré par le maître d'ouvrage et sans pouvoir
+                  être supérieur au montant prévu au I de l'article R. 243-3 du
+                  code des assurances. En présence d'un CCRD : Lorsqu'un Contrat
+                  Collectif de Responsabilité Décennale (CCRD) est souscrit au
+                  bénéfice de l'assuré, le montant de la garantie est égal au
+                  montant de la franchise absolue stipulée par ledit contrat
+                  collectif.
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€ (*)</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                R.C DECENNALE en tant que sous-traitant en cas de dommages de
-                nature décennale
-              </Text>
-              <Text style={styles.td}>2 000 000€</Text>
-              <Text style={styles.td}>1 000€ (*)</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  R.C DECENNALE en tant que sous-traitant en cas de dommages de
+                  nature décennale
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>2 000 000€</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€ (*)</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                R.C DECENNALE pour travaux de construction non soumis à
-                l'obligation d'assurance conformément à l'article L243-1.1
-                paragraphe 1 du Code des Assurances
-              </Text>
-              <Text style={styles.td}>
-                500 000€ PAR SINISTRE / 800 000€ PAR ANNÉE D'ASSURANCE
-              </Text>
-              <Text style={styles.td}>1 000€ (*)</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  R.C DECENNALE pour travaux de construction non soumis à
+                  l'obligation d'assurance conformément à l'article L243-1.1
+                  paragraphe 1 du Code des Assurances
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  500 000€ PAR SINISTRE / 800 000€ PAR ANNÉE D'ASSURANCE
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>1 000€ (*)</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                RC CONNEXES À LA RC DECENNALE
-              </Text>
-              <Text style={styles.td}>-</Text>
-              <Text style={styles.td}>-</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  RC CONNEXES À LA RC DECENNALE
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                BON FONCTIONNEMENT DES ÉLÉMENTS D'ÉQUIPEMENTS DISSOCIABLES DES
-                OUVRAGES SOUMIS À L'ASSURANCE OBLIGATOIRE (Cette garantie est
-                maintenue pour une durée de 2 ans à compter de la réception des
-                chantiers ouverts durant la période de garantie, telle que
-                précisée à l'article 1792-3 du Code Civil.)
-              </Text>
-              <Text style={styles.td}>
-                600 000€ Montant unique pour l'ensemble des garanties BON
-                FONCTIONNEMENT, DOMMAGES IMMATERIELS CONSECUTIFS, DOMMAGES AUX
-                EXISTANTS et DOMMAGES INTERMEDIAIRES. Dont 100 000 € au titre
-                des DOMMAGES INTERMEDIAIRES et DOMMAGES IMMATERIELS CONSECUTIFS
-                cumulés
-              </Text>
-              <Text style={styles.td}>
-                1 000€ (*) NOTA : en cas de sinistre engageant la garantie
-                principale et une ou des garanties connexes, seule une franchise
-                sera appliquée
-              </Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  BON FONCTIONNEMENT DES ÉLÉMENTS D'ÉQUIPEMENTS DISSOCIABLES DES
+                  OUVRAGES SOUMIS À L'ASSURANCE OBLIGATOIRE (Cette garantie est
+                  maintenue pour une durée de 2 ans à compter de la réception des
+                  chantiers ouverts durant la période de garantie, telle que
+                  précisée à l'article 1792-3 du Code Civil.)
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  600 000€ Montant unique pour l'ensemble des garanties BON
+                  FONCTIONNEMENT, DOMMAGES IMMATERIELS CONSECUTIFS, DOMMAGES AUX
+                  EXISTANTS et DOMMAGES INTERMEDIAIRES. Dont 100 000 € au titre
+                  des DOMMAGES INTERMEDIAIRES et DOMMAGES IMMATERIELS CONSECUTIFS
+                  cumulés
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  1 000€ (*) NOTA : en cas de sinistre engageant la garantie
+                  principale et une ou des garanties connexes, seule une franchise
+                  sera appliquée
+                </Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                DOMMAGES IMMATÉRIELS CONSÉCUTIFS
-              </Text>
-              <Text style={styles.td}>-</Text>
-              <Text style={styles.td}>-</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  DOMMAGES IMMATÉRIELS CONSÉCUTIFS
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                DOMMAGES AUX EXISTANTS
-              </Text>
-              <Text style={styles.td}>-</Text>
-              <Text style={styles.td}>-</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>DOMMAGES AUX EXISTANTS</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                DOMMAGES MATÉRIELS INTERMÉDIAIRES AFFECTANT UN OUVRAGE SOUMIS À
-                L'ASSURANCE OBLIGATOIRE
-              </Text>
-              <Text style={styles.td}>-</Text>
-              <Text style={styles.td}>-</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  DOMMAGES MATÉRIELS INTERMÉDIAIRES AFFECTANT UN OUVRAGE SOUMIS À
+                  L'ASSURANCE OBLIGATOIRE
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>-</Text>
+              </View>
             </View>
           </View>
           <Text style={styles.small}>
@@ -772,35 +908,45 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           <Text style={styles.strong}>ACTIVITÉS GARANTIES</Text>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={styles.th}>
-                N° d'activité, selon nomenclature, en annexe
-              </Text>
-              <Text style={styles.th}>Libellé(s)</Text>
+              <View style={styles.thCell}>
+                <Text style={styles.thLabel}>
+                  N° d'activité, selon nomenclature, en annexe
+                </Text>
+              </View>
+              <View style={styles.thCell}>
+                <Text style={styles.thLabel}>Libellé(s)</Text>
+              </View>
             </View>
             {formData?.activities && formData.activities.length > 0 ? (
               formData.activities.map((activity: any, idx: number) => (
                 <View key={idx} style={styles.row}>
-                  <Text style={styles.td}>{activity.code || "—"}</Text>
-                  <Text style={styles.td}>
-                    {tableauTax.find(
-                      (tax) => tax.code.toString() === activity.code?.toString()
-                    )?.title || "—"}
-                  </Text>
+                  <View style={styles.tdCell}>
+                    <Text style={styles.tdLabel}>{activity.code || "—"}</Text>
+                  </View>
+                  <View style={styles.tdCell}>
+                    <Text style={styles.tdLabel}>
+                      {tableauTax.find(
+                        (tax) =>
+                          tax.code.toString() === activity.code?.toString()
+                      )?.title || "—"}
+                    </Text>
+                  </View>
                 </View>
               ))
             ) : (
               <View style={styles.row}>
-                <Text style={[styles.td, { flex: 2 }]}>
-                  Aucune activité déclarée
-                </Text>
+                <View style={styles.tdCellWide}>
+                  <Text style={styles.tdLabel}>Aucune activité déclarée</Text>
+                </View>
               </View>
             )}
           </View>
           <Text>
             Le périmètre des activités garanties et leurs exclusions sont
             définis dans le document Annexe 1 « Nomenclature des activités
-            souscrites avec Encyclie BAT », réf Encyclie Construction 2022,
-            joint au présent contrat.
+            souscrites avec Encyclie BAT », telle que visée à l'article 2.2 des
+            Conditions Générales (Réf. ENCYCLIE BAT-CG_FIDELIDADE_01052025), jointe
+            au présent contrat.
           </Text>
           <Text style={styles.strong}>
             Seules les activités déclarées dans le tableau, ci-dessus, seront
@@ -876,33 +1022,57 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           <Text style={styles.strong}>Primes</Text>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 2 }]}>
-                PRIMES année en cours pour la période du {periodeDebut} au{" "}
-                {periodeFin}
-              </Text>
-              <Text style={styles.th}>Montants H.T</Text>
-              <Text style={styles.th}>Montants Taxes</Text>
-              <Text style={styles.th}>Montant TTC</Text>
+              <View style={styles.thCellWide}>
+                <Text style={styles.thLabel}>
+                  PRIMES année en cours pour la période du {periodeDebut} au{" "}
+                  {periodeFin}
+                </Text>
+              </View>
+              <View style={styles.thCell}>
+                <Text style={styles.thLabel}>Montants H.T</Text>
+              </View>
+              <View style={styles.thCell}>
+                <Text style={styles.thLabel}>Montants Taxes</Text>
+              </View>
+              <View style={styles.thCell}>
+                <Text style={styles.thLabel}>Montant TTC</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>
-                Prime RCD provisionnelle hors reprise du passé
-              </Text>
-              <Text style={styles.td}>{primeRCDHT} €</Text>
-              <Text style={styles.td}>{primeRCDTaxes} €</Text>
-              <Text style={styles.td}>{primeRCDTTC} €</Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>
+                  Prime RCD provisionnelle hors reprise du passé
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>{primeRCDHT} €</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>{primeRCDTaxes} €</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>{primeRCDTTC} €</Text>
+              </View>
             </View>
             <View style={styles.row}>
-              <Text style={[styles.td, { flex: 2 }]}>Prime PJ</Text>
-              <Text style={styles.td}>
-                {primePJHT !== "0" ? `${primePJHT} €` : "-"}
-              </Text>
-              <Text style={styles.td}>
-                {primePJTaxes !== "0" ? `${primePJTaxes} €` : "-"}
-              </Text>
-              <Text style={styles.td}>
-                {primePJTTC !== "0" ? `${primePJTTC} €` : "-"}
-              </Text>
+              <View style={styles.tdCellWide}>
+                <Text style={styles.tdLabel}>Prime PJ</Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  {primePJHT !== "0" ? `${primePJHT} €` : "-"}
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  {primePJTaxes !== "0" ? `${primePJTaxes} €` : "-"}
+                </Text>
+              </View>
+              <View style={styles.tdCell}>
+                <Text style={styles.tdLabel}>
+                  {primePJTTC !== "0" ? `${primePJTTC} €` : "-"}
+                </Text>
+              </View>
             </View>
           </View>
           <Text style={styles.strong}>
@@ -1026,93 +1196,79 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           </Text>
         </View>
 
-        {/* Chapitre 8 – Déclaration de sinistres */}
+        {/* Chapitre 8 – Déclaration de sinistres (aligné CG art. 9 et 10.1) */}
         <View style={styles.section}>
           <Text style={styles.title}>
             CHAPITRE 8 – DÉCLARATION DE SINISTRES :
           </Text>
           <Text>
-            Toutes les déclarations de sinistre doivent être envoyées à
-            l'adresse suivante :
+            Les déclarations de sinistre et la correspondance y afférente sont à
+            adresser au gestionnaire des sinistres désigné aux présentes
+            Conditions Particulières :
           </Text>
-          <Text style={styles.strong}>« SERVICE SINISTRE ENCYCLIE »</Text>
-          <Text>42 RUE NOTRE-DAME DES VICTOIRES</Text>
-          <Text>75002 PARIS</Text>
-          <Text>
-            Ou par mail à l'adresse : contact@encyclie-construction.com
-          </Text>
+          <Text style={styles.strong}>ACS Solutions</Text>
+          <Text>Service réclamation Le Carillon</Text>
+          <Text>6 Esplanade Charles de Gaulle</Text>
+          <Text>92000 NANTERRE</Text>
         </View>
 
-        {/* Chapitre 9 – Réclamations */}
+        {/* Chapitre 9 – Réclamations (aligné CG art. 10.1) */}
         <View style={styles.section}>
           <Text style={styles.title}>CHAPITRE 9 – RÉCLAMATIONS :</Text>
           <Text>
-            Toutes les réclamations doivent être adressées au Service Gestion
-            des Réclamations d'ENCYCLIE CONSTRUCTION à l'adresse suivante :
+            En cas de désaccord ou de non-réponse suite à votre première demande
+            concernant la gestion de votre contrat, vous pouvez adresser une
+            réclamation au Service Réclamations d'ENCYCLIE par courrier ou par
+            mail :
           </Text>
-          <Text style={styles.strong}>
-            « SERVICE RECLAMATIONS ENCYCLIE CONSTRUCTION »
+          <Text style={styles.strong}>ENCYCLIE CONSTRUCTION – Service Client</Text>
+          <Text>42, rue Notre-Dame des Victoires</Text>
+          <Text>75002 Paris</Text>
+          <Text>Ou par e-mail : reclamation@encyclie-construction.fr</Text>
+          <Text style={{ marginTop: 8 }}>
+            Si la réclamation porte sur un sinistre, vous pouvez adresser votre
+            réclamation par courrier à ACS Solutions à l'adresse suivante :
           </Text>
-          <Text>42 RUE NOTRE-DAME DES VICTOIRES</Text>
-          <Text>75002 PARIS</Text>
-          <Text>Ou par mail à : contact@encyclie-construction.com</Text>
-          <Text>
-            Encyclie s'engage à accuser réception de votre correspondance dans
-            un délai de 10 jours ouvrables (sauf si Encyclie vous a déjà apporté
-            une réponse au cours de ce délai), et à traiter votre réclamation
-            dans un délai maximal de 2 mois à compter de la réception de votre
-            courrier. En cas de non-satisfaction sur la réponse apportée, vous
-            pouvez vous adresser à FIDELIDADE, en écrivant à l'adresse suivante :
-          </Text>
-          <Text style={styles.strong}>FIDELIDADE</Text>
-          <Text>Service Réclamations</Text>
-          <Text>12-14, rond-point des Champs-Élysées</Text>
-          <Text>75008 PARIS</Text>
-          <Text>
-            FIDELIDADE s'engage à accuser réception de votre correspondance dans
-            un délai de 10 jours ouvrables (sauf si FIDELIDADE vous a déjà apporté
-            une réponse au cours de ce délai), et à traiter votre réclamation dans
-            un délai maximal de 2 mois à compter de la réception de votre
-            courrier.
+          <Text style={styles.strong}>ACS Solutions</Text>
+          <Text>Service réclamation Le Carillon</Text>
+          <Text>6 Esplanade Charles de Gaulle</Text>
+          <Text>92000 NANTERRE</Text>
+          <Text style={{ marginTop: 8 }}>
+            Il sera accusé réception par écrit dans un délai maximal de dix (10)
+            jours ouvrables à compter de l'envoi, sauf réponse dans ce délai. Une
+            réponse sera adressée dans les deux mois à compter de l'envoi de la
+            réclamation ; vous serez informé si ces délais ne peuvent être tenus
+            pour circonstances exceptionnelles (dispositions prévues aux Conditions
+            Générales – Réf. ENCYCLIE BAT-CG_FIDELIDADE_01052025).
           </Text>
           <Text>
             Les réclamations portant sur une prestation d'assistance sont à
-            adresser au prestataire d'assistance dont les coordonnées sont
-            indiquées sur vos Conditions Particulières. Il vous répondra
-            directement dans les délais cités ci-dessus et vous précisera, en
-            cas de refus de faire droit en totalité ou partiellement à votre
-            réclamation, les voies de recours possibles, notamment l'existence
-            et les coordonnées du (des) médiateur(s) compétent(s), lorsqu'il(s)
-            existe(nt).
+            adresser au prestataire d'assistance dont les coordonnées figurent aux
+            Conditions Particulières le cas échéant.
+          </Text>
+          <Text style={{ marginTop: 8 }}>
+            Après épuisement des procédures internes de réclamations, vous pouvez
+            saisir par écrit le Médiateur de France Assureurs :
+          </Text>
+          <Text>- par courrier : La médiation de l'assurance</Text>
+          <Text>TSA 50 110 – 75441 Paris Cedex 09</Text>
+          <Text>www.mediation-assurance.org</Text>
+          <Text>- par e-mail : le.mediateur@mediation-assurance.org</Text>
+          <Text style={{ marginTop: 8 }}>
+            Le médiateur, personnalité extérieure aux gestionnaires et à
+            l'assureur, rend son avis en toute indépendance. En cas de désaccord
+            persistant, le recours à une action en justice reste toujours possible.
+            Toutes contestations éventuelles à défaut d'accord amiable relèvent de
+            la compétence des tribunaux civils français.
           </Text>
           <Text>
-            Après épuisement des procédures internes de réclamations propres à
-            FIDELIDADE, vous pouvez saisir par écrit le Médiateur de France Assureurs
-            :
+            La procédure de recours au médiateur et la « Charte de la médiation »
+            de France Assureurs sont consultables sur www.franceassureurs.fr
           </Text>
           <Text>
-            Soit directement sur le site du médiateur de l'assurance :
-          </Text>
-          <Text>http://www.mediation-assurance.org/Saisir+le+mediateur</Text>
-          <Text>Soit par courrier à l'adresse suivante :</Text>
-          <Text>La Médiation de l'Assurance</Text>
-          <Text>TSA 50 110</Text>
-          <Text>75441 Paris cedex 09</Text>
-          <Text>
-            Le Médiateur est une personnalité extérieure à FIDELIDADE qui exerce sa
-            mission en toute indépendance. Ce recours est gratuit. Il rend un
-            avis motivé dans les 3 mois qui suivent sa saisine.
-          </Text>
-          <Text>
-            La procédure de recours au médiateur et la « Charte de la médiation
-            » de France Assureurs sont librement consultables sur le site :
-            www.franceassureurs.fr
-          </Text>
-          <Text>
-            Pour l'ensemble des offres « dématérialisées » vous avez également
-            la possibilité d'utiliser la plateforme de Résolutions des Litiges
-            en Ligne de la Commission Européenne au lien suivant :
-            http://ec.europa.eu/consumers/odr/
+            Pour les offres dématérialisées, vous pouvez également utiliser la
+            plateforme de règlement en ligne des litiges de la Commission
+            européenne : https://ec.europa.eu/consumers/odr/
           </Text>
         </View>
 
@@ -1155,19 +1311,26 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             d'ENCYCLIE CONSTRUCTION, pour le compte de FIDELIDADE agissant en tant
             que responsable de traitement.
           </Text>
-          <Text>
-            Pour toute question, renseignement, ou pour exercer vos droits
-            relatifs à vos données personnelles, veuillez contacter notre
-            Délégué à la Protection des Données : à l'adresse suivante : Délégué
-            à la Protection des Données, FIDELIDADE — 12-14, rond-point des
-            Champs-Élysées, 75008 Paris - France
+          <Text style={styles.strong}>
+            Exercice de vos droits – Délégués à la protection des données :
           </Text>
-          <Text>ou par courriel : dpo@wakam.fr</Text>
+          <Text>Pour ENCYCLIE CONSTRUCTION :</Text>
           <Text>
-            Vous pouvez également consulter le paragraphe sur les données
-            personnelles des Conditions Générales pour avoir toutes les
-            informations relatives aux traitements de vos données personnelles
-            et à l'exercice de vos droits.
+            Par courrier : 42 Rue Notre-Dame des Victoires, 75002 Paris – ou par
+            courriel : contact@encyclie-construction.com
+          </Text>
+          <Text>Pour l'assureur (FIDELIDADE) :</Text>
+          <Text>
+            Par courrier : Délégué à la Protection des Données à caractère
+            personnel – Largo Calhariz, 30, 1200-086 Lisbonne, Portugal – ou par
+            courriel : epdp@fidelidade.pt
+          </Text>
+          <Text>
+            Le détail des traitements et de vos droits figure à l'article 10.4 des
+            Conditions Générales (Réf. ENCYCLIE BAT-CG_FIDELIDADE_01052025).
+            Réclamation auprès de la CNIL : Commission Nationale de l'Informatique
+            et des Libertés (CNIL), 3 Place de Fontenoy – TSA 80715 – 75334 PARIS
+            CEDEX 07.
           </Text>
         </View>
 
@@ -1232,7 +1395,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             - L'ANNEXE 1 « Nomenclature des activités souscrites avec Encyclie
             BAT »
           </Text>
-          <Text>- Les Conditions Générales ENCYCLIE BAT-CG_WAKAM_082022</Text>
+          <Text>
+            - Les Conditions Générales ENCYCLIE BAT-CG_FIDELIDADE_01052025
+          </Text>
           <Text style={styles.strong}>
             LE SOUSCRIPTEUR DECLARE AVOIR PRIS CONNAISSANCE DU DOCUMENT
             D'INFORMATION SUR LE PRODUIT D'ASSURANCE PREALABLEMENT A LA
@@ -1242,10 +1407,24 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             LE SOUSCRIPTEUR DECLARE AVOIR RECU, PRIS CONNAISSANCE ET ACCEPTÉ LES
             TERMES DE L'ENSEMBLE DES DOCUMENTS CONSTITUANT LE PRESENT CONTRAT.
           </Text>
-          <Text>Fait à Paris, en deux exemplaires le {dateEdition}</Text>
-          <Text>ENCYCLIE CONSTRUCTION, LE SOUSCRIPTEUR</Text>
-          <Text>Par délégation de l'Assureur :</Text>
+          <Text>{" "}Fait à Paris, en deux exemplaires le {dateEdition}</Text>
+          <View style={styles.signatureRow}>
+            <View style={styles.signatureBox}>
+              <Text style={styles.strong}>ENCYCLIE CONSTRUCTION</Text>
+              <Text style={{ marginTop: 6, fontSize: 10 }}>
+                Par délégation de l'Assureur :
+              </Text>
+              <Text style={styles.signatureLine}>Date :</Text>
+            </View>
+            <View style={styles.signatureBox}>
+              <Text style={styles.strong}>LE SOUSCRIPTEUR</Text>
+              <Text style={styles.signatureLine}>Date :</Text>
+            </View>
+          </View>
         </View>
+
+      </ContratPdfPageChrome>
+      <ContratPdfPageChrome>
 
         {/* ANNEXE 1 – Nomenclature complète */}
         <View style={styles.section}>
@@ -1874,7 +2053,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             cotisation.encycliebat@encyclie-construction.fr
           </Text>
         </View>
-      </Page>
+      </ContratPdfPageChrome>
     </Document>
   );
 };
