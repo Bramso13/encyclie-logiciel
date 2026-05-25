@@ -16,8 +16,12 @@ import EcartsMontantsTab from "@/components/admin/EcartsMontantsTab";
 import { importBrokers } from "@/scripts/import-brokers";
 import dynamic from "next/dynamic";
 
-// Dynamically import BordereauxPage to avoid SSR issues
+// Dynamically import admin pages to avoid SSR issues
 const BordereauxPage = dynamic(() => import("@/app/admin/bordereaux/page"), {
+  ssr: false,
+});
+
+const ImportPaymentsPage = dynamic(() => import("@/app/admin/import-payments/page"), {
   ssr: false,
 });
 
@@ -1103,6 +1107,16 @@ export default function AdminScreen({ user }: AdminScreenProps) {
               }`}
             >
               Bordereaux
+            </button>
+            <button
+              onClick={() => setActiveTab("importPayments")}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "importPayments"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Import CSV
             </button>
             <button
               onClick={() => setActiveTab("ecartsMontants")}
@@ -3216,6 +3230,7 @@ export default function AdminScreen({ user }: AdminScreenProps) {
           )}
 
           {activeTab === "bordereaux" && <BordereauxPage />}
+          {activeTab === "importPayments" && <ImportPaymentsPage />}
           {activeTab === "ecartsMontants" && <EcartsMontantsTab />}
         </div>
       </div>

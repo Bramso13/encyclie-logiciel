@@ -11,7 +11,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "update-quotes": "tsx src/scripts/update-quotes-from-file.ts",
     "recalcul-echeancier": "DEBUG_ECHEANCIER=true tsx src/scripts/recalcul-echeancier.ts",
-    "recalcul-echeancier:last": "DEBUG_ECHEANCIER=true tsx src/scripts/recalcul-echeancier.ts --last"
+    "recalcul-echeancier:last": "DEBUG_ECHEANCIER=true tsx src/scripts/recalcul-echeancier.ts --last",
+    "import-payments": "tsx src/scripts/import-payments-from-csv.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -12,6 +12,10 @@ import { PrismaClient } from "@prisma/client";
 import { genererEcheancier, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import { calculateWithMapping } from "@/lib/utils";
 import { validateEcheancierInvariants } from "@/lib/tarificateurs/validateEcheancierInvariants";
+import {
+  regenerateScheduleWithPaymentPreservation,
+  adaptEcheancesForDatabase,
+} from "@/lib/payment-schedule-utils";
 
 const prisma = new PrismaClient();
 
@@ -288,26 +292,56 @@ async function main() {
         }
 
         if (APPLY) {
-          await prisma.$transaction(async (tx) => {
-            for (let i = 0; i < nbComparables; i++) {
-              const p = payments[i];
-              const e = echeances[i];
-              await tx.paymentInstallment.update({
-                where: { id: p.id },
+          // Vérifier s'il y a des paiements existants à conserver
+          const hasPaidInstallments = payments.some(
+            (p) => p.status === "PAID" || p.status === "PARTIALLY_PAID"
+          );
+
+          if (hasPaidInstallments) {
+            // Utiliser la fonction de régénération avec conservation des paiements
+            await prisma.$transaction(async (tx) => {
+              // Mettre à jour les totaux de l'échéancier
+              await tx.paymentSchedule.update({
+                where: { id: schedule!.id },
                 data: {
-                  amountHT: round2(e.totalHT),
-                  taxAmount: round2(e.taxe),
-                  amountTTC: round2(e.totalTTC),
-                  rcdAmount: round2(e.rcd),
-                  pjAmount: round2(e.pj),
-                  feesAmount: round2(e.frais),
-                  resumeAmount: round2(e.reprise),
+                  totalAmountHT: params.rcd + params.frais,
+                  totalTaxAmount: params.taxe,
+                  totalAmountTTC: params.totalTTC,
                 },
               });
-            }
-          });
-          rapports[rapports.length - 1] += "  → Corrigé en base.\n";
-          console.log(`  → Corrigé en base.`);
+
+              // Régénérer en conservant les paiements
+              await regenerateScheduleWithPaymentPreservation(
+                tx,
+                schedule!.id,
+                adaptEcheancesForDatabase(echeances)
+              );
+            });
+            rapports[rapports.length - 1] += "  → Régénéré avec conservation des paiements.\n";
+            console.log(`  → Régénéré avec conservation des paiements.`);
+          } else {
+            // Pas de paiements - mise à jour simple
+            await prisma.$transaction(async (tx) => {
+              for (let i = 0; i < nbComparables; i++) {
+                const p = payments[i];
+                const e = echeances[i];
+                await tx.paymentInstallment.update({
+                  where: { id: p.id },
+                  data: {
+                    amountHT: round2(e.totalHT),
+                    taxAmount: round2(e.taxe),
+                    amountTTC: round2(e.totalTTC),
+                    rcdAmount: round2(e.rcd),
+                    pjAmount: round2(e.pj),
+                    feesAmount: round2(e.frais),
+                    resumeAmount: round2(e.reprise),
+                  },
+                });
+              }
+            });
+            rapports[rapports.length - 1] += "  → Corrigé en base.\n";
+            console.log(`  → Corrigé en base.`);
+          }
         }
       }
     } catch (err) {

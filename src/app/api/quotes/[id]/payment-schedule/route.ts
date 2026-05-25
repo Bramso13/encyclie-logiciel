@@ -6,13 +6,10 @@ import {
   withAuth,
   ApiError,
 } from "@/lib/api-utils";
-
-// Fonction pour convertir une date au format français DD/MM/YYYY vers un objet Date
-// function parseDateFrancaise(dateFr: string): Date {
-//   const [jour, mois, annee] = dateFr.split("/").map(Number);
-//   // Mois - 1 car les mois en JavaScript commencent à 0
-//   return new Date(annee, mois - 1, jour);
-// }
+import {
+  regenerateScheduleWithPaymentPreservation,
+  adaptEcheancesForDatabase,
+} from "@/lib/payment-schedule-utils";
 
 // GET /api/quotes/[id]/payment-schedule - Get payment schedule for a quote
 export async function GET(
@@ -154,53 +151,107 @@ export async function POST(
       const totalTaxAmount = calculationResult.autres?.taxeAssurance || 0;
       const totalAmountTTC = calculationResult.totalTTC || 0;
 
-      // Créer l'échéancier avec les échéances
-      const paymentSchedule = await prisma.paymentSchedule.create({
-        data: {
-          quoteId: params.id,
-          totalAmountHT,
-          totalTaxAmount,
-          totalAmountTTC,
-          startDate: new Date(echeances[0].debutPeriode),
-          endDate: new Date(echeances[echeances.length - 1].finPeriode),
-          status: "PENDING",
-          payments: {
-            create: echeances.map((echeance: any, index: number) => ({
-              installmentNumber: index + 1,
-              dueDate: new Date(echeance.date),
-              amountHT: echeance.totalHT || 0,
-              taxAmount: echeance.taxe || 0,
-              amountTTC: echeance.totalTTC || 0,
-              rcdAmount: echeance.rcd || 0,
-              pjAmount: echeance.pj || 0,
-              feesAmount: echeance.frais || 0,
-              resumeAmount: echeance.reprise || 0,
-              periodStart: new Date(echeance.debutPeriode),
-              periodEnd: new Date(echeance.finPeriode),
-              status: "PENDING",
-            })),
-          },
-        },
-        include: {
-          payments: {
-            include: {
-              validatedBy: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  role: true,
-                },
-              },
-            },
-            orderBy: {
-              installmentNumber: "asc",
-            },
-          },
-        },
+      // Vérifier si un échéancier existe déjà (pour conservation des paiements)
+      const existingSchedule = await prisma.paymentSchedule.findUnique({
+        where: { quoteId: params.id },
+        include: { payments: true },
       });
 
-      return createApiResponse(paymentSchedule, "Échéancier créé avec succès");
+      let paymentSchedule;
+
+      if (existingSchedule && existingSchedule.payments && existingSchedule.payments.length > 0) {
+        // Un échéancier existe avec des paiements - on régénère en conservant les paiements
+        paymentSchedule = await prisma.$transaction(async (tx) => {
+          // Mettre à jour les totaux de l'échéancier
+          await tx.paymentSchedule.update({
+            where: { id: existingSchedule.id },
+            data: {
+              totalAmountHT,
+              totalTaxAmount,
+              totalAmountTTC,
+              startDate: new Date(echeances[0].debutPeriode),
+              endDate: new Date(echeances[echeances.length - 1].finPeriode),
+            },
+          });
+
+          // Régénérer les échéances en conservant les paiements
+          await regenerateScheduleWithPaymentPreservation(
+            tx,
+            existingSchedule.id,
+            adaptEcheancesForDatabase(echeances)
+          );
+
+          // Retourner l'échéancier mis à jour
+          return tx.paymentSchedule.findUnique({
+            where: { id: existingSchedule.id },
+            include: {
+              payments: {
+                include: {
+                  validatedBy: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      role: true,
+                    },
+                  },
+                },
+                orderBy: { installmentNumber: "asc" },
+              },
+            },
+          });
+        });
+
+        return createApiResponse(paymentSchedule, "Échéancier régénéré avec conservation des paiements");
+      } else {
+        // Pas d'échéancier existant - création normale
+        paymentSchedule = await prisma.paymentSchedule.create({
+          data: {
+            quoteId: params.id,
+            totalAmountHT,
+            totalTaxAmount,
+            totalAmountTTC,
+            startDate: new Date(echeances[0].debutPeriode),
+            endDate: new Date(echeances[echeances.length - 1].finPeriode),
+            status: "PENDING",
+            payments: {
+              create: echeances.map((echeance: any, index: number) => ({
+                installmentNumber: index + 1,
+                dueDate: new Date(echeance.date),
+                amountHT: echeance.totalHT || 0,
+                taxAmount: echeance.taxe || 0,
+                amountTTC: echeance.totalTTC || 0,
+                rcdAmount: echeance.rcd || 0,
+                pjAmount: echeance.pj || 0,
+                feesAmount: echeance.frais || 0,
+                resumeAmount: echeance.reprise || 0,
+                periodStart: new Date(echeance.debutPeriode),
+                periodEnd: new Date(echeance.finPeriode),
+                status: "PENDING",
+              })),
+            },
+          },
+          include: {
+            payments: {
+              include: {
+                validatedBy: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                  },
+                },
+              },
+              orderBy: {
+                installmentNumber: "asc",
+              },
+            },
+          },
+        });
+
+        return createApiResponse(paymentSchedule, "Échéancier créé avec succès");
+      }
     });
   } catch (error) {
     return handleApiError(error);
