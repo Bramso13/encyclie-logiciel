@@ -171,6 +171,215 @@ function EditableTable<T extends object>({
   );
 }
 
+// ─── Tableau des Polices groupé par MOTIF_ETAT ───────────────────────────────
+
+interface GroupedPolicesTableProps {
+  data: FidelidadePolicesRow[];
+  onCellEdit: (
+    rowIndex: number,
+    field: keyof FidelidadePolicesRow,
+    value: string,
+  ) => void;
+  emptyMessage?: string;
+}
+
+// Utiliser toutes les colonnes POLICES_COLUMNS (importées depuis @/lib/bordereau)
+// pour afficher TOUTES les données dans la preview
+
+function GroupedPolicesTable({
+  data,
+  onCellEdit,
+  emptyMessage = "Aucune donnée",
+}: GroupedPolicesTableProps) {
+  if (data.length === 0) {
+    return <p className="text-center text-gray-500 py-8">{emptyMessage}</p>;
+  }
+
+  // Grouper les données par MOTIF_ETAT
+  const groups = {
+    REGLEMENT: [] as { row: FidelidadePolicesRow; index: number }[],
+    EMISSION: [] as { row: FidelidadePolicesRow; index: number }[],
+    RESILIATION: [] as { row: FidelidadePolicesRow; index: number }[],
+    OTHER: [] as { row: FidelidadePolicesRow; index: number }[],
+  };
+
+  data.forEach((row, index) => {
+    const motif = row.MOTIF_ETAT;
+    if (motif === "REGLEMENT") {
+      groups.REGLEMENT.push({ row, index });
+    } else if (motif === "EMISSION") {
+      groups.EMISSION.push({ row, index });
+    } else if (motif === "RESILIATION") {
+      groups.RESILIATION.push({ row, index });
+    } else {
+      groups.OTHER.push({ row, index });
+    }
+  });
+
+  const groupConfigs = {
+    REGLEMENT: {
+      label: "💰 RÈGLEMENTS",
+      subtitle: "Échéances payées ce mois-ci",
+      color: "emerald",
+      bgColor: "bg-emerald-50",
+      borderColor: "border-emerald-200",
+      headerTextColor: "text-emerald-800",
+      badgeColor: "bg-emerald-100 text-emerald-700",
+    },
+    EMISSION: {
+      label: "📄 EMISSIONS",
+      subtitle: "Échéances en attente de paiement",
+      color: "amber",
+      bgColor: "bg-amber-50",
+      borderColor: "border-amber-200",
+      headerTextColor: "text-amber-800",
+      badgeColor: "bg-amber-100 text-amber-700",
+    },
+    RESILIATION: {
+      label: "🚫 RÉSILIATIONS",
+      subtitle: "Contrats résiliés",
+      color: "red",
+      bgColor: "bg-red-50",
+      borderColor: "border-red-200",
+      headerTextColor: "text-red-800",
+      badgeColor: "bg-red-100 text-red-700",
+    },
+    OTHER: {
+      label: "❓ AUTRES",
+      subtitle: "Motifs non classés",
+      color: "gray",
+      bgColor: "bg-gray-50",
+      borderColor: "border-gray-200",
+      headerTextColor: "text-gray-800",
+      badgeColor: "bg-gray-100 text-gray-700",
+    },
+  };
+
+  function renderGroup(
+    groupKey: keyof typeof groups,
+    items: { row: FidelidadePolicesRow; index: number }[],
+  ) {
+    if (items.length === 0) return null;
+    const config = groupConfigs[groupKey];
+
+    return (
+      <div
+        key={groupKey}
+        className={`mb-6 rounded-lg border ${config.borderColor} overflow-hidden`}
+      >
+        {/* En-tête du groupe */}
+        <div
+          className={`${config.bgColor} ${config.borderColor} border-b px-4 py-3 flex items-center justify-between`}
+        >
+          <div className="flex items-center gap-3">
+            <span className={`font-bold ${config.headerTextColor} text-sm uppercase tracking-wide`}>
+              {config.label}
+            </span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${config.badgeColor}`}>
+              {items.length} ligne{items.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <span className="text-xs text-gray-500 italic">{config.subtitle}</span>
+        </div>
+
+        {/* Tableau du groupe */}
+        <div className="overflow-x-auto max-h-[50vh]">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className={`${config.bgColor} sticky top-0 z-10`}>
+              <tr>
+                {POLICES_COLUMNS.map((col) => (
+                  <th
+                    key={String(col)}
+                    className={`px-3 py-2 text-left text-xs font-semibold ${config.headerTextColor} uppercase tracking-wide whitespace-nowrap`}
+                  >
+                    {String(col)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {items.map(({ row, index }, rowIdx) => (
+                <tr
+                  key={index}
+                  className={rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}
+                >
+                  {POLICES_COLUMNS.map((col) => {
+                    const value = row[col];
+                    const isBadge = col === "MOTIF_ETAT" || col === "ETAT_POLICE" || col === "FRACTIONNEMENT";
+                    
+                    // Déterminer la couleur du badge pour ETAT_POLICE
+                    let badgeClass = "bg-gray-100 text-gray-700";
+                    if (col === "ETAT_POLICE") {
+                      if (value === "RESILIE") badgeClass = "bg-red-100 text-red-700";
+                      else if (value === "SOUSCRIPTION") badgeClass = "bg-indigo-100 text-indigo-700";
+                      else if (value === "EN COURS") badgeClass = "bg-blue-100 text-blue-700";
+                    }
+                    // Badge MOTIF_ETAT
+                    if (col === "MOTIF_ETAT") {
+                      if (value === "REGLEMENT") badgeClass = "bg-emerald-100 text-emerald-700";
+                      else if (value === "EMISSION") badgeClass = "bg-amber-100 text-amber-700";
+                      else if (value === "RESILIATION") badgeClass = "bg-red-100 text-red-700";
+                    }
+
+                    return (
+                      <td key={String(col)} className="px-3 py-2 whitespace-nowrap">
+                        {isBadge ? (
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${badgeClass}`}>
+                            {String(value || "—")}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            value={String(value ?? "")}
+                            onChange={(e) =>
+                              onCellEdit(index, col, e.target.value)
+                            }
+                            className="block w-full min-w-[80px] max-w-[160px] rounded border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border"
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {renderGroup("REGLEMENT", groups.REGLEMENT)}
+      {renderGroup("EMISSION", groups.EMISSION)}
+      {renderGroup("RESILIATION", groups.RESILIATION)}
+      {renderGroup("OTHER", groups.OTHER)}
+
+      {/* Légende */}
+      <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
+        <div className="flex flex-wrap gap-4">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            REGLEMENT : payé ce mois
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            EMISSION : en attente
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-red-500" />
+            RESILIATION : résilié
+          </span>
+        </div>
+        <div className="mt-2 pt-2 border-t border-gray-200 text-gray-400">
+          Les échéances sont affichées dans le bordereau du mois de leur règlement (paidAt), pas de leur échéance (dueDate).
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const now = new Date();
 const defaultMonth = now.getMonth() + 1;
 const defaultYear = now.getFullYear();
@@ -625,8 +834,7 @@ export default function BordereauxPage() {
             </div>
 
             {activeTab === "polices" && (
-              <EditableTable<FidelidadePolicesRow>
-                columns={POLICES_COLUMNS}
+              <GroupedPolicesTable
                 data={editedPolices}
                 onCellEdit={handlePolicesCellEdit}
                 emptyMessage="Aucune police pour cette période"

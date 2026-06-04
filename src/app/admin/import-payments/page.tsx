@@ -28,6 +28,28 @@ interface ImportResponse {
   };
 }
 
+const MOIS = [
+  { value: 1, label: "Janvier" },
+  { value: 2, label: "Février" },
+  { value: 3, label: "Mars" },
+  { value: 4, label: "Avril" },
+  { value: 5, label: "Mai" },
+  { value: 6, label: "Juin" },
+  { value: 7, label: "Juillet" },
+  { value: 8, label: "Août" },
+  { value: 9, label: "Septembre" },
+  { value: 10, label: "Octobre" },
+  { value: 11, label: "Novembre" },
+  { value: 12, label: "Décembre" },
+];
+
+function getYears(): number[] {
+  const currentYear = new Date().getFullYear();
+  const from = currentYear - 2;
+  const to = currentYear + 1;
+  return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+}
+
 export default function ImportPaymentsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [dryRun, setDryRun] = useState(true);
@@ -35,6 +57,15 @@ export default function ImportPaymentsPage() {
   const [response, setResponse] = useState<ImportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // États pour la réinitialisation des paiements
+  const now = new Date();
+  const [resetMonth, setResetMonth] = useState(now.getMonth() + 1);
+  const [resetYear, setResetYear] = useState(now.getFullYear());
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -87,6 +118,40 @@ export default function ImportPaymentsPage() {
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleResetPayments = async () => {
+    setResetLoading(true);
+    setResetError(null);
+    setResetSuccess(null);
+
+    try {
+      const startDate = `${resetYear}-${String(resetMonth).padStart(2, "0")}-01`;
+      const nextMonth = resetMonth === 12 ? 1 : resetMonth + 1;
+      const nextYear = resetMonth === 12 ? resetYear + 1 : resetYear;
+      const endDate = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+      const res = await fetch("/api/admin/payments/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate, endDate }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Erreur lors de la réinitialisation");
+      }
+
+      setResetSuccess(
+        `${data.count} paiement(s) réinitialisé(s) pour ${MOIS.find(m => m.value === resetMonth)?.label} ${resetYear}`
+      );
+      setShowResetConfirm(false);
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -229,6 +294,122 @@ export default function ImportPaymentsPage() {
               )}
             </div>
           </form>
+        </div>
+
+        {/* ─── Section Réinitialisation des paiements ─── */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6 border-t-4 border-red-400">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Réinitialiser les paiements
+            </h2>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Cette action supprime les informations de paiement (paidAt, paidAmount, paymentMethod) 
+            des échéances pour une période donnée. Les échéances elles-mêmes ne sont pas supprimées.
+          </p>
+
+          {/* Sélecteurs de période */}
+          <div className="flex flex-wrap items-end gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mois
+              </label>
+              <select
+                value={resetMonth}
+                onChange={(e) => setResetMonth(Number(e.target.value))}
+                disabled={resetLoading}
+                className="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm px-3 py-2 border min-w-[140px]"
+              >
+                {MOIS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Année
+              </label>
+              <select
+                value={resetYear}
+                onChange={(e) => setResetYear(Number(e.target.value))}
+                disabled={resetLoading}
+                className="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm px-3 py-2 border min-w-[100px]"
+              >
+                {getYears().map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Messages */}
+          {resetError && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+              <p className="text-sm text-red-800">{resetError}</p>
+            </div>
+          )}
+          {resetSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4">
+              <p className="text-sm text-green-800">{resetSuccess}</p>
+            </div>
+          )}
+
+          {/* Bouton de réinitialisation */}
+          {!showResetConfirm ? (
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              disabled={resetLoading}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Réinitialiser tous les paiements du mois
+            </button>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-3">
+                ⚠️ Êtes-vous sûr de vouloir réinitialiser tous les paiements de{" "}
+                <strong>{MOIS.find((m) => m.value === resetMonth)?.label} {resetYear}</strong> ?
+              </p>
+              <p className="text-xs text-red-600 mb-4">
+                Cette action est irréversible. Les données de paiement (date, montant, méthode) seront perdues.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleResetPayments}
+                  disabled={resetLoading}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400"
+                >
+                  {resetLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Suppression en cours...
+                    </>
+                  ) : (
+                    "Oui, réinitialiser"
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  disabled={resetLoading}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Résultats */}

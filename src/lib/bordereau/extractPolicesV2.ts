@@ -4,10 +4,10 @@ import { tableauTax } from "@/lib/tarificateurs/rcd";
 import type { BordereauFiltersV2, FidelidadePolicesRow } from "./types";
 import { getApporteur } from "./config";
 import {
-  formatDate,
-  mapContractStatusToEtatPolice,
-  mapQuoteStatusToStatutPolice,
-} from "./utils";
+  getBordereauMonthEvents,
+  type BordereauMonthEventType,
+} from "./bordereauMonthEventsV2";
+import { formatDate } from "./utils";
 
 const DEFAULT_STRING = "";
 
@@ -20,186 +20,93 @@ function getActiviteTitleByCode(code: string | number): string {
 }
 
 /**
- * Règle périmètre : une ligne par SIREN (jamais deux lignes avec le même SIREN).
- * On construit une ligne par échéance puis on déduplique par SIREN (DATE_FIN_CONTRAT = max des periodEnd du groupe).
+ * Options historiques (UI admin) — ignorées : périmètre = événements du mois uniquement.
  */
 export interface BordereauInclusionOptions {
-  /** Inclure seulement les échéances ayant une date d'émission (défaut : true) */
   requireEmission?: boolean;
-  /** Inclure N > 1 seulement si l'échéance précédente est payée (défaut : true) */
   requirePrevPaid?: boolean;
 }
 
 export async function getPolicesV2(
   filters: BordereauFiltersV2,
   prisma: PrismaClient,
-  options?: BordereauInclusionOptions,
+  _options?: BordereauInclusionOptions,
 ): Promise<FidelidadePolicesRow[]> {
-  const { dateRange } = filters;
   const apporteur = getApporteur();
+  const events = await getBordereauMonthEvents(prisma, filters);
+  const etatPoliceByQuote = buildEtatPoliceByQuote(events);
 
-  const installments = await prisma.paymentInstallment.findMany({
-    where: {
-      schedule: {
-        quote: { status: QuoteStatus.ACCEPTED },
-      },
-      OR: [
-        {
-          dueDate: {
-            gte: dateRange.startDate,
-            lte: dateRange.endDate,
-          },
-        },
-        {
-          AND: [
-            { periodStart: { lte: dateRange.endDate } },
-            { periodEnd: { gte: dateRange.startDate } },
-          ],
-        },
-      ],
-    },
-    include: {
-      schedule: {
-        include: {
-          quote: {
-            include: {
-              product: true,
-              contract: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  // Filtrer les échéances post-résiliation.
-  // resiliationDate sera disponible sur le schedule après migration + prisma generate.
-  const filteredInstallments = (installments as any[]).filter((inst) => {
-    const resiliationDate: Date | null = inst.schedule?.resiliationDate ?? null;
-    if (!resiliationDate) return true;
-    const endOfResiliationMonth = new Date(
-      resiliationDate.getFullYear(),
-      resiliationDate.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
-    );
-    return inst.periodStart <= endOfResiliationMonth;
-  });
-
-  filteredInstallments.sort((a: any, b: any) => {
-    const refA = a.schedule.quote.reference ?? "";
-    const refB = b.schedule.quote.reference ?? "";
-    if (refA !== refB) return refA.localeCompare(refB);
-    return a.installmentNumber - b.installmentNumber;
-  });
-
-  // ── Filtre d'inclusion bordereau (contrôlé par options) ──────────────────────
-  const doRequireEmission = options?.requireEmission !== false; // true par défaut
-  const doRequirePrevPaid = options?.requirePrevPaid !== false; // true par défaut
-
-  // 1. Filtre emissionDate
-  const withEmission = doRequireEmission
-    ? (filteredInstallments as any[]).filter((i: any) => !!i.emissionDate)
-    : (filteredInstallments as any[]);
-
-  // 2. Filtre échéance précédente payée (uniquement si les deux options sont actives)
-  const prevPaidMap = new Map<string, boolean>();
-  if (doRequirePrevPaid) {
-    const toCheckPrev = withEmission
-      .filter((i: any) => i.installmentNumber > 1)
-      .map((i: any) => ({
-        scheduleId: i.scheduleId,
-        prevNum: i.installmentNumber - 1,
-      }));
-
-    if (toCheckPrev.length > 0) {
-      const scheduleToNums = new Map<string, Set<number>>();
-      for (const p of toCheckPrev) {
-        if (!scheduleToNums.has(p.scheduleId))
-          scheduleToNums.set(p.scheduleId, new Set());
-        scheduleToNums.get(p.scheduleId)!.add(p.prevNum);
-      }
-      const prevInsts = await prisma.paymentInstallment.findMany({
-        where: {
-          OR: [...scheduleToNums.entries()].map(([scheduleId, nums]) => ({
-            scheduleId,
-            installmentNumber: { in: [...nums] },
-          })),
-        },
-        select: {
-          scheduleId: true,
-          installmentNumber: true,
-          status: true,
-          paidAt: true,
-        },
-      });
-      for (const prev of prevInsts) {
-        const key = `${prev.scheduleId}-${prev.installmentNumber}`;
-        prevPaidMap.set(key, prev.status === "PAID" || prev.paidAt !== null);
-      }
-    }
-  }
-
-  const bordereauInstallments = withEmission.filter((inst: any) => {
-    if (!doRequirePrevPaid) return true;
-    if (inst.installmentNumber === 1) return true;
-    const key = `${inst.scheduleId}-${inst.installmentNumber - 1}`;
-    return prevPaidMap.get(key) === true;
-  });
-
-  const rows: FidelidadePolicesRow[] = [];
-
-  for (const inst of bordereauInstallments as any[]) {
+  const rows = events.map(({ installment: inst, eventType, eventDate }) => {
     const quote = inst.schedule.quote;
     const contract = quote.contract;
     const companyData = (quote.companyData ?? {}) as Record<string, unknown>;
     const formData = (quote.formData ?? {}) as Record<string, unknown>;
+    const quoteRef = quote.reference ?? DEFAULT_STRING;
 
+    return mapInstallmentToPolicesRow({
+      inst: {
+        periodStart: inst.periodStart,
+        periodEnd: inst.periodEnd,
+        dueDate: inst.dueDate,
+        status: inst.status,
+        paidAt: inst.paidAt,
+        emissionDate: inst.emissionDate ?? null,
+        installmentNumber: inst.installmentNumber,
+      },
+      eventType,
+      eventDate,
+      etatPolice: etatPoliceByQuote.get(quoteRef) ?? "EN COURS",
+      quote,
+      contract,
+      companyData,
+      formData,
+      apporteur,
+    });
+  });
+
+  return rows;
+}
+
+/**
+ * Un seul ETAT_POLICE par devis (IDENTIFIANT_POLICE) sur tout le bordereau du mois.
+ */
+function buildEtatPoliceByQuote(
+  events: Awaited<ReturnType<typeof getBordereauMonthEvents>>,
+): Map<string, string> {
+  const byQuote = new Map<
+    string,
+    { resiliationDate: Date | null; maxInstallmentNumber: number }
+  >();
+
+  for (const { installment: inst } of events) {
+    const quoteRef = inst.schedule?.quote?.reference ?? DEFAULT_STRING;
     const resiliationDate: Date | null = inst.schedule?.resiliationDate ?? null;
-
-    rows.push(
-      mapInstallmentToPolicesRow({
-        inst: {
-          periodStart: inst.periodStart,
-          periodEnd: inst.periodEnd,
-          dueDate: inst.dueDate,
-          status: inst.status,
-          paidAt: inst.paidAt,
-          emissionDate: inst.emissionDate ?? null,
-          installmentNumber: inst.installmentNumber,
-        },
-        quote,
-        contract,
-        companyData,
-        formData,
-        apporteur,
+    const prev = byQuote.get(quoteRef);
+    if (!prev) {
+      byQuote.set(quoteRef, {
         resiliationDate,
-      }),
-    );
+        maxInstallmentNumber: inst.installmentNumber,
+      });
+    } else {
+      prev.maxInstallmentNumber = Math.max(
+        prev.maxInstallmentNumber,
+        inst.installmentNumber,
+      );
+      if (resiliationDate) prev.resiliationDate = resiliationDate;
+    }
   }
 
-  // Déduplication par SIREN — même logique que pour les Quittances :
-  // une seule ligne par SIREN (première occurrence après tri).
-  // Si pas de SIREN, on utilise l'IDENTIFIANT_POLICE comme clé de fallback.
-  const seenSiren = new Set<string>();
-  const deduped: FidelidadePolicesRow[] = [];
-
-  rows.sort((a, b) =>
-    (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""),
-  );
-
-  for (const row of rows) {
-    const sirenKey = row.SIREN?.trim();
-    const key = sirenKey ? sirenKey : `_${row.IDENTIFIANT_POLICE}`;
-    if (seenSiren.has(key)) continue;
-    seenSiren.add(key);
-    deduped.push(row);
+  const etatByQuote = new Map<string, string>();
+  for (const [quoteRef, meta] of byQuote) {
+    if (meta.resiliationDate) {
+      etatByQuote.set(quoteRef, "RESILIE");
+    } else if (meta.maxInstallmentNumber === 1) {
+      etatByQuote.set(quoteRef, "SOUSCRIPTION");
+    } else {
+      etatByQuote.set(quoteRef, "EN COURS");
+    }
   }
-
-  return deduped;
+  return etatByQuote;
 }
 
 function mapInstallmentToPolicesRow(params: {
@@ -212,10 +119,13 @@ function mapInstallmentToPolicesRow(params: {
     emissionDate: Date | null;
     installmentNumber: number;
   };
+  eventType: BordereauMonthEventType;
+  eventDate: Date;
+  /** État unique pour toutes les lignes du même devis */
+  etatPolice: string;
   quote: {
     reference: string;
     submittedAt: Date | null;
-
     status: QuoteStatus;
     updatedAt: Date;
     acceptedAt: Date | null;
@@ -230,16 +140,16 @@ function mapInstallmentToPolicesRow(params: {
   companyData: Record<string, unknown>;
   formData: Record<string, unknown>;
   apporteur: string;
-  resiliationDate?: Date | null;
 }): FidelidadePolicesRow {
   const {
     inst,
+    eventType,
+    eventDate,
+    etatPolice,
     quote,
-    contract,
     companyData,
     formData,
     apporteur,
-    resiliationDate,
   } = params;
   const activityCols = buildActivityColumnsFromFormData(formData);
   const quoteCodeNaf =
@@ -252,7 +162,6 @@ function mapInstallmentToPolicesRow(params: {
     quoteCodeNaf,
   );
 
-  // DATE_SOUSCRIPTION = date d'effet du formulaire
   const dateDeffetRaw =
     formData.dateDeffet ??
     formData.dateEffet ??
@@ -263,41 +172,15 @@ function mapInstallmentToPolicesRow(params: {
       ? formatDate(dateDeffetRaw as Date | string)
       : DEFAULT_STRING;
 
-  // DATE_EFFET_CONTRAT = début de période de l'échéance
   const dateEffet = formatDate(inst.periodStart);
-
-  // DATE_FIN_CONTRAT = fin de période de l'échéance
   const dateFin = formatDate(inst.periodEnd);
-
-  const dateDemande = inst.dueDate ? formatDate(inst.dueDate) : DEFAULT_STRING;
-
-  // ETAT_POLICE : RESILIE > SOUSCRIPTION (1re échéance) > EN COURS (autres)
-  const statutPolice = resiliationDate
-    ? "RESILIE"
-    : inst.installmentNumber === 1
-      ? "SOUSCRIPTION"
-      : "EN COURS";
-
-  // DATE_ETAT_POLICE = paidAt si payé, sinon emissionDate (date d'émission d'appel de prime)
-  const dateStatPolice =
-    inst.paidAt != null
-      ? formatDate(inst.paidAt)
-      : inst.emissionDate != null
-        ? formatDate(inst.emissionDate)
-        : DEFAULT_STRING;
+  const dateDemande = dateEffet;
 
   const fractionnement = toStr(
     formData.periodicity ??
       formData.periodicite ??
       formData.fractionnementPrime,
   );
-
-  // MOTIF_ETAT : RESILIATION / REGLEMENT / EMISSION
-  const motifEtat = resiliationDate
-    ? "RESILIATION"
-    : inst.status === "PAID" || inst.paidAt != null
-      ? "REGLEMENT"
-      : "EMISSION";
 
   return {
     APPORTEUR: apporteur,
@@ -309,9 +192,9 @@ function mapInstallmentToPolicesRow(params: {
     MOTIF_AVENANT: DEFAULT_STRING,
     DATE_EFFET_AVENANT: DEFAULT_STRING,
     DATE_ECHEANCE: dateDemande,
-    ETAT_POLICE: statutPolice,
-    DATE_ETAT_POLICE: dateStatPolice,
-    MOTIF_ETAT: motifEtat,
+    ETAT_POLICE: etatPolice,
+    DATE_ETAT_POLICE: formatDate(eventDate),
+    MOTIF_ETAT: etatPolice === "RESILIE" ? "RESILIATION" : eventType,
 
     FRACTIONNEMENT: fractionnement,
     NOM_ENTREPRISE_ASSURE: formFields.nomEntrepriseAssure,
@@ -349,9 +232,6 @@ function buildActivityColumnsFromFormData(
   return out;
 }
 
-/**
- * Champs Polices remplis depuis formData (priorité) puis companyData.
- */
 function getFormDataFieldsForPolices(
   formData: Record<string, unknown>,
   companyData: Record<string, unknown>,
@@ -368,7 +248,9 @@ function getFormDataFieldsForPolices(
 } {
   const siretRaw = formData.siret ?? companyData.siret;
   const siren =
-    siretRaw != null ? String(siretRaw).substring(0, 9) : DEFAULT_STRING;
+    siretRaw != null
+      ? String(siretRaw).replace(/\D/g, "").slice(0, 9)
+      : DEFAULT_STRING;
   return {
     villeRisque: toStr(formData.city ?? companyData.city ?? companyData.ville),
     codePostalRisque: toStr(

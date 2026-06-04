@@ -1,23 +1,20 @@
-import { PrismaClient, QuoteStatus } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import type { BordereauFiltersV2, FidelidadeQuittancesRow } from "./types";
 import { getApporteur } from "./config";
 import {
+  getBordereauMonthEvents,
+  type BordereauMonthEventType,
+} from "./bordereauMonthEventsV2";
+import {
   formatDate,
-  mapPaymentStatusToStatutQuittance,
   mapPaymentMethodToModePaiement,
 } from "./utils";
 
 const DEFAULT_STRING = "";
 const GARANTIE_RC_RCD = "RC_RCD";
-
-/** Commission = PrimeHT * 0.24 */
 const TAUX_COMMISSION = 0.24;
 
-/**
- * Lettre pour IDENTIFIANT_QUITTANCE selon fractionnement :
- * trimestriel → Q, mensuel → M, semestriel → S, annuel → rien.
- */
 function getQuittanceLetter(formData: Record<string, unknown>): string {
   const raw =
     formData.periodicity ??
@@ -30,22 +27,6 @@ function getQuittanceLetter(formData: Record<string, unknown>): string {
   return "";
 }
 
-/** SIREN = 9 premiers caractères du SIRET (formData.siret ou companyData.siret). */
-function getSiren(
-  formData: Record<string, unknown>,
-  companyData: Record<string, unknown> | null,
-): string {
-  const siret =
-    (formData?.siret as string) ?? (companyData?.siret as string) ?? "";
-  const s =
-    typeof siret === "string" ? siret.replace(/\D/g, "").slice(0, 9) : "";
-  return s;
-}
-
-/**
- * Taux de taxe selon la région (formData.territory) via getTaxeByRegion.
- * Retourné multiplié par 100 (ex. 0.09 → "9").
- */
 function computeTauxTaxe(formData: Record<string, unknown>): string {
   const region = formData.territory ?? formData.region;
   if (region == null || typeof region !== "string") return DEFAULT_STRING;
@@ -54,165 +35,32 @@ function computeTauxTaxe(formData: Record<string, unknown>): string {
   return String(Math.round(rate * 100 * 100) / 100);
 }
 
-/**
- * Règle périmètre : PaymentInstallment dont dueDate OU (periodStart/periodEnd)
- * chevauche la période filtre. Quote ACCEPTED uniquement (aligné Feuille 1).
- */
 export async function getQuittancesV2(
   filters: BordereauFiltersV2,
   prisma: PrismaClient,
-  options?: import("./extractPolicesV2").BordereauInclusionOptions,
+  _options?: import("./extractPolicesV2").BordereauInclusionOptions,
 ): Promise<FidelidadeQuittancesRow[]> {
-  const { dateRange } = filters;
   const apporteur = getApporteur();
+  const events = await getBordereauMonthEvents(prisma, filters);
 
-  const installments = await prisma.paymentInstallment.findMany({
-    where: {
-      schedule: {
-        quote: { status: QuoteStatus.ACCEPTED },
-      },
-      OR: [
-        {
-          dueDate: {
-            gte: dateRange.startDate,
-            lte: dateRange.endDate,
-          },
-        },
-        {
-          AND: [
-            { periodStart: { lte: dateRange.endDate } },
-            { periodEnd: { gte: dateRange.startDate } },
-          ],
-        },
-      ],
-    },
-    select: {
-      scheduleId: true,
-      periodStart: true,
-      periodEnd: true,
-      dueDate: true,
-      amountHT: true,
-      amountTTC: true,
-      taxAmount: true,
-      rcdAmount: true,
-      paidAt: true,
-      status: true,
-      installmentNumber: true,
-      paymentMethod: true,
-      emissionDate: true,
-      schedule: {
-        select: {
-          // resiliationDate sera disponible après migration + prisma generate
-          quote: {
-            select: {
-              reference: true,
-              formData: true,
-              companyData: true,
-              acceptedAt: true,
-              modifieAlaMain: true,
-            },
-          },
-        },
-      },
-      transactions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { method: true },
-      },
-    } as any,
-  });
-
-  // Filtrer les échéances strictement post-résiliation.
-  const filteredByResiliation = (installments as any[]).filter((inst) => {
-    const resiliationDate: Date | null = inst.schedule?.resiliationDate ?? null;
-    if (!resiliationDate) return true;
-    const endOfResiliationMonth = new Date(
-      resiliationDate.getFullYear(),
-      resiliationDate.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999
-    );
-    return inst.periodStart <= endOfResiliationMonth;
-  });
-
-  // ── Filtre d'inclusion bordereau (contrôlé par options) ──────────────────────
-  const doRequireEmission = options?.requireEmission !== false;
-  const doRequirePrevPaid = options?.requirePrevPaid !== false;
-
-  const withEmission = doRequireEmission
-    ? filteredByResiliation.filter((i: any) => !!i.emissionDate)
-    : filteredByResiliation;
-
-  const prevPaidMapQ = new Map<string, boolean>();
-  if (doRequirePrevPaid) {
-    const toCheckPrev = withEmission
-      .filter((i: any) => i.installmentNumber > 1)
-      .map((i: any) => ({ scheduleId: i.scheduleId, prevNum: i.installmentNumber - 1 }));
-
-    if (toCheckPrev.length > 0) {
-      const scheduleToNums = new Map<string, Set<number>>();
-      for (const p of toCheckPrev) {
-        if (!scheduleToNums.has(p.scheduleId))
-          scheduleToNums.set(p.scheduleId, new Set());
-        scheduleToNums.get(p.scheduleId)!.add(p.prevNum);
-      }
-      const prevInsts = await prisma.paymentInstallment.findMany({
-        where: {
-          OR: [...scheduleToNums.entries()].map(([scheduleId, nums]) => ({
-            scheduleId,
-            installmentNumber: { in: [...nums] },
-          })),
-        },
-        select: { scheduleId: true, installmentNumber: true, status: true, paidAt: true },
-      });
-      for (const prev of prevInsts) {
-        const key = `${prev.scheduleId}-${prev.installmentNumber}`;
-        prevPaidMapQ.set(key, prev.status === "PAID" || prev.paidAt !== null);
-      }
-    }
-  }
-
-  const filteredInstallments = withEmission.filter((inst: any) => {
-    if (!doRequirePrevPaid) return true;
-    if (inst.installmentNumber === 1) return true;
-    const key = `${inst.scheduleId}-${inst.installmentNumber - 1}`;
-    return prevPaidMapQ.get(key) === true;
-  });
-
-  filteredInstallments.sort((a: any, b: any) => {
-    const refA = a.schedule.quote.reference ?? "";
-    const refB = b.schedule.quote.reference ?? "";
-    if (refA !== refB) return refA.localeCompare(refB);
-    return a.installmentNumber - b.installmentNumber;
-  });
-
-  const withSiren: {
-    siren: string;
-    row: FidelidadeQuittancesRow;
-    periodStart: Date;
-    periodEnd: Date;
-  }[] = [];
-
-  for (const inst of filteredInstallments as any[]) {
+  return events.map(({ installment: inst, eventType, eventDate }) => {
     const quote = inst.schedule.quote;
     const formData = (quote.formData ?? {}) as Record<string, unknown>;
-    const companyData = (quote.companyData ?? null) as Record<
-      string,
-      unknown
-    > | null;
-    const siren = getSiren(formData, companyData);
     const identifiantPolice = quote.reference ?? DEFAULT_STRING;
     const letter = getQuittanceLetter(formData);
     const year = inst.dueDate.toISOString().split("T")[0].split("-")[0];
-    const identifiantQuittance = letter
+    const baseId = letter
       ? `${identifiantPolice}${letter}${inst.installmentNumber}-${year}`
       : `${identifiantPolice}${inst.installmentNumber}-${year}`;
+    const quittanceSuffix =
+      eventType === "EMISSION"
+        ? "EM"
+        : eventType === "REGLEMENT"
+          ? "RG"
+          : "RL";
+    const identifiantQuittance = `${baseId}-${quittanceSuffix}`;
+
     const modifieAlaMain = quote.modifieAlaMain === true;
-    // Pour devis non modifié à la main : PRIME_HT = RCD_HT (rcdAmount), PRIME_TTC = PRIME_HT + taxe
-    // Fallback amountHT si rcdAmount null (données legacy)
     const rcdHt = inst.rcdAmount ?? inst.amountHT ?? 0;
     const primeHT = modifieAlaMain ? inst.amountHT : rcdHt;
     const primeTTC = modifieAlaMain ? inst.amountTTC : rcdHt + inst.taxAmount;
@@ -225,19 +73,29 @@ export async function getQuittancesV2(
       | undefined =
       inst.paymentMethod ??
       (fromTransaction as import("@prisma/client").PaymentMethod | undefined);
-    if (inst.status === "PAID" && !paymentMethod) {
+    if (eventType === "REGLEMENT" && !paymentMethod) {
       paymentMethod = "OTHER";
     }
 
-    const dateEmissionQuittance =
-      inst.emissionDate ?? quote.acceptedAt ?? null;
-    const row = mapInstallmentToQuittancesRow({
+    const dateEmissionSource =
+      eventType === "EMISSION"
+        ? eventDate
+        : (inst.emissionDate ?? quote.acceptedAt ?? null);
+
+    return mapInstallmentToQuittancesRow({
       inst: {
-        ...inst,
-        amountHT: primeHT,
+        periodStart: inst.periodStart,
+        periodEnd: inst.periodEnd,
         amountTTC: primeTTC,
+        amountHT: primeHT,
+        taxAmount: inst.taxAmount,
+        paidAt: inst.paidAt,
+        status: inst.status,
+        dueDate: inst.dueDate,
       },
-      dateEmissionQuittance,
+      eventType,
+      eventDate,
+      dateEmissionQuittance: dateEmissionSource,
       identifiantPolice,
       identifiantQuittance,
       apporteur,
@@ -245,41 +103,7 @@ export async function getQuittancesV2(
       tauxTaxe,
       paymentMethod,
     });
-    withSiren.push({
-      siren,
-      row,
-      periodStart: inst.periodStart,
-      periodEnd: inst.periodEnd,
-    });
-  }
-
-  return deduplicateQuittancesBySiren(withSiren);
-}
-
-/** Une ligne par SIREN : garde uniquement la première occurrence, sans regrouper. */
-function deduplicateQuittancesBySiren(
-  withSiren: {
-    siren: string;
-    row: FidelidadeQuittancesRow;
-    periodStart: Date;
-    periodEnd: Date;
-  }[],
-): FidelidadeQuittancesRow[] {
-  const seenSiren = new Set<string>();
-  const out: FidelidadeQuittancesRow[] = [];
-
-  for (const item of withSiren) {
-    const sirenKey = item.siren?.trim();
-    const key = sirenKey ? sirenKey : `_${item.row.IDENTIFIANT_QUITTANCE}`;
-    if (seenSiren.has(key)) continue;
-    seenSiren.add(key);
-    out.push(item.row);
-  }
-
-  out.sort((a, b) =>
-    (a.IDENTIFIANT_POLICE || "").localeCompare(b.IDENTIFIANT_POLICE || ""),
-  );
-  return out;
+  });
 }
 
 function mapInstallmentToQuittancesRow(params: {
@@ -293,6 +117,8 @@ function mapInstallmentToQuittancesRow(params: {
     status: import("@prisma/client").PaymentScheduleStatus;
     dueDate: Date;
   };
+  eventType: BordereauMonthEventType;
+  eventDate: Date;
   dateEmissionQuittance: Date | null;
   identifiantPolice: string;
   identifiantQuittance: string;
@@ -303,6 +129,8 @@ function mapInstallmentToQuittancesRow(params: {
 }): FidelidadeQuittancesRow {
   const {
     inst,
+    eventType,
+    eventDate,
     dateEmissionQuittance,
     identifiantPolice,
     identifiantQuittance,
@@ -317,13 +145,18 @@ function mapInstallmentToQuittancesRow(params: {
   const dateEmission = dateEmissionQuittance
     ? formatDate(dateEmissionQuittance)
     : DEFAULT_STRING;
-  const dateEncaissement = inst.paidAt
-    ? formatDate(inst.paidAt)
-    : DEFAULT_STRING;
+  const dateEncaissement =
+    eventType === "REGLEMENT" ? formatDate(eventDate) : DEFAULT_STRING;
 
-  let modePaiement = mapPaymentMethodToModePaiement(paymentMethod);
-  if (inst.status === "PAID" && (!modePaiement || modePaiement.length < 2)) {
-    modePaiement = "VIREMENT";
+  const statutQuittance =
+    eventType === "REGLEMENT" ? "ENCAISSE" : "EMISE";
+
+  let modePaiement = DEFAULT_STRING;
+  if (eventType === "REGLEMENT") {
+    modePaiement = mapPaymentMethodToModePaiement(paymentMethod);
+    if (!modePaiement || modePaiement.length < 2) {
+      modePaiement = "VIREMENT";
+    }
   }
 
   return {
@@ -335,7 +168,7 @@ function mapInstallmentToQuittancesRow(params: {
     DATE_FIN_QUITTANCE: dateFin,
     DATE_EMISSION_QUITTANCE: dateEmission,
     DATE_ENCAISSEMENT: dateEncaissement,
-    STATUT_QUITTANCE: mapPaymentStatusToStatutQuittance(inst.status),
+    STATUT_QUITTANCE: statutQuittance,
     GARANTIE: GARANTIE_RC_RCD,
     PRIME_TTC: String(inst.amountTTC),
     PRIME_HT: String(inst.amountHT),

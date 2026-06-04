@@ -756,10 +756,16 @@ export default function BordereauTab({
   }, [fetchData]);
 
   // ── Computed bordereau rows ───────────────────────────────────────────────
+  // Tri par numéro d'échéance pour un affichage chronologique propre
+  const sortedInstallments = useMemo(
+    () => [...installments].sort((a, b) => a.installmentNumber - b.installmentNumber),
+    [installments],
+  );
+
   const policesRows = useMemo(
     () =>
       computePolicesRows(
-        installments,
+        sortedInstallments,
         editFd,
         editCd,
         quote.reference,
@@ -768,7 +774,7 @@ export default function BordereauTab({
         resiliationDate,
       ),
     [
-      installments,
+      sortedInstallments,
       editFd,
       editCd,
       quote.reference,
@@ -783,12 +789,12 @@ export default function BordereauTab({
   const quittancesRows = useMemo(
     () =>
       computeQuittancesRows(
-        installments,
+        sortedInstallments,
         editFd,
         quote.reference,
         quote.modifieAlaMain === true,
       ),
-    [installments, editFd, quote.reference, quote.modifieAlaMain],
+    [sortedInstallments, editFd, quote.reference, quote.modifieAlaMain],
   );
 
   // ── Field update helpers ──────────────────────────────────────────────────
@@ -1717,149 +1723,209 @@ export default function BordereauTab({
                   </div>
                 </div>
 
-                {/* ─ Aperçu Polices : une ligne par échéance ─ */}
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    Aperçu bordereau — une ligne par échéance
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-indigo-50 text-indigo-800 text-xs border-b border-indigo-200">
-                          <th className="px-3 py-2 text-center font-semibold">
-                            N°
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            DATE_EFFET_CONTRAT
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            DATE_FIN_CONTRAT
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            DATE_ECHEANCE
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            DATE_ETAT_POLICE
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            ETAT_POLICE
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            MOTIF_ETAT
-                          </th>
-                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">
-                            Dans BDX ?
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {policesRows.map((row, idx) => {
-                          const inst = installments[idx];
-                          const excludedResil = inst
-                            ? isExcludedByResiliation(inst)
-                            : false;
-                          const excludedBdx = inst
-                            ? isExcludedFromBordereau(inst)
-                            : true;
-                          const excluded = excludedResil || excludedBdx;
-                          const motifColor =
-                            row.MOTIF_ETAT === "REGLEMENT"
-                              ? "text-emerald-700 bg-emerald-50"
-                              : row.MOTIF_ETAT === "RESILIATION"
-                                ? "text-red-700 bg-red-50"
-                                : "text-amber-700 bg-amber-50";
-                          const etatColor =
-                            row.ETAT_POLICE === "RESILIE"
-                              ? "bg-red-100 text-red-700"
-                              : row.ETAT_POLICE === "SOUSCRIPTION"
-                                ? "bg-indigo-100 text-indigo-700"
-                                : "bg-blue-100 text-blue-700";
-                          return (
-                            <tr
-                              key={idx}
-                              className={
-                                excluded
-                                  ? "opacity-40 bg-gray-50"
-                                  : idx % 2 === 0
-                                    ? "bg-white"
-                                    : "bg-gray-50"
-                              }
-                              title={
-                                excludedResil
-                                  ? "Hors bordereau (après résiliation)"
-                                  : excludedBdx
-                                    ? "Hors bordereau (pas d'émission ou précédente non réglée)"
-                                    : undefined
-                              }
-                            >
-                              <td className="px-3 py-2 text-center font-semibold text-gray-700">
-                                {inst?.installmentNumber ?? idx + 1}
-                              </td>
-                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                                {row.DATE_EFFET_CONTRAT || "—"}
-                              </td>
-                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                                {row.DATE_FIN_CONTRAT || "—"}
-                              </td>
-                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                                {row.DATE_ECHEANCE || "—"}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                {row.DATE_ETAT_POLICE ? (
-                                  <span className="text-gray-700">
-                                    {row.DATE_ETAT_POLICE}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-300 italic text-xs">
-                                    Non définie
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                <span
-                                  className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${etatColor}`}
-                                >
-                                  {row.ETAT_POLICE || "—"}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                <span
-                                  className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${motifColor}`}
-                                >
-                                  {row.MOTIF_ETAT || "—"}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                {excluded ? (
-                                  <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-400">
-                                    {excludedResil ? "Résilié" : "Hors BDX"}
-                                  </span>
-                                ) : (
-                                  <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
-                                    ✓ Inclus
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400 space-y-0.5">
-                    <div>
-                      DATE_EFFET_CONTRAT = début de période de l'échéance ·
-                      DATE_ETAT_POLICE ={" "}
-                      <span className="font-mono">paidAt</span> si payé, sinon{" "}
-                      <span className="font-mono">emissionDate</span>
+                {/* ─ Aperçu Polices : groupé par MOTIF_ETAT ─ */}
+                <div className="space-y-4">
+                  {/* Tableau 1: REGLEMENTS */}
+                  {(() => {
+                    const groupRows = policesRows
+                      .map((row, idx) => ({ row, idx, inst: sortedInstallments[idx] }))
+                      .filter(({ row }) => row.MOTIF_ETAT === "REGLEMENT");
+                    if (groupRows.length === 0) return null;
+                    return (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span>💰</span>
+                            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
+                              Règlements
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({groupRows.length} échéance{groupRows.length > 1 ? "s" : ""})
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {groupRows.some(({ inst }) => !isExcludedByResiliation(inst) && !isExcludedFromBordereau(inst)) && (
+                              <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">
+                                ✓ Inclus dans le bordereau
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-emerald-50/50 text-emerald-900 text-xs border-b border-emerald-100">
+                                <th className="px-3 py-2 text-center font-semibold">N°</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Période</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Échéance</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Date état</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">État police</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Fractionnement</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Statut</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {groupRows.map(({ row, idx, inst }, rowIdx) => {
+                                const excludedResil = inst ? isExcludedByResiliation(inst) : false;
+                                const excludedBdx = inst ? isExcludedFromBordereau(inst) : true;
+                                const excluded = excludedResil || excludedBdx;
+                                const etatColor = row.ETAT_POLICE === "RESILIE" ? "bg-red-100 text-red-700" : row.ETAT_POLICE === "SOUSCRIPTION" ? "bg-indigo-100 text-indigo-700" : "bg-blue-100 text-blue-700";
+                                return (
+                                  <tr key={idx} className={excluded ? "opacity-40 bg-gray-50" : rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                                    <td className="px-3 py-2 text-center font-semibold text-gray-700">{inst?.installmentNumber ?? idx + 1}</td>
+                                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.DATE_EFFET_CONTRAT || "—"} → {row.DATE_FIN_CONTRAT || "—"}</td>
+                                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.DATE_ECHEANCE || "—"}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{row.DATE_ETAT_POLICE ? <span className="text-gray-700 font-medium">{row.DATE_ETAT_POLICE}</span> : <span className="text-gray-400 italic">—</span>}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap"><span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${etatColor}`}>{row.ETAT_POLICE || "—"}</span></td>
+                                    <td className="px-3 py-2 whitespace-nowrap"><span className="inline-block px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700">{row.FRACTIONNEMENT || "—"}</span></td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{excluded ? <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-400">{excludedResil ? "Résilié" : "Hors BDX"}</span> : <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">✓ Inclus</span>}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Tableau 2: EMISSIONS */}
+                  {(() => {
+                    const groupRows = policesRows
+                      .map((row, idx) => ({ row, idx, inst: sortedInstallments[idx] }))
+                      .filter(({ row }) => row.MOTIF_ETAT === "EMISSION");
+                    if (groupRows.length === 0) return null;
+                    return (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span>📄</span>
+                            <span className="text-xs font-bold text-amber-800 uppercase tracking-wide">
+                              Emissions (non payées)
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({groupRows.length} échéance{groupRows.length > 1 ? "s" : ""})
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {groupRows.some(({ inst }) => !isExcludedByResiliation(inst) && !isExcludedFromBordereau(inst)) && (
+                              <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">
+                                ✓ Inclus dans le bordereau
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-amber-50/50 text-amber-900 text-xs border-b border-amber-100">
+                                <th className="px-3 py-2 text-center font-semibold">N°</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Période</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Échéance</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Date état</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">État police</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Fractionnement</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Statut</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {groupRows.map(({ row, idx, inst }, rowIdx) => {
+                                const excludedResil = inst ? isExcludedByResiliation(inst) : false;
+                                const excludedBdx = inst ? isExcludedFromBordereau(inst) : true;
+                                const excluded = excludedResil || excludedBdx;
+                                const etatColor = row.ETAT_POLICE === "RESILIE" ? "bg-red-100 text-red-700" : row.ETAT_POLICE === "SOUSCRIPTION" ? "bg-indigo-100 text-indigo-700" : "bg-blue-100 text-blue-700";
+                                return (
+                                  <tr key={idx} className={excluded ? "opacity-40 bg-gray-50" : rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                                    <td className="px-3 py-2 text-center font-semibold text-gray-700">{inst?.installmentNumber ?? idx + 1}</td>
+                                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.DATE_EFFET_CONTRAT || "—"} → {row.DATE_FIN_CONTRAT || "—"}</td>
+                                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.DATE_ECHEANCE || "—"}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{row.DATE_ETAT_POLICE ? <span className="text-gray-700 font-medium">{row.DATE_ETAT_POLICE}</span> : <span className="text-gray-400 italic">—</span>}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap"><span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${etatColor}`}>{row.ETAT_POLICE || "—"}</span></td>
+                                    <td className="px-3 py-2 whitespace-nowrap"><span className="inline-block px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700">{row.FRACTIONNEMENT || "—"}</span></td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{excluded ? <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-400">{excludedResil ? "Résilié" : "Hors BDX"}</span> : <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">✓ Inclus</span>}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Tableau 3: RESILIATIONS */}
+                  {(() => {
+                    const groupRows = policesRows
+                      .map((row, idx) => ({ row, idx, inst: sortedInstallments[idx] }))
+                      .filter(({ row }) => row.MOTIF_ETAT === "RESILIATION");
+                    if (groupRows.length === 0) return null;
+                    return (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-red-50 border-b border-red-200 px-4 py-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span>🚫</span>
+                            <span className="text-xs font-bold text-red-800 uppercase tracking-wide">
+                              Résiliations
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({groupRows.length} échéance{groupRows.length > 1 ? "s" : ""})
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {groupRows.some(({ inst }) => !isExcludedByResiliation(inst) && !isExcludedFromBordereau(inst)) && (
+                              <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">
+                                ✓ Inclus dans le bordereau
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-red-50/50 text-red-900 text-xs border-b border-red-100">
+                                <th className="px-3 py-2 text-center font-semibold">N°</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Période</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Échéance</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Date état</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">État police</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Fractionnement</th>
+                                <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">Statut</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {groupRows.map(({ row, idx, inst }, rowIdx) => {
+                                const excludedResil = inst ? isExcludedByResiliation(inst) : false;
+                                const excludedBdx = inst ? isExcludedFromBordereau(inst) : true;
+                                const excluded = excludedResil || excludedBdx;
+                                const etatColor = row.ETAT_POLICE === "RESILIE" ? "bg-red-100 text-red-700" : row.ETAT_POLICE === "SOUSCRIPTION" ? "bg-indigo-100 text-indigo-700" : "bg-blue-100 text-blue-700";
+                                return (
+                                  <tr key={idx} className={excluded ? "opacity-40 bg-gray-50" : rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                                    <td className="px-3 py-2 text-center font-semibold text-gray-700">{inst?.installmentNumber ?? idx + 1}</td>
+                                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.DATE_EFFET_CONTRAT || "—"} → {row.DATE_FIN_CONTRAT || "—"}</td>
+                                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{row.DATE_ECHEANCE || "—"}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{row.DATE_ETAT_POLICE ? <span className="text-gray-700 font-medium">{row.DATE_ETAT_POLICE}</span> : <span className="text-gray-400 italic">—</span>}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap"><span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${etatColor}`}>{row.ETAT_POLICE || "—"}</span></td>
+                                    <td className="px-3 py-2 whitespace-nowrap"><span className="inline-block px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700">{row.FRACTIONNEMENT || "—"}</span></td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{excluded ? <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-400">{excludedResil ? "Résilié" : "Hors BDX"}</span> : <span className="inline-block px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">✓ Inclus</span>}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Légende */}
+                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 space-y-1">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />REGLEMENT : payé</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />EMISSION : en attente</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />RESILIATION : résilié</span>
                     </div>
-                    <div>
-                      ETAT_POLICE : SOUSCRIPTION (1re échéance) · EN COURS
-                      (autres) · RESILIE (si résilié)
-                    </div>
-                    <div className="text-amber-600">
-                      Règle d'inclusion : date d'émission requise + échéance
-                      précédente réglée
+                    <div className="text-gray-400 pt-1 border-t border-gray-200 mt-1">
+                      DATE_ETAT_POLICE = <span className="font-mono">paidAt</span> si payé, sinon <span className="font-mono">emissionDate</span>
                     </div>
                   </div>
                 </div>
