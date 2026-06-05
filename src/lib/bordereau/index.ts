@@ -43,6 +43,8 @@ export {
   POLICES_COLUMNS,
   QUITTANCES_COLUMNS,
   csvToBlob,
+  csvToUtf8Buffer,
   downloadCSV,
+  CSV_UTF8_BOM,
 } from "./generateCSV";
 export { getApporteur } from "./config";

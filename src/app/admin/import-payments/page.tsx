@@ -2,11 +2,34 @@
 
 import { useState, useRef } from "react";
 
+type ImportAction =
+  | "UPDATED"
+  | "CREATED"
+  | "DRY_RUN_UPDATE"
+  | "DRY_RUN_CREATE"
+  | "SKIPPED_ALREADY_PAID"
+  | "SKIPPED_DUPLICATE_CSV"
+  | "SKIPPED_DUPLICATE_DB"
+  | "ERROR";
+
 interface ImportResult {
   rowIndex: number;
   success: boolean;
   created?: boolean;
   message: string;
+  action: ImportAction;
+  nomClient: string;
+  numeroPolice: string;
+  siret: string;
+  periode: string;
+  dateReglement: string;
+  primeReglee: number;
+  quoteReference?: string;
+  installmentNumber?: number;
+  installmentId?: string;
+  matchMethod?: string;
+  warnings: string[];
+  details: string;
 }
 
 interface ImportStats {
@@ -15,6 +38,68 @@ interface ImportStats {
   created: number;
   skipped: number;
   errors: number;
+  duplicateCsv: number;
+  duplicateDb: number;
+}
+
+type ResultFilter = "all" | "ok" | "created" | "skipped" | "errors" | "warnings";
+
+const ACTION_LABELS: Record<ImportAction, string> = {
+  UPDATED: "Mis à jour",
+  CREATED: "Créé",
+  DRY_RUN_UPDATE: "Simul. MAJ",
+  DRY_RUN_CREATE: "Simul. création",
+  SKIPPED_ALREADY_PAID: "Déjà payé",
+  SKIPPED_DUPLICATE_CSV: "Doublon CSV",
+  SKIPPED_DUPLICATE_DB: "Doublon DB",
+  ERROR: "Erreur",
+};
+
+function actionBadgeClass(action: ImportAction): string {
+  switch (action) {
+    case "UPDATED":
+    case "DRY_RUN_UPDATE":
+      return "bg-green-100 text-green-800";
+    case "CREATED":
+    case "DRY_RUN_CREATE":
+      return "bg-blue-100 text-blue-800";
+    case "SKIPPED_ALREADY_PAID":
+    case "SKIPPED_DUPLICATE_CSV":
+    case "SKIPPED_DUPLICATE_DB":
+      return "bg-amber-100 text-amber-800";
+    default:
+      return "bg-red-100 text-red-800";
+  }
+}
+
+function rowBgClass(result: ImportResult): string {
+  if (result.success) {
+    return result.created ? "bg-blue-50/60" : "bg-green-50/60";
+  }
+  if (
+    result.action === "SKIPPED_ALREADY_PAID" ||
+    result.action === "SKIPPED_DUPLICATE_CSV"
+  ) {
+    return "bg-amber-50/80";
+  }
+  return "bg-red-50/80";
+}
+
+function matchesFilter(result: ImportResult, filter: ResultFilter): boolean {
+  switch (filter) {
+    case "ok":
+      return result.success && !result.created;
+    case "created":
+      return result.success && !!result.created;
+    case "skipped":
+      return result.action.startsWith("SKIPPED");
+    case "errors":
+      return result.action === "ERROR";
+    case "warnings":
+      return result.warnings.length > 0;
+    default:
+      return true;
+  }
 }
 
 interface ImportResponse {
@@ -66,6 +151,7 @@ export default function ImportPaymentsPage() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -105,6 +191,7 @@ export default function ImportPaymentsPage() {
       }
 
       setResponse(data);
+      setResultFilter("all");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
@@ -203,8 +290,11 @@ export default function ImportPaymentsPage() {
                 )}
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                Format attendu : CSV avec séparateur virgule, colonnes : Nom
-                Client, bordereau, DATE DE REGLEMENT, prime reglee, etc.
+                Format <strong>reglementVinu.csv</strong> : séparateur virgule,
+                dates en <strong>JJ/MM/AAAA</strong>, période{" "}
+                <code className="text-xs bg-gray-100 px-1 rounded">
+                  01/01/2026 AU 31/03/2026
+                </code>
               </p>
             </div>
 
@@ -428,99 +518,168 @@ export default function ImportPaymentsPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-500">Total lignes</p>
-                  <p className="text-2xl font-bold text-gray-900">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Total lignes</p>
+                  <p className="text-xl font-bold text-gray-900">
                     {response.data.stats.total}
                   </p>
                 </div>
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-sm text-green-600">Importés</p>
-                  <p className="text-2xl font-bold text-green-700">
+                <div className="bg-green-50 rounded-lg p-3">
+                  <p className="text-xs text-green-600">Mis à jour</p>
+                  <p className="text-xl font-bold text-green-700">
                     {response.data.stats.imported}
                   </p>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-blue-600">Créés</p>
-                  <p className="text-2xl font-bold text-blue-700">
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <p className="text-xs text-blue-600">Créés</p>
+                  <p className="text-xl font-bold text-blue-700">
                     {response.data.stats.created}
                   </p>
                 </div>
-                <div className="bg-amber-50 rounded-lg p-4">
-                  <p className="text-sm text-amber-600">Ignorés</p>
-                  <p className="text-2xl font-bold text-amber-700">
+                <div className="bg-amber-50 rounded-lg p-3">
+                  <p className="text-xs text-amber-600">Ignorés</p>
+                  <p className="text-xl font-bold text-amber-700">
                     {response.data.stats.skipped}
                   </p>
                 </div>
-                <div className="bg-red-50 rounded-lg p-4">
-                  <p className="text-sm text-red-600">Erreurs</p>
-                  <p className="text-2xl font-bold text-red-700">
+                <div className="bg-red-50 rounded-lg p-3">
+                  <p className="text-xs text-red-600">Erreurs</p>
+                  <p className="text-xl font-bold text-red-700">
                     {response.data.stats.errors}
                   </p>
                 </div>
+                <div className="bg-orange-50 rounded-lg p-3">
+                  <p className="text-xs text-orange-600">Doublons CSV</p>
+                  <p className="text-xl font-bold text-orange-700">
+                    {response.data.stats.duplicateCsv ?? 0}
+                  </p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-3">
+                  <p className="text-xs text-purple-600">Doublons DB</p>
+                  <p className="text-xl font-bold text-purple-700">
+                    {response.data.stats.duplicateDb ?? 0}
+                  </p>
+                </div>
               </div>
+
+              {(response.data.stats.duplicateCsv > 0 ||
+                response.data.stats.duplicateDb > 0) && (
+                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-900">
+                  <strong>Attention doublons :</strong>{" "}
+                  {response.data.stats.duplicateCsv > 0 &&
+                    `${response.data.stats.duplicateCsv} ligne(s) en double dans le fichier CSV `}
+                  {response.data.stats.duplicateDb > 0 &&
+                    `${response.data.stats.duplicateDb} ligne(s) avec échéances dupliquées en base`}
+                </div>
+              )}
             </div>
 
-            {/* Détails */}
-            <div className="overflow-x-auto max-h-[60vh]">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0">
+            {/* Filtres */}
+            <div className="px-6 py-3 border-b border-gray-200 flex flex-wrap gap-2">
+              {(
+                [
+                  ["all", "Tout"],
+                  ["ok", "Mis à jour"],
+                  ["created", "Créés"],
+                  ["skipped", "Ignorés"],
+                  ["errors", "Erreurs"],
+                  ["warnings", "Avertissements"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setResultFilter(key)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    resultFilter === key
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Journal détaillé */}
+            <div className="overflow-x-auto max-h-[65vh]">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                      Ligne
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                      Statut
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Message
-                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Police</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SIRET</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Période</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Règlement</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Montant</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Éch.</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Matching</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase min-w-[220px]">Détail</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {response.data.results.map((result, idx) => (
-                    <tr
-                      key={idx}
-                      className={`${
-                        result.success
-                          ? result.created
-                            ? "bg-blue-50"
-                            : "bg-green-50"
-                          : result.message.includes("déjà payée")
-                          ? "bg-amber-50"
-                          : "bg-red-50"
-                      }`}
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        #{result.rowIndex + 1}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {result.success ? (
-                          result.created ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Créé
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              OK
-                            </span>
-                          )
-                        ) : result.message.includes("déjà payée") ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            Ignoré
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {response.data.results
+                    .filter((r) => matchesFilter(r, resultFilter))
+                    .map((result) => (
+                      <tr key={result.rowIndex} className={rowBgClass(result)}>
+                        <td className="px-3 py-2 whitespace-nowrap font-mono text-gray-600">
+                          {result.rowIndex + 1}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${actionBadgeClass(result.action)}`}
+                          >
+                            {ACTION_LABELS[result.action]}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            Erreur
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {result.message}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-gray-900">
+                          {result.nomClient}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap font-mono text-xs">
+                          {result.numeroPolice || "—"}
+                          {result.quoteReference &&
+                            result.quoteReference !== result.numeroPolice && (
+                              <div className="text-gray-400">
+                                → {result.quoteReference}
+                              </div>
+                            )}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap font-mono text-xs">
+                          {result.siret}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-xs max-w-[140px] truncate" title={result.periode}>
+                          {result.periode}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {result.dateReglement}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-right font-mono">
+                          {result.primeReglee.toFixed(2)} €
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {result.installmentNumber != null
+                            ? `#${result.installmentNumber}`
+                            : "—"}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-600">
+                          {result.matchMethod || "—"}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-700">
+                          <div>{result.message}</div>
+                          <div className="text-gray-500 mt-0.5">{result.details}</div>
+                          {result.warnings.length > 0 && (
+                            <ul className="mt-1 text-amber-700 list-disc list-inside">
+                              {result.warnings.map((w, i) => (
+                                <li key={i}>{w}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -535,28 +694,21 @@ export default function ImportPaymentsPage() {
           <div className="prose prose-sm text-gray-600">
             <ol className="list-decimal list-inside space-y-2">
               <li>
-                Préparez votre fichier CSV avec les colonnes suivantes :
-                <ul className="list-disc list-inside ml-6 mt-1 space-y-1">
-                  <li>Nom Client</li>
-                  <li>bordereau</li>
-                  <li>DATE DE REGLEMENT</li>
-                  <li>prime reglee</li>
-                  <li>NUMERO SIRET</li>
-                  <li>PERIODE REGLEE</li>
-                </ul>
+                Fichier au format <strong>reglementVinu.csv</strong> (virgule,
+                dates <strong>JJ/MM/AAAA</strong>).
               </li>
               <li>
-                Utilisez d&apos;abord le <strong>mode simulation</strong> pour
-                vérifier que tout est correct.
+                Colonnes clés : Nom Client, bordereau, DATE DE REGLEMENT, prime
+                reglee, PERIODE REGLEE, NUMERO DE POLICE RCD, NUMERO SIRET.
               </li>
               <li>
-                Si la simulation est concluante, cliquez sur{" "}
-                <strong>Confirmer et appliquer</strong>.
+                Lancez d&apos;abord une <strong>simulation</strong> et vérifiez
+                le journal : doublons CSV, échéances déjà payées, matching par
+                n° de police + période.
               </li>
               <li>
-                Les paiements seront associés aux échéances existantes (par
-                SIRET/SIREN et période) ou de nouvelles échéances seront créées
-                si nécessaire.
+                Les échéances existantes sont <strong>réutilisées</strong> (pas
+                de doublon créé si la période existe déjà).
               </li>
             </ol>
           </div>

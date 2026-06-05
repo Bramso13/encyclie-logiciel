@@ -4,6 +4,28 @@ import type {
   FidelidadeQuittancesRow,
 } from "./types";
 
+/** BOM UTF-8 — requis pour qu’Excel (Windows) lise correctement les accents */
+export const CSV_UTF8_BOM = "\uFEFF";
+
+function stripCsvBom(csvContent: string): string {
+  return csvContent.replace(/^\uFEFF/, "");
+}
+
+/** Normalise les fins de ligne (CRLF) pour compatibilité Excel */
+function normalizeCsvLineEndings(csvContent: string): string {
+  return stripCsvBom(csvContent).replace(/\r\n/g, "\n").split("\n").join("\r\n");
+}
+
+/**
+ * Buffer UTF-8 avec BOM pour export fichier / ZIP.
+ */
+export function csvToUtf8Buffer(csvContent: string): Buffer {
+  return Buffer.from(
+    CSV_UTF8_BOM + normalizeCsvLineEndings(csvContent),
+    "utf8",
+  );
+}
+
 /**
  * Generate CSV content from FIDELIDADE rows
  *
@@ -173,7 +195,7 @@ function generateCSVFromHeaders(
  * Valide que la structure CSV correspond au spec FIDELIDADE (noms et nombre de colonnes).
  */
 export function validatePolicesCSVStructure(csvContent: string): boolean {
-  const firstLine = csvContent.split("\n")[0];
+  const firstLine = stripCsvBom(csvContent).split(/\r?\n/)[0];
   const headers =
     firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
   return (
@@ -186,7 +208,7 @@ export function validatePolicesCSVStructure(csvContent: string): boolean {
  * Valide que la structure CSV quittances correspond au spec FIDELIDADE.
  */
 export function validateQuittancesCSVStructure(csvContent: string): boolean {
-  const firstLine = csvContent.split("\n")[0];
+  const firstLine = stripCsvBom(csvContent).split(/\r?\n/)[0];
   const headers =
     firstLine?.split(",").map((h) => h.replace(/^"|"$/g, "")) ?? [];
   return (
@@ -249,7 +271,8 @@ export function getBordereauZipFileName(month: number, year: number): string {
  * @returns Blob ready for download
  */
 export function csvToBlob(csvContent: string): Blob {
-  return new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const buffer = csvToUtf8Buffer(csvContent);
+  return new Blob([buffer], { type: "text/csv;charset=utf-8;" });
 }
 
 /**

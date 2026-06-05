@@ -5,6 +5,7 @@ import { withAuthAndRole } from "@/lib/api-utils";
 import {
   generatePolicesCSV,
   generateQuittancesCSV,
+  csvToUtf8Buffer,
   getBordereauZipFileName,
 } from "@/lib/bordereau";
 import type {
@@ -60,8 +61,12 @@ export async function GET(
         archive.on("end", () => resolve(Buffer.concat(chunks)));
         archive.on("error", reject);
 
-        archive.append(policesCSV, { name: bordereau.fileNamePolices });
-        archive.append(quittancesCSV, { name: bordereau.fileNameQuittances });
+        archive.append(csvToUtf8Buffer(policesCSV), {
+          name: bordereau.fileNamePolices,
+        });
+        archive.append(csvToUtf8Buffer(quittancesCSV), {
+          name: bordereau.fileNameQuittances,
+        });
         void archive.finalize();
       });
 

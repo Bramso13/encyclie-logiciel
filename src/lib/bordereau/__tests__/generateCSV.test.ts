@@ -10,6 +10,7 @@ import {
   validatePolicesCSVStructure,
   validateQuittancesCSVStructure,
   escapeCsvValue,
+  csvToUtf8Buffer,
 } from "../generateCSV";
 import type { FidelidadePolicesRow, FidelidadeQuittancesRow } from "../types";
 
@@ -129,6 +130,19 @@ describe("generateQuittancesCSV", () => {
   it("valide la structure générée", () => {
     const csv = generateQuittancesCSV([emptyQuittancesRow]);
     expect(validateQuittancesCSVStructure(csv)).toBe(true);
+  });
+});
+
+describe("csvToUtf8Buffer", () => {
+  it("ajoute le BOM UTF-8 et préserve les accents français", () => {
+    const csv = generatePolicesCSV([
+      { ...emptyPolicesRow, NOM_ENTREPRISE_ASSURE: "Société Générale" },
+    ]);
+    const buf = csvToUtf8Buffer(csv);
+    expect(buf[0]).toBe(0xef);
+    expect(buf[1]).toBe(0xbb);
+    expect(buf[2]).toBe(0xbf);
+    expect(buf.toString("utf8")).toContain("Société Générale");
   });
 });
 

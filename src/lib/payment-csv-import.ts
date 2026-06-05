@@ -1,11 +1,15 @@
 /**
- * Librairie d'import de paiements depuis CSV
- * Partagée entre le script CLI et l'API web
+ * Import de paiements depuis CSV (format reglementVinu.csv)
+ * Dates : JJ/MM/AAAA
  */
 
-import { PrismaClient, PaymentScheduleStatus, PaymentMethod, Prisma } from "@prisma/client";
+import {
+  PrismaClient,
+  PaymentScheduleStatus,
+  PaymentMethod,
+  Prisma,
+} from "@prisma/client";
 
-// Type pour une ligne du CSV parsée
 export type CsvRow = {
   nomClient: string;
   bordereau: string;
@@ -27,26 +31,46 @@ export type CsvRow = {
   courtier: string;
 };
 
-// Type pour le résultat d'import
+export type ImportAction =
+  | "UPDATED"
+  | "CREATED"
+  | "DRY_RUN_UPDATE"
+  | "DRY_RUN_CREATE"
+  | "SKIPPED_ALREADY_PAID"
+  | "SKIPPED_DUPLICATE_CSV"
+  | "SKIPPED_DUPLICATE_DB"
+  | "ERROR";
+
 export type ImportResult = {
   success: boolean;
   created?: boolean;
   message: string;
   rowIndex: number;
+  action: ImportAction;
+  nomClient: string;
+  numeroPolice: string;
+  siret: string;
+  periode: string;
+  dateReglement: string;
+  primeReglee: number;
+  quoteReference?: string;
+  installmentNumber?: number;
+  installmentId?: string;
+  matchMethod?: string;
+  warnings: string[];
+  details: string;
 };
 
-// Type pour les statistiques d'import
 export type ImportStats = {
   total: number;
   imported: number;
   created: number;
   skipped: number;
   errors: number;
+  duplicateCsv: number;
+  duplicateDb: number;
 };
 
-/**
- * Parse une ligne CSV en respectant les guillemets
- */
 function parseCSVLine(line: string): string[] {
   const values: string[] = [];
   let current = "";
@@ -75,90 +99,97 @@ function parseCSVLine(line: string): string[] {
   return values;
 }
 
-/**
- * Parse une date au format M/D/YYYY ou MM/DD/YYYY
- */
-function parseCSVDate(dateStr: string): Date | null {
+/** Parse une date au format JJ/MM/AAAA (ou J/M/AAAA) */
+export function parseCSVDate(dateStr: string): Date | null {
   if (!dateStr) return null;
   const parts = dateStr.trim().split("/");
   if (parts.length !== 3) return null;
 
-  const month = parseInt(parts[0], 10) - 1;
-  const day = parseInt(parts[1], 10);
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
   const year = parseInt(parts[2], 10);
+
+  if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year)) return null;
 
   const date = new Date(year, month, day);
   if (isNaN(date.getTime())) return null;
+  if (date.getDate() !== day || date.getMonth() !== month) return null;
   return date;
 }
 
-/**
- * Parse une période au format "01/01/2026 AU 31/03/2026"
- */
 function parsePeriode(periodeStr: string): { debut: Date | null; fin: Date | null } {
   if (!periodeStr) return { debut: null, fin: null };
 
-  const match = periodeStr.match(/(\d{2}\/\d{2}\/\d{4})\s*AU\s*(\d{2}\/\d{2}\/\d{4})/i);
+  const match = periodeStr.match(
+    /(\d{1,2}\/\d{1,2}\/\d{4})\s*AU\s*(\d{1,2}\/\d{1,2}\/\d{4})/i,
+  );
   if (!match) return { debut: null, fin: null };
 
-  const [, debutStr, finStr] = match;
-
-  const parseFrDate = (str: string): Date | null => {
-    const parts = str.split("/");
-    if (parts.length !== 3) return null;
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
-    const date = new Date(year, month, day);
-    return isNaN(date.getTime()) ? null : date;
-  };
-
   return {
-    debut: parseFrDate(debutStr),
-    fin: parseFrDate(finStr),
+    debut: parseCSVDate(match[1]),
+    fin: parseCSVDate(match[2]),
   };
 }
 
-/**
- * Parse un montant en euros
- */
-function parseMontant(montantStr: string): { montant: number; estPartiel: boolean; manquant?: number } {
+function parseMontant(montantStr: string): {
+  montant: number;
+  estPartiel: boolean;
+  manquant?: number;
+} {
   if (!montantStr) return { montant: 0, estPartiel: false };
 
   const str = montantStr.toString().trim();
 
-  // Détecter si c'est un paiement partiel
-  const partielMatch = str.match(/([\d\s,\.]+)\s*€?\s*,?\s*manque\s+([\d\s,\.]+)\s*€?/i);
+  const partielMatch = str.match(
+    /([\d\s\u00A0\u202F,\.]+)\s*€?\s*,?\s*manque\s+([\d\s\u00A0\u202F,\.]+)\s*€?/i,
+  );
   if (partielMatch) {
-    const paye = parseFloat(partielMatch[1].replace(/\s/g, "").replace(",", "."));
-    const manquant = parseFloat(partielMatch[2].replace(/\s/g, "").replace(",", "."));
+    const paye = parseFloat(
+      partielMatch[1].replace(/[\s\u00A0\u202F]/g, "").replace(",", "."),
+    );
+    const manquant = parseFloat(
+      partielMatch[2].replace(/[\s\u00A0\u202F]/g, "").replace(",", "."),
+    );
     return {
-      montant: isNaN(paye) ? 0 : paye,
+      montant: Number.isNaN(paye) ? 0 : paye,
       estPartiel: true,
-      manquant: isNaN(manquant) ? undefined : manquant,
+      manquant: Number.isNaN(manquant) ? undefined : manquant,
     };
   }
 
-  // Montant simple
   const cleaned = str
     .replace(/€/g, "")
-    .replace(/\s/g, "")
+    .replace(/[\s\u00A0\u202F]/g, "")
     .replace(/,/g, ".");
 
   const parts = cleaned.split(".");
   if (parts.length > 2) {
     const lastPart = parts.pop();
     const montant = parseFloat(parts.join("") + "." + lastPart);
-    return { montant: isNaN(montant) ? 0 : montant, estPartiel: false };
+    return { montant: Number.isNaN(montant) ? 0 : montant, estPartiel: false };
   }
 
   const montant = parseFloat(cleaned);
-  return { montant: isNaN(montant) ? 0 : montant, estPartiel: false };
+  return { montant: Number.isNaN(montant) ? 0 : montant, estPartiel: false };
 }
 
-/**
- * Extrait le SIREN (9 chiffres) d'un numéro SIRET
- */
+export function formatDateFr(date: Date | null | undefined): string {
+  if (!date) return "—";
+  const d = date.getDate().toString().padStart(2, "0");
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+export function csvRowKey(row: CsvRow): string {
+  return [
+    row.numeroPolice.trim().toUpperCase(),
+    row.siret.replace(/\D/g, ""),
+    formatDateFr(row.dateDebutPeriode),
+    formatDateFr(row.dateFinPeriode),
+  ].join("|");
+}
+
 export function extractSiren(siret: string): string | null {
   const cleaned = siret.replace(/\s/g, "").replace(/\D/g, "");
   if (cleaned.length >= 9) {
@@ -167,9 +198,6 @@ export function extractSiren(siret: string): string | null {
   return null;
 }
 
-/**
- * Vérifie si deux numéros SIRET/SIREN correspondent
- */
 export function siretsMatch(siret1: string, siret2: string): boolean {
   const s1 = siret1.replace(/\s/g, "").replace(/\D/g, "");
   const s2 = siret2.replace(/\s/g, "").replace(/\D/g, "");
@@ -184,14 +212,18 @@ export function siretsMatch(siret1: string, siret2: string): boolean {
   return false;
 }
 
-/**
- * Cherche le SIRET/SIREN dans un objet JSON
- */
 function findSiretInData(data: unknown, targetSiret: string): boolean {
   if (!data || typeof data !== "object") return false;
 
   const targetSiren = extractSiren(targetSiret);
-  const fields = ["siret", "siretNumber", "siren", "sirenNumber", "numeroSiret", "siretClient"];
+  const fields = [
+    "siret",
+    "siretNumber",
+    "siren",
+    "sirenNumber",
+    "numeroSiret",
+    "siretClient",
+  ];
 
   for (const field of fields) {
     const value = (data as Record<string, unknown>)[field];
@@ -204,9 +236,25 @@ function findSiretInData(data: unknown, targetSiret: string): boolean {
   return false;
 }
 
-/**
- * Parse un fichier CSV complet
- */
+function periodMatches(
+  periodStart: Date,
+  periodEnd: Date,
+  targetStart: Date,
+  targetEnd: Date,
+): boolean {
+  const pStart = new Date(periodStart);
+  pStart.setHours(0, 0, 0, 0);
+  const pEnd = new Date(periodEnd);
+  pEnd.setHours(0, 0, 0, 0);
+  const tStart = new Date(targetStart);
+  tStart.setHours(0, 0, 0, 0);
+  const tEnd = new Date(targetEnd);
+  tEnd.setHours(0, 0, 0, 0);
+  return (
+    pStart.getTime() === tStart.getTime() && pEnd.getTime() === tEnd.getTime()
+  );
+}
+
 export function parseCSV(content: string): CsvRow[] {
   const lines = content.split(/\r?\n/);
   const rows: CsvRow[] = [];
@@ -237,8 +285,8 @@ export function parseCSV(content: string): CsvRow[] {
       periode: periodeStr,
       dateDebutPeriode: periode.debut,
       dateFinPeriode: periode.fin,
-      numeroPolice: values[7] || "",
-      siret: siret,
+      numeroPolice: (values[7] || "").trim(),
+      siret,
       primeComDeduite: parseMontant(values[9]).montant,
       montantRenouvellement: parseMontant(values[10]).montant,
       montantComCourtier: parseMontant(values[11]).montant,
@@ -254,99 +302,169 @@ export function parseCSV(content: string): CsvRow[] {
   return rows;
 }
 
-/**
- * Détermine la méthode de paiement
- */
 function detectPaymentMethod(_csvRow: CsvRow): PaymentMethod {
   return "OTHER";
 }
 
-/**
- * Cherche un devis par SIRET/SIREN
- */
+function buildBaseResult(
+  csvRow: CsvRow,
+  rowIndex: number,
+  action: ImportAction,
+): Omit<ImportResult, "success" | "message" | "details" | "warnings"> {
+  return {
+    rowIndex,
+    action,
+    nomClient: csvRow.nomClient,
+    numeroPolice: csvRow.numeroPolice,
+    siret: csvRow.siret,
+    periode: csvRow.periode,
+    dateReglement: formatDateFr(csvRow.dateReglement),
+    primeReglee: csvRow.primeReglee,
+  };
+}
+
+export async function findQuoteForCsvRow(
+  prisma: PrismaClient,
+  csvRow: CsvRow,
+) {
+  const ref = csvRow.numeroPolice.trim();
+  if (ref) {
+    const byRef = await prisma.quote.findFirst({
+      where: { reference: ref },
+      include: { paymentSchedule: { include: { payments: true } } },
+    });
+    if (byRef) return byRef;
+  }
+
+  return findQuoteBySiret(prisma, csvRow.siret);
+}
+
 export async function findQuoteBySiret(prisma: PrismaClient, siret: string) {
   const quotes = await prisma.quote.findMany({
     where: {
       paymentSchedule: { isNot: null },
     },
+    include: {
+      paymentSchedule: { include: { payments: true } },
+    },
   });
 
-  return quotes.find((quote) => {
+  const matching = quotes.filter((quote) => {
     const companyData = quote.companyData as Record<string, unknown> | null;
     const formData = quote.formData as Record<string, unknown> | null;
+    return (
+      (companyData && findSiretInData(companyData, siret)) ||
+      (formData && findSiretInData(formData, siret))
+    );
+  });
 
-    const matchCompany = companyData && findSiretInData(companyData, siret);
-    const matchForm = formData && findSiretInData(formData, siret);
-
-    return matchCompany || matchForm;
-  }) || null;
+  if (matching.length === 0) return null;
+  return matching[0];
 }
 
-/**
- * Trouve une échéance par SIRET/SIREN et période
- */
+type InstallmentMatch = {
+  quote: NonNullable<Awaited<ReturnType<typeof findQuoteForCsvRow>>>;
+  schedule: NonNullable<
+    NonNullable<Awaited<ReturnType<typeof findQuoteForCsvRow>>>["paymentSchedule"]
+  >;
+  installment: InstallmentMatch["schedule"]["payments"][number];
+  matchMethod: string;
+  warnings: string[];
+};
+
+export async function findInstallmentForCsvRow(
+  prisma: PrismaClient,
+  csvRow: CsvRow,
+): Promise<InstallmentMatch | null> {
+  const warnings: string[] = [];
+  const quote = await findQuoteForCsvRow(prisma, csvRow);
+
+  if (!quote?.paymentSchedule) return null;
+
+  const schedule = quote.paymentSchedule;
+  const periodStart = csvRow.dateDebutPeriode!;
+  const periodEnd = csvRow.dateFinPeriode!;
+
+  const matchingPayments = schedule.payments.filter((p) =>
+    periodMatches(p.periodStart, p.periodEnd, periodStart, periodEnd),
+  );
+
+  if (matchingPayments.length === 0) return null;
+
+  let matchMethod = csvRow.numeroPolice
+    ? "NUMERO_POLICE + PERIODE"
+    : "SIRET + PERIODE";
+
+  if (matchingPayments.length > 1) {
+    warnings.push(
+      `${matchingPayments.length} échéances en base pour la même période (${formatDateFr(periodStart)} → ${formatDateFr(periodEnd)}) — sélection de la première non payée`,
+    );
+    matchMethod += " (doublon DB)";
+  }
+
+  const unpaid = matchingPayments.filter(
+    (p) => p.status !== "PAID" && p.status !== "PARTIALLY_PAID",
+  );
+  const installment =
+    unpaid.sort((a, b) => a.installmentNumber - b.installmentNumber)[0] ??
+    matchingPayments.sort((a, b) => a.installmentNumber - b.installmentNumber)[0];
+
+  return {
+    quote,
+    schedule,
+    installment,
+    matchMethod,
+    warnings,
+  };
+}
+
+/** @deprecated Utiliser findInstallmentForCsvRow */
 export async function findInstallmentBySiretAndPeriod(
   prisma: PrismaClient,
   siret: string,
   periodStart: Date,
-  periodEnd: Date
+  periodEnd: Date,
 ) {
-  const quotes = await prisma.quote.findMany({
-    where: {
-      paymentSchedule: { isNot: null },
-    },
-    include: {
-      paymentSchedule: {
-        include: {
-          payments: true,
-        },
-      },
-    },
+  const found = await findInstallmentForCsvRow(prisma, {
+    nomClient: "",
+    bordereau: "",
+    dateReglement: null,
+    primeReglee: 0,
+    estPartiel: false,
+    avecOuSansCom: "",
+    typeSouscription: "",
+    periode: "",
+    dateDebutPeriode: periodStart,
+    dateFinPeriode: periodEnd,
+    numeroPolice: "",
+    siret,
+    primeComDeduite: 0,
+    montantRenouvellement: 0,
+    montantComCourtier: 0,
+    territoire: "",
+    courtier: "",
   });
-
-  const matchingQuotes = quotes.filter((quote) => {
-    const companyData = quote.companyData as Record<string, unknown> | null;
-    const formData = quote.formData as Record<string, unknown> | null;
-
-    const matchCompany = companyData && findSiretInData(companyData, siret);
-    const matchForm = formData && findSiretInData(formData, siret);
-
-    return matchCompany || matchForm;
-  });
-
-  for (const quote of matchingQuotes) {
-    if (!quote.paymentSchedule) continue;
-
-    for (const payment of quote.paymentSchedule.payments) {
-      const pStart = new Date(payment.periodStart).setHours(0, 0, 0, 0);
-      const pEnd = new Date(payment.periodEnd).setHours(0, 0, 0, 0);
-      const targetStart = new Date(periodStart).setHours(0, 0, 0, 0);
-      const targetEnd = new Date(periodEnd).setHours(0, 0, 0, 0);
-
-      if (pStart === targetStart && pEnd === targetEnd) {
-        return {
-          quote,
-          schedule: quote.paymentSchedule,
-          installment: payment,
-        };
-      }
-    }
-  }
-
-  return null;
+  if (!found) return null;
+  return {
+    quote: found.quote,
+    schedule: found.schedule,
+    installment: found.installment,
+  };
 }
 
-/**
- * Crée une échéance manquante avec son échéancier si nécessaire
- */
 export async function createMissingInstallment(
   tx: Prisma.TransactionClient,
   csvRow: CsvRow,
   quoteId: string,
-  adminId: string
-): Promise<{ scheduleId: string; installmentId: string }> {
+  adminId: string,
+): Promise<{
+  scheduleId: string;
+  installmentId: string;
+  alreadyExisted: boolean;
+}> {
   let schedule = await tx.paymentSchedule.findUnique({
     where: { quoteId },
+    include: { payments: true },
   });
 
   if (!schedule) {
@@ -360,7 +478,25 @@ export async function createMissingInstallment(
         endDate: csvRow.dateFinPeriode!,
         status: csvRow.estPartiel ? "PARTIALLY_PAID" : "PAID",
       },
+      include: { payments: true },
     });
+  }
+
+  const existing = schedule.payments.find((p) =>
+    periodMatches(
+      p.periodStart,
+      p.periodEnd,
+      csvRow.dateDebutPeriode!,
+      csvRow.dateFinPeriode!,
+    ),
+  );
+
+  if (existing) {
+    return {
+      scheduleId: schedule.id,
+      installmentId: existing.id,
+      alreadyExisted: true,
+    };
   }
 
   const lastInstallment = await tx.paymentInstallment.findFirst({
@@ -369,7 +505,9 @@ export async function createMissingInstallment(
   });
   const nextNumber = (lastInstallment?.installmentNumber ?? 0) + 1;
 
-  const status: PaymentScheduleStatus = csvRow.estPartiel ? "PARTIALLY_PAID" : "PAID";
+  const status: PaymentScheduleStatus = csvRow.estPartiel
+    ? "PARTIALLY_PAID"
+    : "PAID";
 
   const installment = await tx.paymentInstallment.create({
     data: {
@@ -392,50 +530,124 @@ export async function createMissingInstallment(
     },
   });
 
-  return { scheduleId: schedule.id, installmentId: installment.id };
+  return {
+    scheduleId: schedule.id,
+    installmentId: installment.id,
+    alreadyExisted: false,
+  };
 }
 
-/**
- * Importe un paiement depuis une ligne CSV
- */
+function makeResult(
+  csvRow: CsvRow,
+  rowIndex: number,
+  params: {
+    success: boolean;
+    action: ImportAction;
+    message: string;
+    details: string;
+    created?: boolean;
+    quoteReference?: string;
+    installmentNumber?: number;
+    installmentId?: string;
+    matchMethod?: string;
+    warnings?: string[];
+  },
+): ImportResult {
+  return {
+    ...buildBaseResult(csvRow, rowIndex, params.action),
+    success: params.success,
+    created: params.created,
+    message: params.message,
+    details: params.details,
+    quoteReference: params.quoteReference,
+    installmentNumber: params.installmentNumber,
+    installmentId: params.installmentId,
+    matchMethod: params.matchMethod,
+    warnings: params.warnings ?? [],
+  };
+}
+
 export async function importPaymentRow(
   prisma: PrismaClient,
   csvRow: CsvRow,
   adminId: string,
   rowIndex: number,
-  dryRun: boolean = false
+  dryRun: boolean = false,
+  options?: { skipDuplicateCsv?: boolean },
 ): Promise<ImportResult> {
-  const found = await findInstallmentBySiretAndPeriod(
-    prisma,
-    csvRow.siret,
-    csvRow.dateDebutPeriode!,
-    csvRow.dateFinPeriode!
-  );
+  if (options?.skipDuplicateCsv) {
+    return makeResult(csvRow, rowIndex, {
+      success: false,
+      action: "SKIPPED_DUPLICATE_CSV",
+      message: "Ligne en double dans le CSV (même police + SIRET + période)",
+      details: `Clé : ${csvRowKey(csvRow)}`,
+    });
+  }
 
-  // Si pas trouvé, chercher le quote pour créer l'échéance
+  const found = await findInstallmentForCsvRow(prisma, csvRow);
+
   if (!found) {
-    const quote = await findQuoteBySiret(prisma, csvRow.siret);
+    const quote = await findQuoteForCsvRow(prisma, csvRow);
 
     if (!quote) {
-      return {
+      return makeResult(csvRow, rowIndex, {
         success: false,
-        rowIndex,
-        message: `Devis non trouvé pour SIRET ${csvRow.siret} (client: ${csvRow.nomClient})`,
-      };
+        action: "ERROR",
+        message: `Devis introuvable — police ${csvRow.numeroPolice || "—"}, SIRET ${csvRow.siret}`,
+        details: `Client : ${csvRow.nomClient} | Période : ${csvRow.periode}`,
+      });
     }
 
     if (dryRun) {
-      return {
+      return makeResult(csvRow, rowIndex, {
         success: true,
+        action: "DRY_RUN_CREATE",
         created: true,
-        rowIndex,
-        message: `[DRY-RUN] Échéance serait CRÉÉE pour ${quote.reference} - ${csvRow.primeReglee}€`,
-      };
+        quoteReference: quote.reference,
+        message: `[SIMULATION] Créerait une échéance sur ${quote.reference}`,
+        details: `Période ${formatDateFr(csvRow.dateDebutPeriode)} → ${formatDateFr(csvRow.dateFinPeriode)} | ${csvRow.primeReglee.toFixed(2)} € le ${formatDateFr(csvRow.dateReglement)}`,
+      });
     }
 
-    // Créer l'échéance manquante
-    const { installmentId } = await prisma.$transaction(async (tx) => {
+    const txResult = await prisma.$transaction(async (tx) => {
       const result = await createMissingInstallment(tx, csvRow, quote.id, adminId);
+
+      if (result.alreadyExisted) {
+        const inst = await tx.paymentInstallment.findUnique({
+          where: { id: result.installmentId },
+        });
+        if (
+          inst &&
+          (inst.status === "PAID" || inst.status === "PARTIALLY_PAID")
+        ) {
+          return { type: "already_paid" as const, inst, result };
+        }
+        await tx.paymentInstallment.update({
+          where: { id: result.installmentId },
+          data: {
+            status: csvRow.estPartiel ? "PARTIALLY_PAID" : "PAID",
+            paidAt: csvRow.dateReglement || new Date(),
+            paidAmount: csvRow.primeReglee,
+            paymentMethod: detectPaymentMethod(csvRow),
+            paymentReference: `CSV-${csvRow.bordereau}`,
+            validatedById: adminId,
+            validatedAt: new Date(),
+            adminNotes: `Import CSV - ${csvRow.nomClient} - ${csvRow.courtier}`,
+          },
+        });
+        await tx.paymentTransaction.create({
+          data: {
+            installmentId: result.installmentId,
+            amount: csvRow.primeReglee,
+            method: detectPaymentMethod(csvRow),
+            reference: `Import CSV - ${csvRow.bordereau}`,
+            validatedById: adminId,
+            validatedAt: csvRow.dateReglement || new Date(),
+            notes: `Importé depuis CSV (échéance existante réutilisée). Client: ${csvRow.nomClient}`,
+          },
+        });
+        return { type: "updated_existing" as const, inst, result };
+      }
 
       await tx.paymentTransaction.create({
         data: {
@@ -448,68 +660,116 @@ export async function importPaymentRow(
           notes: `Importé depuis CSV (échéance créée). Client: ${csvRow.nomClient}`,
         },
       });
-
-      return result;
+      return { type: "created" as const, result };
     });
 
-    return {
+    if (txResult.type === "already_paid" && txResult.inst) {
+      return makeResult(csvRow, rowIndex, {
+        success: false,
+        action: "SKIPPED_ALREADY_PAID",
+        quoteReference: quote.reference,
+        installmentNumber: txResult.inst.installmentNumber,
+        installmentId: txResult.inst.id,
+        message: `Échéance déjà payée (évitée création doublon)`,
+        details: `Éch. #${txResult.inst.installmentNumber} | Payé le ${formatDateFr(txResult.inst.paidAt)} | ${txResult.inst.paidAmount ?? 0} €`,
+        warnings: [
+          "Une échéance existait déjà pour cette période — pas de nouvelle ligne créée",
+        ],
+      });
+    }
+
+    if (txResult.type === "updated_existing" && txResult.inst) {
+      return makeResult(csvRow, rowIndex, {
+        success: true,
+        action: "UPDATED",
+        quoteReference: quote.reference,
+        installmentNumber: txResult.inst.installmentNumber,
+        installmentId: txResult.inst.id,
+        matchMethod: "PERIODE_EXISTANTE",
+        message: `Paiement appliqué sur échéance existante #${txResult.inst.installmentNumber}`,
+        details: `${quote.reference} | ${csvRow.primeReglee.toFixed(2)} € le ${formatDateFr(csvRow.dateReglement)}`,
+        warnings: [
+          "Échéance déjà présente en base pour cette période — mise à jour, pas de doublon",
+        ],
+      });
+    }
+
+    const inst = await prisma.paymentInstallment.findUnique({
+      where: { id: txResult.result.installmentId },
+    });
+
+    return makeResult(csvRow, rowIndex, {
       success: true,
+      action: "CREATED",
       created: true,
-      rowIndex,
-      message: `Échéance CRÉÉE et paiement importé - ${csvRow.nomClient} - ${csvRow.primeReglee}€`,
-    };
+      quoteReference: quote.reference,
+      installmentNumber: inst?.installmentNumber,
+      installmentId: txResult.result.installmentId,
+      matchMethod: "NOUVELLE_ECHEANCE",
+      message: `Échéance créée et payée sur ${quote.reference}`,
+      details: `Éch. #${inst?.installmentNumber ?? "?"} | ${csvRow.primeReglee.toFixed(2)} € le ${formatDateFr(csvRow.dateReglement)}`,
+    });
   }
 
-  const { installment, schedule } = found;
+  const { installment, schedule, quote, matchMethod, warnings } = found;
 
-  // Vérifier si déjà payé
   if (installment.status === "PAID" || installment.status === "PARTIALLY_PAID") {
-    return {
+    return makeResult(csvRow, rowIndex, {
       success: false,
-      rowIndex,
-      message: `Échéance déjà payée (statut: ${installment.status})`,
-    };
+      action: "SKIPPED_ALREADY_PAID",
+      quoteReference: quote.reference,
+      installmentNumber: installment.installmentNumber,
+      installmentId: installment.id,
+      matchMethod,
+      message: `Déjà payée — éch. #${installment.installmentNumber} sur ${quote.reference}`,
+      details: `Payé le ${formatDateFr(installment.paidAt)} | Montant en base : ${installment.paidAmount ?? 0} € | CSV : ${csvRow.primeReglee.toFixed(2)} €`,
+      warnings,
+    });
   }
-
-  const status: PaymentScheduleStatus = csvRow.estPartiel ? "PARTIALLY_PAID" : "PAID";
-
-  const transactionData = {
-    installmentId: installment.id,
-    amount: csvRow.primeReglee,
-    method: detectPaymentMethod(csvRow),
-    reference: `Import CSV - ${csvRow.bordereau}`,
-    validatedById: adminId,
-    validatedAt: csvRow.dateReglement || new Date(),
-    notes: `Importé depuis CSV. Client: ${csvRow.nomClient}`,
-  };
-
-  const installmentData = {
-    status,
-    paidAt: csvRow.dateReglement || new Date(),
-    paidAmount: csvRow.primeReglee,
-    paymentMethod: detectPaymentMethod(csvRow),
-    paymentReference: `CSV-${csvRow.bordereau}`,
-    validatedById: adminId,
-    validatedAt: new Date(),
-    adminNotes: `Import CSV - ${csvRow.nomClient} - ${csvRow.courtier}`,
-  };
 
   if (dryRun) {
-    return {
+    return makeResult(csvRow, rowIndex, {
       success: true,
-      rowIndex,
-      message: `[DRY-RUN] Échéance ${installment.id} serait mise à jour - ${csvRow.primeReglee}€`,
-    };
+      action: "DRY_RUN_UPDATE",
+      quoteReference: quote.reference,
+      installmentNumber: installment.installmentNumber,
+      installmentId: installment.id,
+      matchMethod,
+      message: `[SIMULATION] Mettrait à jour éch. #${installment.installmentNumber} sur ${quote.reference}`,
+      details: `${csvRow.primeReglee.toFixed(2)} € le ${formatDateFr(csvRow.dateReglement)} | Période ${csvRow.periode}`,
+      warnings,
+    });
   }
+
+  const status: PaymentScheduleStatus = csvRow.estPartiel
+    ? "PARTIALLY_PAID"
+    : "PAID";
 
   await prisma.$transaction(async (tx) => {
     await tx.paymentTransaction.create({
-      data: transactionData,
+      data: {
+        installmentId: installment.id,
+        amount: csvRow.primeReglee,
+        method: detectPaymentMethod(csvRow),
+        reference: `Import CSV - ${csvRow.bordereau}`,
+        validatedById: adminId,
+        validatedAt: csvRow.dateReglement || new Date(),
+        notes: `Importé depuis CSV. Client: ${csvRow.nomClient}`,
+      },
     });
 
     await tx.paymentInstallment.update({
       where: { id: installment.id },
-      data: installmentData,
+      data: {
+        status,
+        paidAt: csvRow.dateReglement || new Date(),
+        paidAmount: csvRow.primeReglee,
+        paymentMethod: detectPaymentMethod(csvRow),
+        paymentReference: `CSV-${csvRow.bordereau}`,
+        validatedById: adminId,
+        validatedAt: new Date(),
+        adminNotes: `Import CSV - ${csvRow.nomClient} - ${csvRow.courtier}`,
+      },
     });
 
     const remainingUnpaid = await tx.paymentInstallment.count({
@@ -527,44 +787,73 @@ export async function importPaymentRow(
     }
   });
 
-  return {
+  return makeResult(csvRow, rowIndex, {
     success: true,
-    rowIndex,
-    message: `Paiement importé - ${csvRow.nomClient} - ${csvRow.primeReglee}€`,
-  };
+    action: "UPDATED",
+    quoteReference: quote.reference,
+    installmentNumber: installment.installmentNumber,
+    installmentId: installment.id,
+    matchMethod,
+    message: `Paiement importé — éch. #${installment.installmentNumber} sur ${quote.reference}`,
+    details: `${csvRow.primeReglee.toFixed(2)} € le ${formatDateFr(csvRow.dateReglement)} | ${matchMethod}`,
+    warnings,
+  });
 }
 
-/**
- * Importe toutes les lignes d'un CSV
- */
 export async function importCSV(
   prisma: PrismaClient,
   content: string,
   adminId: string,
-  dryRun: boolean = false
+  dryRun: boolean = false,
 ): Promise<{ results: ImportResult[]; stats: ImportStats }> {
   const rows = parseCSV(content);
   const results: ImportResult[] = [];
+
+  const seenKeys = new Map<string, number>();
 
   let imported = 0;
   let created = 0;
   let skipped = 0;
   let errors = 0;
+  let duplicateCsv = 0;
+  let duplicateDb = 0;
 
   for (let i = 0; i < rows.length; i++) {
-    const result = await importPaymentRow(prisma, rows[i], adminId, i, dryRun);
+    const row = rows[i];
+    const key = csvRowKey(row);
+    const isDuplicateCsv = seenKeys.has(key);
+    if (!isDuplicateCsv) {
+      seenKeys.set(key, i);
+    } else {
+      duplicateCsv++;
+    }
+
+    const result = await importPaymentRow(prisma, row, adminId, i, dryRun, {
+      skipDuplicateCsv: isDuplicateCsv,
+    });
     results.push(result);
 
-    if (result.success) {
-      if (result.created) {
-        created++;
-      } else {
+    if (result.warnings.some((w) => w.includes("doublon DB"))) {
+      duplicateDb++;
+    }
+
+    switch (result.action) {
+      case "UPDATED":
+      case "DRY_RUN_UPDATE":
         imported++;
-      }
-    } else if (result.message.includes("déjà payée")) {
-      skipped++;
-    } else {
-      errors++;
+        break;
+      case "CREATED":
+      case "DRY_RUN_CREATE":
+        created++;
+        break;
+      case "SKIPPED_ALREADY_PAID":
+      case "SKIPPED_DUPLICATE_CSV":
+      case "SKIPPED_DUPLICATE_DB":
+        skipped++;
+        break;
+      case "ERROR":
+        errors++;
+        break;
     }
   }
 
@@ -576,6 +865,8 @@ export async function importCSV(
       created,
       skipped,
       errors,
+      duplicateCsv,
+      duplicateDb,
     },
   };
 }

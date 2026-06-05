@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateCSV, generateFileName } from "@/lib/bordereau";
+import { generateCSV, generateFileName, csvToUtf8Buffer } from "@/lib/bordereau";
 import type { FidelidadeRow } from "@/lib/bordereau";
 
 /**
@@ -34,10 +34,12 @@ export async function POST(request: NextRequest) {
     const csvFileName = fileName || generateFileName();
 
     // Return CSV as downloadable file
-    return new NextResponse(csvContent, {
+    const csvBuffer = csvToUtf8Buffer(csvContent);
+
+    return new NextResponse(csvBuffer, {
       status: 200,
       headers: {
-        "Content-Type": "text/csv;charset=utf-8;",
+        "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${csvFileName}"`,
       },
     });

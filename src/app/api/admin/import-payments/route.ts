@@ -55,12 +55,7 @@ export async function POST(request: NextRequest) {
           fileName: file.name,
           dryRun,
           stats,
-          results: results.map((r) => ({
-            rowIndex: r.rowIndex,
-            success: r.success,
-            created: r.created,
-            message: r.message,
-          })),
+          results,
         },
         dryRun
           ? "Simulation terminée - Aucune modification appliquée"

@@ -7,6 +7,7 @@ import {
   getQuittancesV2,
   generatePolicesCSV,
   generateQuittancesCSV,
+  csvToUtf8Buffer,
   getPolicesFileName,
   getQuittancesFileName,
   getBordereauZipFileName,
@@ -79,8 +80,10 @@ export async function POST(request: NextRequest) {
         archive.on("end", () => resolve(Buffer.concat(chunks)));
         archive.on("error", reject);
 
-        archive.append(policesCSV, { name: policesFileName });
-        archive.append(quittancesCSV, { name: quittancesFileName });
+        archive.append(csvToUtf8Buffer(policesCSV), { name: policesFileName });
+        archive.append(csvToUtf8Buffer(quittancesCSV), {
+          name: quittancesFileName,
+        });
         void archive.finalize();
       });
 
