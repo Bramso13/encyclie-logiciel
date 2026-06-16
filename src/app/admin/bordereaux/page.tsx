@@ -391,6 +391,8 @@ export default function BordereauxPage() {
   // Filtres d'inclusion bordereau
   const [requireEmission, setRequireEmission] = useState(true);
   const [requirePrevPaid, setRequirePrevPaid] = useState(true);
+  const [deductPremierEcheanceSupplements, setDeductPremierEcheanceSupplements] =
+    useState(false);
 
   const [polices, setPolices] = useState<FidelidadePolicesRow[]>([]);
   const [quittances, setQuittances] = useState<FidelidadeQuittancesRow[]>([]);
@@ -508,7 +510,11 @@ export default function BordereauxPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dateRange: { startDate, endDate },
-          inclusionOptions: { requireEmission, requirePrevPaid },
+          inclusionOptions: {
+            requireEmission,
+            requirePrevPaid,
+            deductPremierEcheanceSupplements,
+          },
         }),
       });
 
@@ -564,7 +570,11 @@ export default function BordereauxPage() {
           dateRange: { startDate, endDate },
           polices: editedPolices,
           quittances: editedQuittances,
-          inclusionOptions: { requireEmission, requirePrevPaid },
+          inclusionOptions: {
+            requireEmission,
+            requirePrevPaid,
+            deductPremierEcheanceSupplements,
+          },
         }),
       });
 
@@ -721,6 +731,31 @@ export default function BordereauxPage() {
                   }`}
                 >
                   {requirePrevPaid ? "ON" : "OFF"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Toggle
+                  id="filter-deduct-supplements"
+                  checked={deductPremierEcheanceSupplements}
+                  onChange={(v) => {
+                    setDeductPremierEcheanceSupplements(v);
+                    setShowPreview(false);
+                  }}
+                />
+                <label
+                  htmlFor="filter-deduct-supplements"
+                  className="text-sm text-gray-700 cursor-pointer select-none"
+                >
+                  Déduire suppléments 1re éch. annuelle (quittances)
+                </label>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    deductPremierEcheanceSupplements
+                      ? "bg-indigo-100 text-indigo-700"
+                      : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  {deductPremierEcheanceSupplements ? "ON" : "OFF"}
                 </span>
               </div>
             </div>

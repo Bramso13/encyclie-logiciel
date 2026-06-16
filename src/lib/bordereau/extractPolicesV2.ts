@@ -25,6 +25,8 @@ function getActiviteTitleByCode(code: string | number): string {
 export interface BordereauInclusionOptions {
   requireEmission?: boolean;
   requirePrevPaid?: boolean;
+  /** Quittances : exclure PJ, reprise et frais de gestion des 1res échéances annuelles. */
+  deductPremierEcheanceSupplements?: boolean;
 }
 
 export async function getPolicesV2(

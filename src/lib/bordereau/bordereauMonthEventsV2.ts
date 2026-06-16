@@ -186,6 +186,20 @@ export function pickInstallmentForResiliation<
 const installmentInclude = {
   schedule: {
     include: {
+      payments: {
+        orderBy: { installmentNumber: "asc" as const },
+        select: {
+          installmentNumber: true,
+          periodStart: true,
+          amountHT: true,
+          amountTTC: true,
+          taxAmount: true,
+          rcdAmount: true,
+          pjAmount: true,
+          feesAmount: true,
+          resumeAmount: true,
+        },
+      },
       quote: {
         include: {
           product: true,

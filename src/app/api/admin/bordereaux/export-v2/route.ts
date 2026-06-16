@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
             inclusionOptions: (inclusionOptions ?? {
               requireEmission: true,
               requirePrevPaid: true,
+              deductPremierEcheanceSupplements: false,
             }) as Record<string, boolean>,
           },
           csvDataPolices: policesRows as unknown as object,

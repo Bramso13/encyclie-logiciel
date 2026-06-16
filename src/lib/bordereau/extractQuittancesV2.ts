@@ -10,6 +10,8 @@ import {
   formatDate,
   mapPaymentMethodToModePaiement,
 } from "./utils";
+import { computeBordereauQuittanceAmounts } from "./quittanceAmountsV2";
+import type { BordereauInclusionOptions } from "./extractPolicesV2";
 
 const DEFAULT_STRING = "";
 const GARANTIE_RC_RCD = "RC_RCD";
@@ -38,10 +40,11 @@ function computeTauxTaxe(formData: Record<string, unknown>): string {
 export async function getQuittancesV2(
   filters: BordereauFiltersV2,
   prisma: PrismaClient,
-  _options?: import("./extractPolicesV2").BordereauInclusionOptions,
+  options?: BordereauInclusionOptions,
 ): Promise<FidelidadeQuittancesRow[]> {
   const apporteur = getApporteur();
   const events = await getBordereauMonthEvents(prisma, filters);
+  const deductAnnualSupplements = options?.deductPremierEcheanceSupplements === true;
 
   return events.map(({ installment: inst, eventType, eventDate }) => {
     const quote = inst.schedule.quote;
@@ -61,9 +64,62 @@ export async function getQuittancesV2(
     const identifiantQuittance = `${baseId}-${quittanceSuffix}`;
 
     const modifieAlaMain = quote.modifieAlaMain === true;
-    const rcdHt = inst.rcdAmount ?? inst.amountHT ?? 0;
-    const primeHT = modifieAlaMain ? inst.amountHT : rcdHt;
-    const primeTTC = modifieAlaMain ? inst.amountTTC : rcdHt + inst.taxAmount;
+    const region = formData.territory ?? formData.region;
+    const tauxTaxeDecimal =
+      region != null && typeof region === "string"
+        ? getTaxeByRegion(region)
+        : null;
+    const schedulePayments =
+      inst.schedule?.payments?.map(
+        (p: { installmentNumber: number; periodStart: Date }) => ({
+          installmentNumber: p.installmentNumber,
+          periodStart: p.periodStart,
+        }),
+      ) ?? [];
+    const scheduleInstallments =
+      inst.schedule?.payments?.map(
+        (p: {
+          installmentNumber: number;
+          periodStart: Date;
+          amountHT: number;
+          amountTTC: number;
+          taxAmount: number;
+          rcdAmount: number | null;
+          pjAmount: number | null;
+          feesAmount: number | null;
+          resumeAmount: number | null;
+        }) => ({
+          installmentNumber: p.installmentNumber,
+          periodStart: p.periodStart,
+          amountHT: p.amountHT,
+          amountTTC: p.amountTTC,
+          taxAmount: p.taxAmount,
+          rcdAmount: p.rcdAmount,
+          pjAmount: p.pjAmount,
+          feesAmount: p.feesAmount,
+          resumeAmount: p.resumeAmount,
+        }),
+      ) ?? [];
+
+    const { primeHT, primeTTC, taxAmount } = computeBordereauQuittanceAmounts({
+      inst: {
+        installmentNumber: inst.installmentNumber,
+        periodStart: inst.periodStart,
+        amountHT: inst.amountHT,
+        amountTTC: inst.amountTTC,
+        taxAmount: inst.taxAmount,
+        rcdAmount: inst.rcdAmount,
+        pjAmount: inst.pjAmount,
+        feesAmount: inst.feesAmount,
+        resumeAmount: inst.resumeAmount,
+      },
+      modifieAlaMain,
+      deductAnnualSupplements,
+      schedulePayments,
+      scheduleInstallments,
+      tauxTaxeDecimal,
+    });
+
     const commission = Math.round(primeHT * TAUX_COMMISSION * 100) / 100;
     const tauxTaxe = computeTauxTaxe(formData);
     const fromTransaction = inst.transactions?.[0]?.method;
@@ -88,7 +144,7 @@ export async function getQuittancesV2(
         periodEnd: inst.periodEnd,
         amountTTC: primeTTC,
         amountHT: primeHT,
-        taxAmount: inst.taxAmount,
+        taxAmount,
         paidAt: inst.paidAt,
         status: inst.status,
         dueDate: inst.dueDate,
