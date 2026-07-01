@@ -81,6 +81,7 @@ export async function getQuittancesV2(
         (p: {
           installmentNumber: number;
           periodStart: Date;
+          periodEnd: Date;
           amountHT: number;
           amountTTC: number;
           taxAmount: number;
@@ -91,6 +92,7 @@ export async function getQuittancesV2(
         }) => ({
           installmentNumber: p.installmentNumber,
           periodStart: p.periodStart,
+          periodEnd: p.periodEnd,
           amountHT: p.amountHT,
           amountTTC: p.amountTTC,
           taxAmount: p.taxAmount,
@@ -101,10 +103,16 @@ export async function getQuittancesV2(
         }),
       ) ?? [];
 
+    const calculatedPremium = (quote.calculatedPremium ?? {}) as {
+      fraisGestion?: number;
+    };
+    const fraisGestionGlobal = calculatedPremium.fraisGestion ?? null;
+
     const { primeHT, primeTTC, taxAmount } = computeBordereauQuittanceAmounts({
       inst: {
         installmentNumber: inst.installmentNumber,
         periodStart: inst.periodStart,
+        periodEnd: inst.periodEnd,
         amountHT: inst.amountHT,
         amountTTC: inst.amountTTC,
         taxAmount: inst.taxAmount,
@@ -118,6 +126,8 @@ export async function getQuittancesV2(
       schedulePayments,
       scheduleInstallments,
       tauxTaxeDecimal,
+      fraisGestionGlobal,
+      formData,
     });
 
     const commission = Math.round(primeHT * TAUX_COMMISSION * 100) / 100;

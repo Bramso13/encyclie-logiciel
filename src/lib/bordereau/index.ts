@@ -48,3 +48,7 @@ export {
   CSV_UTF8_BOM,
 } from "./generateCSV";
 export { getApporteur } from "./config";
+export {
+  getBordereauDateRangeForMonthYear,
+  getBordereauDateRangeFromArgs,
+} from "./dateRange";

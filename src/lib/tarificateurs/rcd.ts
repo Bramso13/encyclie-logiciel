@@ -441,7 +441,6 @@ const calculDeg = (params: {
 };
 export function getTaxeByRegion(region: string) {
   const regionRea = region.toLowerCase().replace(" ", "-");
-  console.log("regionRea", regionRea);
   const taxeByRegion: { [key: string]: number } = {
     martinique: 0.09,
     guadeloupe: 0.09,
@@ -455,7 +454,6 @@ export function getTaxeByRegion(region: string) {
 }
 export function getTaxeProtectionJuridiqueByRegion(region: string) {
   const regionRea = region.toLowerCase().replace(" ", "-");
-  console.log("regionRea", regionRea);
   const taxeByRegion: { [key: string]: number } = {
     martinique: 0.134,
     guadeloupe: 0.134,

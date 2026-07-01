@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
-  computeRowValuesModifieAlaMain,
-  computeRowValuesDefault,
+  bordereauAmountsFromCalculationTabRow,
   buildGetEcheanceRowValues,
+  computeRowValuesDefault,
+  computeRowValuesModifieAlaMain,
+  getCalculationTabRowForEcheance1,
 } from "./echeance-row-values";
 
 const baseInst = {
@@ -57,6 +59,33 @@ describe("computeRowValuesDefault", () => {
     );
     expect(row.totalHT).toBe(10 + 20 + 3 + 7);
     expect(row.totalTTC).toBe(row.totalHT + 5);
+  });
+});
+
+describe("bordereauAmountsFromCalculationTabRow", () => {
+  it("2025158RCDFID : Total HT/TTC − PJ − Frais Gestion (CalculationTab)", () => {
+    const inst = {
+      installmentNumber: 1,
+      rcdAmount: 804.22,
+      pjAmount: 106,
+      feesAmount: 40,
+      resumeAmount: 0,
+      amountHT: 2678.91,
+      taxAmount: 87.38,
+      amountTTC: 2766.3,
+    };
+    const row = getCalculationTabRowForEcheance1(inst, 1759.81183);
+    const amounts = bordereauAmountsFromCalculationTabRow(row);
+
+    expect(row.totalHT).toBe(2678.91);
+    expect(row.totalTTC).toBe(2766.3);
+    expect(row.pj).toBe(106);
+    expect(row.fraisGestion).toBe(1759.81183);
+    expect(amounts).toEqual({
+      primeHT: 813.1,
+      primeTTC: 900.49,
+      taxAmount: 87.39,
+    });
   });
 });
 

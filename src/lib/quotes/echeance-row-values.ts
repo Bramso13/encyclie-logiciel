@@ -18,15 +18,13 @@ export interface EcheanceRowValues {
 /** Sous-ensemble des champs lus pour les lignes d’échéancier. */
 export type PaymentInstallmentForEcheanceRow = Pick<
   PaymentInstallment,
-  | "installmentNumber"
-  | "rcdAmount"
-  | "pjAmount"
-  | "feesAmount"
-  | "resumeAmount"
-  | "amountHT"
-  | "taxAmount"
-  | "amountTTC"
->;
+  "installmentNumber" | "amountHT" | "taxAmount" | "amountTTC"
+> & {
+  rcdAmount?: number | null;
+  pjAmount?: number | null;
+  feesAmount?: number | null;
+  resumeAmount?: number | null;
+};
 
 const FRAIS_GESTION_RATE = 0.1;
 
@@ -155,4 +153,42 @@ export function buildGetEcheanceRowValues(ctx: {
       useSavedInstallment,
     );
   };
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** Même ligne que le tableau « Échéancier de paiement détaillé » de CalculationTab (éch. #1). */
+export function getCalculationTabRowForEcheance1(
+  inst: PaymentInstallmentForEcheanceRow,
+  fraisGestionGlobal: number,
+): EcheanceRowValues {
+  return computeRowValuesDefault(inst, {}, 0, fraisGestionGlobal, true);
+}
+
+/**
+ * Bordereau éch. #1 = exactement ce qu’on lit dans CalculationTab :
+ *   primeHT  = row.totalHT  − row.pj − row.fraisGestion
+ *   primeTTC = row.totalTTC − row.pj − row.fraisGestion
+ */
+export function bordereauAmountsFromCalculationTabRow(
+  row: EcheanceRowValues,
+): { primeHT: number; primeTTC: number; taxAmount: number } {
+  const primeHT = row.totalHT - row.pj - row.fraisGestion;
+  const primeTTC = row.totalTTC - row.pj - row.fraisGestion;
+  return {
+    primeHT: round2(primeHT),
+    primeTTC: round2(primeTTC),
+    taxAmount: round2(primeTTC - primeHT),
+  };
+}
+
+export function computeBordereauEch1FromCalculationTabRow(
+  inst: PaymentInstallmentForEcheanceRow,
+  fraisGestionGlobal: number,
+): { primeHT: number; primeTTC: number; taxAmount: number } {
+  return bordereauAmountsFromCalculationTabRow(
+    getCalculationTabRowForEcheance1(inst, fraisGestionGlobal),
+  );
 }

@@ -5,6 +5,7 @@ import type {
   FidelidadePolicesRow,
   FidelidadeQuittancesRow,
 } from "@/lib/bordereau";
+import { getBordereauDateRangeForMonthYear } from "@/lib/bordereau/dateRange";
 import { POLICES_COLUMNS, QUITTANCES_COLUMNS } from "@/lib/bordereau";
 
 function Toggle({
@@ -59,11 +60,11 @@ function getDateRangeForMonthYear(
   month: number,
   year: number,
 ): { startDate: string; endDate: string } {
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const nextMonth = month === 12 ? 1 : month + 1;
-  const nextYear = month === 12 ? year + 1 : year;
-  const endDate = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
-  return { startDate, endDate };
+  const { startDateStr, endDateStr } = getBordereauDateRangeForMonthYear(
+    month,
+    year,
+  );
+  return { startDate: startDateStr, endDate: endDateStr };
 }
 
 function getYears(): number[] {
@@ -746,7 +747,7 @@ export default function BordereauxPage() {
                   htmlFor="filter-deduct-supplements"
                   className="text-sm text-gray-700 cursor-pointer select-none"
                 >
-                  Déduire suppléments 1re éch. annuelle (quittances)
+                  Déduire suppléments 1re éch. annuelle (quittances — harmonise tous les montants)
                 </label>
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded font-medium ${

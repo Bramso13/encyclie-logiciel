@@ -1,6 +1,10 @@
+import { computeBordereauEch1FromCalculationTabRow } from "@/lib/quotes/echeance-row-values";
+import { detectEch1Prorata } from "./prorata";
+
 export interface InstallmentAmountFields {
   installmentNumber: number;
   periodStart: Date;
+  periodEnd?: Date;
   amountHT: number;
   amountTTC: number;
   taxAmount: number;
@@ -42,6 +46,16 @@ function resolveFraisGestion(inst: InstallmentAmountFields): number {
   return inferFraisGestion(inst);
 }
 
+export function resolveFraisGestionGlobal(
+  inst: InstallmentAmountFields,
+  fraisGestionGlobal?: number | null,
+): number {
+  if (fraisGestionGlobal != null && fraisGestionGlobal > 0.005) {
+    return round2(fraisGestionGlobal);
+  }
+  return resolveFraisGestion(inst);
+}
+
 /** RCD HT : champ dédié ou repli sur le HT total si pas de décomposition. */
 export function resolveRcdAmount(inst: InstallmentAmountFields): number {
   if (inst.rcdAmount != null) return inst.rcdAmount;
@@ -76,52 +90,50 @@ export function isPremierPaiementAnnee(
   return inst.installmentNumber === minNumber;
 }
 
+/** PJ ou frais de gestion sur l'échéance (reprise exclue). */
 export function hasAnnualSupplements(inst: InstallmentAmountFields): boolean {
   if ((inst.pjAmount ?? 0) > 0.005) return true;
-  if ((inst.resumeAmount ?? 0) > 0.005) return true;
   return resolveFraisGestion(inst) > 0.005;
 }
 
 export function shouldDeductAnnualSupplements(
   inst: InstallmentAmountFields,
-  schedulePayments: ScheduleSibling[],
+  _schedulePayments: ScheduleSibling[],
   enabled: boolean,
 ): boolean {
   return (
-    enabled &&
-    isPremierPaiementAnnee(inst, schedulePayments) &&
-    hasAnnualSupplements(inst)
+    enabled && inst.installmentNumber === 1 && hasAnnualSupplements(inst)
   );
 }
 
-function findReferenceNormalInstallment(
-  inst: InstallmentAmountFields,
+export function findSecondInstallment(
   scheduleInstallments: InstallmentAmountFields[],
 ): InstallmentAmountFields | null {
-  const siblings = scheduleInstallments.filter(
-    (p) => p.installmentNumber !== inst.installmentNumber,
+  return (
+    scheduleInstallments.find((p) => p.installmentNumber === 2) ?? null
   );
-  if (siblings.length === 0) return null;
-
-  const scheduleRefs: ScheduleSibling[] = scheduleInstallments.map((p) => ({
-    installmentNumber: p.installmentNumber,
-    periodStart: p.periodStart,
-  }));
-
-  const isNormal = (p: InstallmentAmountFields) =>
-    !isPremierPaiementAnnee(p, scheduleRefs) && !hasAnnualSupplements(p);
-
-  const sameYear = siblings.find(
-    (p) =>
-      p.periodStart.getFullYear() === inst.periodStart.getFullYear() &&
-      isNormal(p),
-  );
-  if (sameYear) return sameYear;
-
-  return siblings.find(isNormal) ?? null;
 }
 
-function computeNormalEcheanceAmounts(
+/** @deprecated Préférer findSecondInstallment (référence = échéance #2). */
+export function findReferenceNormalInstallment(
+  _inst: InstallmentAmountFields,
+  scheduleInstallments: InstallmentAmountFields[],
+): InstallmentAmountFields | null {
+  return findSecondInstallment(scheduleInstallments);
+}
+
+/** Montants enregistrés (aligné sur CalculationTab / échéancier sauvegardé). */
+export function amountsFromSavedInstallment(
+  inst: InstallmentAmountFields,
+): { primeHT: number; primeTTC: number; taxAmount: number } {
+  return {
+    primeHT: round2(inst.amountHT),
+    primeTTC: round2(inst.amountTTC),
+    taxAmount: round2(inst.taxAmount),
+  };
+}
+
+export function computeNormalEcheanceAmounts(
   inst: InstallmentAmountFields,
   tauxTaxeDecimal: number,
 ): { primeHT: number; primeTTC: number; taxAmount: number } {
@@ -135,29 +147,33 @@ function computeNormalEcheanceAmounts(
 
 function computeDeductedPremierEcheanceAmounts(
   inst: InstallmentAmountFields,
-  scheduleInstallments: InstallmentAmountFields[],
-  tauxTaxeDecimal: number,
+  fraisGestionGlobal?: number | null,
+  scheduleInstallments?: InstallmentAmountFields[],
+  formData?: Record<string, unknown>,
 ): { primeHT: number; primeTTC: number; taxAmount: number } {
-  if (inst.rcdAmount != null) {
-    return computeNormalEcheanceAmounts(inst, tauxTaxeDecimal);
+  const ech2 = scheduleInstallments
+    ? findSecondInstallment(scheduleInstallments)
+    : null;
+
+  const prorata =
+    formData != null && detectEch1Prorata(inst, formData);
+
+  if (ech2 && !prorata) {
+    return amountsFromSavedInstallment(ech2);
   }
 
-  const reference = findReferenceNormalInstallment(inst, scheduleInstallments);
-  if (reference) {
-    return computeNormalEcheanceAmounts(reference, tauxTaxeDecimal);
-  }
-
-  const pj = inst.pjAmount ?? 0;
-  const reprise = inst.resumeAmount ?? 0;
-  const fees = inst.feesAmount ?? 0;
-  const primeHT = round2(Math.max(0, inst.amountHT - pj - reprise - fees));
-  const taxAmount = round2(primeHT * tauxTaxeDecimal);
-  return { primeHT, primeTTC: round2(primeHT + taxAmount), taxAmount };
+  const fg =
+    fraisGestionGlobal != null && fraisGestionGlobal > 0.005
+      ? fraisGestionGlobal
+      : resolveFraisGestion(inst);
+  return computeBordereauEch1FromCalculationTabRow(inst, fg);
 }
 
 /**
- * Montants quittance bordereau : RCD + frais de fractionnement + taxe associée.
- * Les suppléments (PJ, reprise, frais de gestion) sont exclus sur demande.
+ * Montants quittance bordereau.
+ * Éch. #1 + déduction, période pleine : montants éch. #2 (ligne CalculationTab normale).
+ * Éch. #1 + déduction, prorata : Total HT/TTC éch. #1 − PJ − frais de gestion.
+ * Autres échéances : montants enregistrés (CalculationTab).
  */
 export function computeBordereauQuittanceAmounts(params: {
   inst: InstallmentAmountFields;
@@ -166,33 +182,34 @@ export function computeBordereauQuittanceAmounts(params: {
   schedulePayments: ScheduleSibling[];
   scheduleInstallments?: InstallmentAmountFields[];
   tauxTaxeDecimal: number | null;
+  fraisGestionGlobal?: number | null;
+  formData?: Record<string, unknown>;
 }): { primeHT: number; primeTTC: number; taxAmount: number } {
   const {
     inst,
     modifieAlaMain,
     deductAnnualSupplements,
     schedulePayments,
-    scheduleInstallments = [],
+    scheduleInstallments,
     tauxTaxeDecimal,
+    fraisGestionGlobal,
+    formData,
   } = params;
 
-  if (
-    shouldDeductAnnualSupplements(inst, schedulePayments, deductAnnualSupplements) &&
-    tauxTaxeDecimal != null
-  ) {
-    return computeDeductedPremierEcheanceAmounts(
-      inst,
-      scheduleInstallments.length > 0 ? scheduleInstallments : [inst],
-      tauxTaxeDecimal,
-    );
+  if (deductAnnualSupplements) {
+    if (shouldDeductAnnualSupplements(inst, schedulePayments, true)) {
+      return computeDeductedPremierEcheanceAmounts(
+        inst,
+        fraisGestionGlobal,
+        scheduleInstallments,
+        formData,
+      );
+    }
+    return amountsFromSavedInstallment(inst);
   }
 
   if (modifieAlaMain) {
-    return {
-      primeHT: inst.amountHT,
-      primeTTC: inst.amountTTC,
-      taxAmount: inst.taxAmount,
-    };
+    return amountsFromSavedInstallment(inst);
   }
 
   const rcdHt = resolveRcdAmount(inst);
