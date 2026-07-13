@@ -8,7 +8,8 @@ import {
   Image,
 } from "@react-pdf/renderer";
 import { Quote, FormData } from "@/lib/types";
-import { getTaxeByRegion, tableauTax } from "@/lib/tarificateurs/rcd";
+import { tableauTax } from "@/lib/tarificateurs/rcd";
+import { computePrimesTableAmounts } from "@/lib/quotes/primes-table-calculations";
 
 interface OfferLetterPDFProps {
   quote: Quote;
@@ -297,6 +298,14 @@ const OfferLetterPDF = ({
 
     const firstDate = echeances[0]?.debutPeriode;
     const lastDate = echeances[echeances.length - 1]?.finPeriode;
+    const amounts = computePrimesTableAmounts(
+      echeances,
+      quote?.formData?.territory
+    );
+    const showAmount = (value: number, showDashWhenZero = false) => {
+      if (showDashWhenZero && value === 0) return "";
+      return `${financial(value) || ""} €`;
+    };
 
     return (
       <>
@@ -323,32 +332,13 @@ const OfferLetterPDF = ({
               Prime RCD provisionnelle hors reprise du passé
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.rcd - echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primeRCDHT)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primeRCDTaxes)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.rcd || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primeRCDTTC)}
             </Text>
           </View>
 
@@ -357,32 +347,13 @@ const OfferLetterPDF = ({
               Prime Protection Juridique Complément RCD CFDP
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                ) *
-                  (1 - getTaxeByRegion(quote?.formData?.territory))
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primePJHT, true)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                ) * getTaxeByRegion(quote?.formData?.territory)
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primePJTaxes, true)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.pj || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primePJTTC, true)}
             </Text>
           </View>
 
@@ -391,36 +362,13 @@ const OfferLetterPDF = ({
               Montant total RCD + PJ
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.totalRCDPJHT)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.totalRCDPJTaxes)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.rcd || 0) + (echeance.pj || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.totalRCDPJTTC)}
             </Text>
           </View>
 
@@ -429,14 +377,7 @@ const OfferLetterPDF = ({
               Honoraire de gestion
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.fraisGestion || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.honorairesHT)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}></Text>
             <Text style={[styles.tableCell, { flex: 1 }]}></Text>
@@ -447,40 +388,13 @@ const OfferLetterPDF = ({
               Montant RCD +PJ+ Frais gestion
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.totalAvecFraisHT)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.totalAvecFraisTaxes)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.totalAvecFraisTTC)}
             </Text>
           </View>
 
@@ -490,32 +404,13 @@ const OfferLetterPDF = ({
               souscription)
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                ) *
-                  (1 - getTaxeByRegion(quote?.formData?.territory))
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.repriseHT, true)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                ) * getTaxeByRegion(quote?.formData?.territory)
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.repriseTaxes, true)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1 }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.reprise || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.repriseTTC, true)}
             </Text>
           </View>
 
@@ -524,38 +419,13 @@ const OfferLetterPDF = ({
               Prime totale à régler
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum +
-                    (echeance.rcd || 0) +
-                    (echeance.pj || 0) +
-                    (echeance.fraisGestion || 0) +
-                    (echeance.reprise || 0) -
-                    (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primeTotaleHT)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primeTotaleTaxes)}
             </Text>
             <Text style={[styles.tableCell, { flex: 1, fontWeight: "bold" }]}>
-              {financial(
-                echeances.reduce(
-                  (sum: number, echeance: any) =>
-                    sum + (echeance.totalTTC || 0),
-                  0
-                )
-              ) || ""}{" "}
-              €
+              {showAmount(amounts.primeTotaleTTC)}
             </Text>
           </View>
         </View>

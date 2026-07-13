@@ -583,7 +583,7 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
             <Text style={styles.bold}>{contractNumber}</Text>
           </Text>
           <Text style={styles.listItem}>
-            • Aux Conditions Générales ENCYCLIE BAT-CG_WAKAM_082022
+            • Aux Conditions Générales ENCYCLIE BAT-CG_FIDELIDADE_01052025
           </Text>
           <Text style={[styles.paragraph, { marginTop: 10 }]}>
             <Text style={styles.bold}>Avis au Preneur d'Assurance</Text> : Ce

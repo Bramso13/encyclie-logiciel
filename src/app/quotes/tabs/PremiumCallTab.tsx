@@ -10,6 +10,10 @@ import {
 import { useState, useEffect } from "react";
 import { pdf } from "@react-pdf/renderer";
 import AttestationRCDPDF from "@/components/pdf/AttestationRCDPDF";
+import {
+  formatRcdContractNumber,
+  getAttestationPdfDates,
+} from "@/lib/quotes/attestation-dates";
 
 interface ExtendedPaymentInstallment extends PaymentInstallment {
   schedule: {
@@ -321,39 +325,23 @@ export default function PaymentTrackingTab({
     setShowAttestationModal(true);
 
     try {
-      // Calculer les dates pour l'attestation
-      const startDate = installment.periodStart
-        ? new Date(installment.periodStart)
-        : quote.formData?.dateDeffet
-        ? new Date(quote.formData.dateDeffet)
-        : new Date();
-      const endDate = installment.periodEnd
-        ? new Date(installment.periodEnd)
-        : new Date(
-            startDate.getFullYear() + 1,
-            startDate.getMonth(),
-            startDate.getDate()
-          );
-      const attestationDate = installment.paidAt
-        ? new Date(installment.paidAt)
-        : new Date();
-      const validityStartDate = attestationDate;
-      const validityEndDate = new Date(
-        validityStartDate.getFullYear() + 1,
-        validityStartDate.getMonth(),
-        validityStartDate.getDate()
-      );
+      const {
+        contractStartDate,
+        contractEndDate,
+        validityStartDate,
+        validityEndDate,
+        attestationDate,
+      } = getAttestationPdfDates(installment, quote, calculationResult);
 
-      // Générer le numéro de contrat (format: RCD + référence du devis)
-      const contractNumber = `RCD${quote.reference || "WAK"}`;
+      const contractNumber = formatRcdContractNumber(quote.reference);
 
       // Générer le PDF
       const pdfBlob = await pdf(
         <AttestationRCDPDF
           quote={quote}
           contractNumber={contractNumber}
-          startDate={startDate.toISOString()}
-          endDate={endDate.toISOString()}
+          startDate={contractStartDate.toISOString()}
+          endDate={contractEndDate.toISOString()}
           attestationDate={attestationDate.toISOString()}
           validityStartDate={validityStartDate.toISOString()}
           validityEndDate={validityEndDate.toISOString()}
@@ -556,30 +544,18 @@ export default function PaymentTrackingTab({
       const response = await fetch(pdfUrl);
       const pdfBlob = await response.blob();
 
-      // Calculer les dates
-      const startDate = selectedInstallmentForAttestation.periodStart
-        ? new Date(selectedInstallmentForAttestation.periodStart)
-        : quote.formData?.dateDeffet
-        ? new Date(quote.formData.dateDeffet)
-        : new Date();
-      const endDate = selectedInstallmentForAttestation.periodEnd
-        ? new Date(selectedInstallmentForAttestation.periodEnd)
-        : new Date(
-            startDate.getFullYear() + 1,
-            startDate.getMonth(),
-            startDate.getDate()
-          );
-      const attestationDate = selectedInstallmentForAttestation.paidAt
-        ? new Date(selectedInstallmentForAttestation.paidAt)
-        : new Date();
-      const validityStartDate = attestationDate;
-      const validityEndDate = new Date(
-        validityStartDate.getFullYear() + 1,
-        validityStartDate.getMonth(),
-        validityStartDate.getDate()
+      const {
+        contractStartDate,
+        contractEndDate,
+        validityStartDate,
+        validityEndDate,
+      } = getAttestationPdfDates(
+        selectedInstallmentForAttestation,
+        quote,
+        calculationResult
       );
 
-      const contractNumber = `RCD${quote.reference || "WAK"}`;
+      const contractNumber = formatRcdContractNumber(quote.reference);
 
       // Préparer les données pour l'API
       const formData = new FormData();

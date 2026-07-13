@@ -8,7 +8,8 @@ import {
   Image,
 } from "@react-pdf/renderer";
 import { Quote, FormData } from "@/lib/types";
-import { getTaxeByRegion, tableauTax } from "@/lib/tarificateurs/rcd";
+import { tableauTax } from "@/lib/tarificateurs/rcd";
+import { PrimesTableRows } from "@/components/pdf/primesTableRows";
 
 const styles = StyleSheet.create({
   page: {
@@ -110,6 +111,17 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#374151",
     textAlign: "left",
+  },
+  tdLabelBold: {
+    fontSize: 9,
+    color: "#374151",
+    textAlign: "left",
+    fontWeight: "bold",
+  },
+  rowHighlight: {
+    flexDirection: "row",
+    borderBottom: "1px solid #e5e7eb",
+    backgroundColor: "#dbeafe",
   },
   listItem: {
     marginBottom: 3,
@@ -217,11 +229,6 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
     return value ? "OUI" : "NON";
   };
 
-  function financial(x: number | undefined | null) {
-    if (x === undefined || x === null) return "0";
-    return x.toFixed(2);
-  }
-
   // Récupérer les valeurs dynamiques
   const dateEffet = formData?.dateDeffet
     ? formatDate(formData.dateDeffet)
@@ -294,57 +301,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
       )
     : "XX/XX/XXXX";
 
-  const primeRCDHT = calculationResult?.echeancier?.echeances
-    ? financial(
-        calculationResult.echeancier.echeances.reduce(
-          (sum: number, echeance: any) =>
-            sum + (echeance.rcd - echeance.taxe || 0),
-          0
-        )
-      )
-    : "0";
-  const primeRCDTaxes = calculationResult?.echeancier?.echeances
-    ? financial(
-        calculationResult.echeancier.echeances.reduce(
-          (sum: number, echeance: any) => sum + (echeance.taxe || 0),
-          0
-        )
-      )
-    : "0";
-  const primeRCDTTC = calculationResult?.echeancier?.echeances
-    ? financial(
-        calculationResult.echeancier.echeances.reduce(
-          (sum: number, echeance: any) => sum + (echeance.rcd || 0),
-          0
-        )
-      )
-    : "0";
-
-  const primePJHT = calculationResult?.echeancier?.echeances
-    ? financial(
-        calculationResult.echeancier.echeances.reduce(
-          (sum: number, echeance: any) => sum + (echeance.pj || 0),
-          0
-        ) *
-          (1 - getTaxeByRegion(quote?.formData?.territory || ""))
-      )
-    : "0";
-  const primePJTaxes = calculationResult?.echeancier?.echeances
-    ? financial(
-        calculationResult.echeancier.echeances.reduce(
-          (sum: number, echeance: any) => sum + (echeance.pj || 0),
-          0
-        ) * getTaxeByRegion(quote?.formData?.territory || "")
-      )
-    : "0";
-  const primePJTTC = calculationResult?.echeancier?.echeances
-    ? financial(
-        calculationResult.echeancier.echeances.reduce(
-          (sum: number, echeance: any) => sum + (echeance.pj || 0),
-          0
-        )
-      )
-    : "0";
+  const echeances = calculationResult?.echeancier?.echeances || [];
 
   return (
     <Document>
@@ -1038,42 +995,18 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
                 <Text style={styles.thLabel}>Montant TTC</Text>
               </View>
             </View>
-            <View style={styles.row}>
-              <View style={styles.tdCellWide}>
-                <Text style={styles.tdLabel}>
-                  Prime RCD provisionnelle hors reprise du passé
-                </Text>
-              </View>
-              <View style={styles.tdCell}>
-                <Text style={styles.tdLabel}>{primeRCDHT} €</Text>
-              </View>
-              <View style={styles.tdCell}>
-                <Text style={styles.tdLabel}>{primeRCDTaxes} €</Text>
-              </View>
-              <View style={styles.tdCell}>
-                <Text style={styles.tdLabel}>{primeRCDTTC} €</Text>
-              </View>
-            </View>
-            <View style={styles.row}>
-              <View style={styles.tdCellWide}>
-                <Text style={styles.tdLabel}>Prime PJ</Text>
-              </View>
-              <View style={styles.tdCell}>
-                <Text style={styles.tdLabel}>
-                  {primePJHT !== "0" ? `${primePJHT} €` : "-"}
-                </Text>
-              </View>
-              <View style={styles.tdCell}>
-                <Text style={styles.tdLabel}>
-                  {primePJTaxes !== "0" ? `${primePJTaxes} €` : "-"}
-                </Text>
-              </View>
-              <View style={styles.tdCell}>
-                <Text style={styles.tdLabel}>
-                  {primePJTTC !== "0" ? `${primePJTTC} €` : "-"}
-                </Text>
-              </View>
-            </View>
+            <PrimesTableRows
+              echeances={echeances}
+              territory={quote?.formData?.territory}
+              styles={{
+                row: styles.row,
+                tdCell: styles.tdCell,
+                tdCellWide: styles.tdCellWide,
+                tdLabel: styles.tdLabel,
+                tdLabelBold: styles.tdLabelBold,
+                rowHighlight: styles.rowHighlight,
+              }}
+            />
           </View>
           <Text style={styles.strong}>
             Prime minimale de souscription : 2 400 €
