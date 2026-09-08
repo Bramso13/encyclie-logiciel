@@ -6,86 +6,88 @@ import {
   withAuthAndRole,
 } from "@/lib/api-utils";
 
-// GET /api/payment-installments/overdue - Get all overdue payment installments (Admin only)
+const DEFAULT_LIMIT = 25;
+
 export async function GET(request: NextRequest) {
   try {
-    return await withAuthAndRole(["ADMIN"], async (userId, userRole) => {
+    return await withAuthAndRole(["ADMIN"], async () => {
       const now = new Date();
+      const page = Math.max(
+        1,
+        Number(request.nextUrl.searchParams.get("page")) || 1,
+      );
+      const limit = Math.min(
+        100,
+        Math.max(
+          1,
+          Number(request.nextUrl.searchParams.get("limit")) || DEFAULT_LIMIT,
+        ),
+      );
 
-      // Get all payment installments that are overdue
-      const overduePayments = await prisma.paymentInstallment.findMany({
-        where: {
-          dueDate: {
-            lt: now, // Date d'échéance dépassée
-          },
-          status: {
-            not: "PAID", // Pas encore payé
-          },
-        },
-        include: {
-          schedule: {
-            include: {
-              quote: {
-                include: {
-                  broker: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                      companyName: true,
-                      phone: true,
+      const where = {
+        dueDate: { lt: now },
+        status: { not: "PAID" as const },
+      };
+
+      const [total, overduePayments] = await Promise.all([
+        prisma.paymentInstallment.count({ where }),
+        prisma.paymentInstallment.findMany({
+          where,
+          include: {
+            schedule: {
+              include: {
+                quote: {
+                  include: {
+                    broker: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        companyName: true,
+                        phone: true,
+                      },
                     },
-                  },
-                  product: {
-                    select: {
-                      name: true,
-                      code: true,
+                    product: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
                     },
                   },
                 },
               },
             },
-          },
-          validatedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+            validatedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
             },
           },
-        },
-        orderBy: {
-          dueDate: "asc", // Les plus anciens en premier
-        },
-      });
+          orderBy: { dueDate: "asc" },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      ]);
 
-      // Calculer le nombre de jours de retard pour chaque paiement
       const paymentsWithDelay = overduePayments.map((payment) => {
         const dueDate = new Date(payment.dueDate);
-        const diffTime = now.getTime() - dueDate.getTime();
-        const daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        return {
-          ...payment,
-          daysOverdue,
-        };
+        const daysOverdue = Math.floor(
+          (now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        return { ...payment, daysOverdue };
       });
 
       return createApiResponse({
         payments: paymentsWithDelay,
-        total: paymentsWithDelay.length,
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
       });
     });
   } catch (error) {
     return handleApiError(error);
   }
 }
-
-
-
-
-
-
-
-
-

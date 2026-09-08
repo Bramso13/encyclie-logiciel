@@ -1,45 +1,125 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #f6f5f2;
   --foreground: #171717;
+  --brand: #f49301;
+  --brand-hover: #d67e00;
+  --ink: #171717;
+  --ink-muted: #5c5c5c;
+  --surface: #f6f5f2;
+  --line: #e4e2dc;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-indigo-500: var(--brand);
+  --color-indigo-600: var(--brand);
+  --color-indigo-700: var(--brand-hover);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 input,
 textarea,
 select {
-  color: black !important;
+  color: var(--ink);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #9ca3af !important; /* gray-400 pour les placeholders */
+  color: #9a9790;
 }
 
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-  -webkit-text-fill-color: black !important;
-  color: black !important;
+.ds-spinner {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  border-top-color: var(--brand);
+  animation: ds-spin 0.7s linear infinite;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes ds-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ds-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ds-table-wrap table {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.ds-table-wrap--compact table {
+  min-width: 0;
+}
+
+.ds-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fafaf8;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.ds-table-wrap tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  vertical-align: middle;
+}
+
+.ds-table-wrap tbody tr:hover td {
+  background: #fafaf8;
+}
+
+.ds-table-wrap thead th:last-child,
+.ds-table-wrap tbody td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  box-shadow: -8px 0 8px -8px rgb(0 0 0 / 0.12);
+  white-space: nowrap;
+}
+
+.ds-table-wrap thead th:last-child {
+  background: #fafaf8;
+}
+
+.ds-table-wrap tbody td:last-child {
+  background: #fff;
+}
+
+.ds-table-wrap tbody tr:hover td:last-child {
+  background: #fafaf8;
 }

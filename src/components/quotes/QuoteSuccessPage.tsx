@@ -5,6 +5,8 @@ import { pdf } from "@react-pdf/renderer";
 import { useState, useEffect } from "react";
 import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
 import { calculateWithMapping, getBrokerCode } from "@/lib/utils";
+import { Button, StatusBadge } from "@/components/ui/Controls";
+import { formatEur } from "@/lib/ui/labels";
 
 interface QuoteSuccessPageProps {
   quote: {
@@ -247,21 +249,11 @@ export default function QuoteSuccessPage({
     }
   }, [parameterMapping, quote]);
 
-  // Fallback calculation for non-RCD or missing data
-  const calculateEstimation = () => {
-    const baseAmount = 1500;
-    const companyFactor = quote.companyData.companyName.length * 10;
-    const productFactor = quote.product.name.includes("Responsabilité")
-      ? 500
-      : 300;
-    return Math.round((baseAmount + companyFactor + productFactor) / 100) * 100;
-  };
-
   const estimation = calculatedPremium
     ? calculatedPremium
     : quote.estimatedPremium
     ? quote.estimatedPremium
-    : calculateEstimation();
+    : null;
 
   return (
     <div className="space-y-6">
@@ -313,11 +305,7 @@ export default function QuoteSuccessPage({
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
               Statut
             </h3>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              {quote.status === "INCOMPLETE"
-                ? "En cours de traitement"
-                : quote.status}
-            </span>
+            <StatusBadge status={quote.status} />
           </div>
 
           <div>
@@ -345,15 +333,15 @@ export default function QuoteSuccessPage({
 
       {/* Estimation */}
       <div
-        className={`border rounded-lg p-6 ${
+        className={`rounded-lg border p-6 ${
           premiumDetails?.refus
-            ? "bg-red-50 border-red-200"
-            : "bg-indigo-50 border-indigo-200"
+            ? "border-rose-200 bg-rose-50"
+            : "border-line bg-white"
         }`}
       >
         <h2
-          className={`text-xl font-semibold mb-4 ${
-            premiumDetails?.refus ? "text-red-900" : "text-indigo-900"
+          className={`mb-4 text-xl font-semibold ${
+            premiumDetails?.refus ? "text-rose-900" : "text-ink"
           }`}
         >
           {premiumDetails?.refus
@@ -400,22 +388,20 @@ export default function QuoteSuccessPage({
           <>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p
-                  className={`text-sm mb-1 ${
-                    premiumDetails ? "text-indigo-700" : "text-indigo-700"
-                  }`}
-                >
-                  Prime d'assurance {premiumDetails ? "calculée" : "estimée"}{" "}
+                <p className="mb-1 text-sm text-ink-muted">
+                  Prime d&apos;assurance {premiumDetails ? "calculée" : "estimée"}{" "}
                   (annuelle TTC)
                 </p>
-                <p className="text-3xl font-bold text-indigo-900">
-                  {estimation.toLocaleString("fr-FR")} €
+                <p className="text-3xl font-bold text-ink">
+                  {estimation != null
+                    ? formatEur(estimation)
+                    : "Prime non encore calculée"}
                 </p>
               </div>
               <div className="text-right">
-                <div className="bg-indigo-100 rounded-full p-4">
+                <div className="rounded-full bg-brand/15 p-4">
                   <svg
-                    className="h-8 w-8 text-indigo-600"
+                    className="h-8 w-8 text-brand"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -433,8 +419,8 @@ export default function QuoteSuccessPage({
 
             {/* Détails du calcul si disponible */}
             {premiumDetails && !premiumDetails.refus && (
-              <div className="mb-4 p-4 bg-white rounded-lg border border-indigo-200">
-                <h3 className="text-sm font-medium text-indigo-900 mb-3">
+              <div className="mb-4 rounded-lg border border-line bg-surface p-4">
+                <h3 className="mb-3 text-sm font-medium text-ink">
                   Détails du calcul :
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -467,7 +453,7 @@ export default function QuoteSuccessPage({
                   </div>
                   <div>
                     <span className="text-gray-600">Total TTC :</span>
-                    <span className="ml-2 font-bold text-indigo-600">
+                    <span className="ml-2 font-bold text-ink">
                       {premiumDetails.totalTTC?.toLocaleString("fr-FR") || "0"}{" "}
                       €
                     </span>
@@ -476,8 +462,8 @@ export default function QuoteSuccessPage({
               </div>
             )}
 
-            <div className="mt-4 p-3 bg-indigo-100 rounded-md">
-              <p className="text-sm text-indigo-800">
+            <div className="mt-4 rounded-md bg-surface p-3">
+              <p className="text-sm text-ink-muted">
                 <strong>Information :</strong>{" "}
                 {premiumDetails
                   ? "Ce calcul est basé sur les données saisies et les tarifs en vigueur. Le montant final pourra être ajusté après vérification des pièces justificatives."
@@ -497,8 +483,8 @@ export default function QuoteSuccessPage({
         <div className="space-y-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100">
-                <span className="text-sm font-medium text-blue-600">1</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/15">
+                <span className="text-sm font-medium text-ink">1</span>
               </div>
             </div>
             <div className="ml-4">
@@ -513,8 +499,8 @@ export default function QuoteSuccessPage({
 
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100">
-                <span className="text-sm font-medium text-blue-600">2</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/15">
+                <span className="text-sm font-medium text-ink">2</span>
               </div>
             </div>
             <div className="ml-4">
@@ -530,8 +516,8 @@ export default function QuoteSuccessPage({
 
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100">
-                <span className="text-sm font-medium text-blue-600">3</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/15">
+                <span className="text-sm font-medium text-ink">3</span>
               </div>
             </div>
             <div className="ml-4">
@@ -547,13 +533,8 @@ export default function QuoteSuccessPage({
       </div>
 
       {/* Actions */}
-      <div className="flex justify-center space-x-4">
-        <button
-          onClick={onBackToDashboard}
-          className="px-6 py-3 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          Voir le détail du devis
-        </button>
+      <div className="flex justify-center">
+        <Button onClick={onBackToDashboard}>Ouvrir le dossier</Button>
       </div>
     </div>
   );

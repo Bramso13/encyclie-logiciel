@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
 import { useState, useEffect } from "react";
 import useProductsStore from "@/lib/stores/products-store";
 import { calculPrimeRCD, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
@@ -431,13 +432,13 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
       });
 
       if (response.ok) {
-        alert("FormFields sauvegardés avec succès !");
+        notify("FormFields sauvegardés avec succès !");
       } else {
         throw new Error("Erreur lors de la sauvegarde");
       }
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de la sauvegarde des formFields");
+      notify("Erreur lors de la sauvegarde des formFields");
     }
   };
 
@@ -452,13 +453,13 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
       });
 
       if (response.ok) {
-        alert("StepConfig sauvegardé avec succès !");
+        notify("StepConfig sauvegardé avec succès !");
       } else {
         throw new Error("Erreur lors de la sauvegarde");
       }
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de la sauvegarde du stepConfig");
+      notify("Erreur lors de la sauvegarde du stepConfig");
     }
   };
 
@@ -748,13 +749,13 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
       const result = await response.json();
       
       if (result.success) {
-        alert('Mapping sauvegardé avec succès !');
+        notify('Mapping sauvegardé avec succès !');
       } else {
         throw new Error(result.error || 'Erreur lors de la sauvegarde');
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde du mapping');
+      notify('Erreur lors de la sauvegarde du mapping');
     }
   };
 
@@ -773,13 +774,13 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
       
       if (result.success && result.data.mappingFields) {
         setParameterMapping(result.data.mappingFields);
-        alert('Mapping chargé avec succès !');
+        notify('Mapping chargé avec succès !');
       } else {
-        alert('Aucun mapping sauvegardé pour ce produit');
+        notify('Aucun mapping sauvegardé pour ce produit');
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
-      alert('Erreur lors du chargement du mapping');
+      notify('Erreur lors du chargement du mapping');
     }
   };
 
@@ -803,7 +804,7 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
     
     setSavedTestValues(valuesToSave);
     localStorage.setItem(`testValues_${selectedProduct}`, JSON.stringify(valuesToSave));
-    alert('Valeurs de test sauvegardées avec succès !');
+    notify('Valeurs de test sauvegardées avec succès !');
   };
 
   // Fonction pour charger les valeurs des inputs de test
@@ -833,13 +834,13 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
           setTestParams(prev => ({ ...prev, sinistresPrecedents: values.sinistresPrecedents }));
         }
         
-        alert('Valeurs de test chargées avec succès !');
+        notify('Valeurs de test chargées avec succès !');
       } catch (error) {
         console.error('Erreur lors du chargement des valeurs:', error);
-        alert('Erreur lors du chargement des valeurs sauvegardées');
+        notify('Erreur lors du chargement des valeurs sauvegardées');
       }
     } else {
-      alert('Aucune valeur sauvegardée pour ce produit');
+      notify('Aucune valeur sauvegardée pour ce produit');
     }
   };
 
@@ -850,7 +851,7 @@ export default function ProductConfigTab({ products, loading }: ProductConfigTab
     if (confirm('Êtes-vous sûr de vouloir effacer toutes les valeurs sauvegardées ?')) {
       localStorage.removeItem(`testValues_${selectedProduct}`);
       setSavedTestValues({});
-      alert('Valeurs effacées avec succès !');
+      notify('Valeurs effacées avec succès !');
     }
   };
 

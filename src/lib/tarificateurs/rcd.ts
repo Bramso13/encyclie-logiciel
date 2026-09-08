@@ -1,3 +1,5 @@
+import { getTariffOverlay } from "./tariff-registry";
+
 function parseISO(d: string): Date {
   const dt = new Date(d);
   if (Number.isNaN(dt.getTime())) throw new Error(`Date invalide: ${d}`);
@@ -225,10 +227,43 @@ const tableauTax2026 = tableauTax2025.map((item) => ({
 // Export pour compatibilité avec le code existant (par défaut 2025)
 export const tableauTax = tableauTax2025;
 
-// Fonction pour obtenir les taux par année
-export function getTableauTaxByYear(year: number) {
+export const BUILTIN_TERRITORY_TAXES: { [key: string]: number } = {
+  martinique: 0.09,
+  guadeloupe: 0.09,
+  reunion: 0.09,
+  guyane: 0.045,
+  mayotte: 0.045,
+  "st-martin": 0.05,
+  "st-barth": 0.0,
+};
+
+export const BUILTIN_TERRITORY_PJ_TAXES: { [key: string]: number } = {
+  martinique: 0.134,
+  guadeloupe: 0.134,
+  reunion: 0.134,
+  guyane: 0.067,
+  mayotte: 0.067,
+  "st-martin": 0.05,
+  "st-barth": 0.0,
+};
+
+export function getBuiltinActivityRates(year: number) {
   if (year >= 2026) return tableauTax2026;
   return tableauTax2025;
+}
+
+export function getBuiltinDegressivity() {
+  return tableauDegAvant;
+}
+
+// Fonction pour obtenir les taux par année.
+// 2025/2026 = code (prod). >= 2027 = overlay DB s'il existe, sinon mêmes taux que 2026.
+export function getTableauTaxByYear(year: number) {
+  if (year >= 2027) {
+    const overlay = getTariffOverlay(year);
+    if (overlay?.activityRates?.length) return overlay.activityRates;
+  }
+  return getBuiltinActivityRates(year);
 }
 const tableauDegAvant = [
   {
@@ -439,31 +474,26 @@ const calculDeg = (params: {
   });
   return resultValue;
 };
-export function getTaxeByRegion(region: string) {
+export function getTaxeByRegion(region: string, year?: number) {
   const regionRea = region.toLowerCase().replace(" ", "-");
-  const taxeByRegion: { [key: string]: number } = {
-    martinique: 0.09,
-    guadeloupe: 0.09,
-    reunion: 0.09,
-    guyane: 0.045,
-    mayotte: 0.045,
-    "st-martin": 0.05,
-    "st-barth": 0.0,
-  };
-  return taxeByRegion[regionRea];
+  if (year != null && year >= 2027) {
+    const overlay = getTariffOverlay(year);
+    const fromOverlay = overlay?.territoryTaxes?.[regionRea];
+    if (typeof fromOverlay === "number") return fromOverlay;
+  }
+  return BUILTIN_TERRITORY_TAXES[regionRea];
 }
-export function getTaxeProtectionJuridiqueByRegion(region: string) {
+export function getTaxeProtectionJuridiqueByRegion(
+  region: string,
+  year?: number,
+) {
   const regionRea = region.toLowerCase().replace(" ", "-");
-  const taxeByRegion: { [key: string]: number } = {
-    martinique: 0.134,
-    guadeloupe: 0.134,
-    reunion: 0.134,
-    guyane: 0.067,
-    mayotte: 0.067,
-    "st-martin": 0.05,
-    "st-barth": 0.0,
-  };
-  return taxeByRegion[regionRea];
+  if (year != null && year >= 2027) {
+    const overlay = getTariffOverlay(year);
+    const fromOverlay = overlay?.territoryPjTaxes?.[regionRea];
+    if (typeof fromOverlay === "number") return fromOverlay;
+  }
+  return BUILTIN_TERRITORY_PJ_TAXES[regionRea];
 }
 export function getTaxePJByTauxTaxe(tauxTaxe: number) {
   if (tauxTaxe === 0.09) return 0.134;
@@ -514,7 +544,7 @@ export function calculPrimeRCD(params: {
   const {
     enCreation,
     caDeclared,
-    honoraireGestion,
+    honoraireGestion = 0,
     etp,
     activites: activitesRaw,
     dateCreation,
@@ -740,9 +770,15 @@ export function calculPrimeRCD(params: {
     }, 0);
   };
 
+  const effectYear = new Date(dateEffet ?? new Date()).getFullYear();
+  const degSource =
+    getTariffOverlay(effectYear)?.degressivity?.length
+      ? getTariffOverlay(effectYear)!.degressivity
+      : tableauDegAvant;
+
   const tableauDeg = calculDeg({
     caDeclared: caCalculee,
-    tableauDeg: tableauDegAvant,
+    tableauDeg: degSource,
   });
 
   console.log("tableauDeg", tableauDeg);
@@ -834,13 +870,14 @@ export function calculPrimeRCD(params: {
   returnValue.totalTTC = roundToTwoDecimals(
     returnValue.primeTotal +
       returnValue.autres.total +
-      returnValue.fraisGestion,
+      returnValue.fraisGestion +
+      honoraireGestion,
   );
   returnValue.returnTab = returnTab;
 
   // ========== CALCULS POUR L'ANNÉE N+1 (2026) ==========
   const returnTabN1: returnTab[] = [];
-  const tableauTaxN1 = tableauTax2026;
+  const tableauTaxN1 = getTableauTaxByYear(effectYear + 1);
 
   activites.forEach((activite) => {
     const degMax = tableauDeg.find(
@@ -916,7 +953,8 @@ export function calculPrimeRCD(params: {
   returnValue.totalTTCN1 = roundToTwoDecimals(
     returnValue.primeTotalN1 +
       returnValue.autresN1.total +
-      returnValue.fraisGestionN1,
+      returnValue.fraisGestionN1 +
+      honoraireGestion,
   );
   returnValue.returnTabN1 = returnTabN1;
 
@@ -944,13 +982,13 @@ export function calculPrimeRCD(params: {
     rcd: returnValue.primeTotal,
     frais: returnValue.autres.fraisFractionnementPrimeHT,
     reprise: 0, // Pas de reprise dans cet exemple
-    fraisGestion: returnValue.fraisGestion,
+    fraisGestion: returnValue.fraisGestion + honoraireGestion,
     periodicite: fractionnementPrime,
     taxeN1: returnValue.autresN1.taxeAssurance,
     totalTTCN1: returnValue.totalTTCN1,
     rcdN1: returnValue.primeTotalN1,
     fraisN1: returnValue.autresN1.fraisFractionnementPrimeHT,
-    fraisGestionN1: returnValue.fraisGestionN1,
+    fraisGestionN1: returnValue.fraisGestionN1 + honoraireGestion,
   });
   console.log("returnValue", returnValue);
   // Calcul de la reprise du passé si activée

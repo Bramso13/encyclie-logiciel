@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { StatusBadge } from "@/components/ui/Controls";
 
 type Row = {
   id: string;
@@ -158,7 +159,7 @@ export default function EcartsMontantsTab() {
                     </Link>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    {r.status}
+                    <StatusBadge status={r.status} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
                     {r.installmentCount}

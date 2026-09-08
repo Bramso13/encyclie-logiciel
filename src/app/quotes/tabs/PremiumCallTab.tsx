@@ -1,3 +1,4 @@
+import { notify } from "@/lib/ui/notify";
 import { useSession } from "@/lib/auth-client";
 import {
   CalculationResult,
@@ -177,7 +178,7 @@ export default function PaymentTrackingTab({
       });
       if (!resQuote.ok) {
         const data = await resQuote.json();
-        alert(data?.error ?? "Erreur lors de la mise à jour de la référence.");
+        notify(data?.error ?? "Erreur lors de la mise à jour de la référence.");
         return;
       }
       const resContract = await fetch(`/api/quotes/${quote.id}/contract`, {
@@ -186,16 +187,16 @@ export default function PaymentTrackingTab({
         body: JSON.stringify({ reference: referenceInput.trim() }),
       });
       if (resContract.ok) {
-        alert("Référence du devis et du contrat (si présent) enregistrée.");
+        notify("Référence du devis et du contrat (si présent) enregistrée.");
       } else if (resContract.status !== 404) {
         const data = await resContract.json();
-        alert(data?.error ?? "Erreur lors de la mise à jour du contrat.");
+        notify(data?.error ?? "Erreur lors de la mise à jour du contrat.");
       } else {
-        alert("Référence du devis enregistrée.");
+        notify("Référence du devis enregistrée.");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de l'enregistrement.");
+      notify("Erreur lors de l'enregistrement.");
     } finally {
       setSavingReference(false);
     }
@@ -208,14 +209,14 @@ export default function PaymentTrackingTab({
       (i) => i.schedule?.quote?.id === quote.id
     );
     if (installmentsForQuote.length === 0) {
-      alert("Aucune échéance pour ce devis.");
+      notify("Aucune échéance pour ce devis.");
       return;
     }
     const ht = parseFloat(bulkHT);
     const tax = parseFloat(bulkTax);
     const ttc = parseFloat(bulkTTC);
     if (Number.isNaN(ht) || Number.isNaN(tax) || Number.isNaN(ttc)) {
-      alert("Veuillez saisir des montants valides (HT, Taxe, TTC).");
+      notify("Veuillez saisir des montants valides (HT, Taxe, TTC).");
       return;
     }
     setSavingBulk(true);
@@ -236,14 +237,14 @@ export default function PaymentTrackingTab({
         setBulkHT("");
         setBulkTax("");
         setBulkTTC("");
-        alert(`${installmentsForQuote.length} échéance(s) mises à jour.`);
+        notify(`${installmentsForQuote.length} échéance(s) mises à jour.`);
       } else {
         const data = await res.json();
-        alert(data?.error ?? "Erreur lors de la mise à jour des échéances.");
+        notify(data?.error ?? "Erreur lors de la mise à jour des échéances.");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de la mise à jour.");
+      notify("Erreur lors de la mise à jour.");
     } finally {
       setSavingBulk(false);
     }
@@ -289,13 +290,13 @@ export default function PaymentTrackingTab({
         setShowPaymentModal(false);
         setSelectedInstallment(null);
         setPaymentForm({ amount: "", method: "", reference: "", notes: "", paidAt: "" });
-        alert("Paiement validé avec succès !");
+        notify("Paiement validé avec succès !");
       } else {
-        alert("Erreur lors de la validation du paiement");
+        notify("Erreur lors de la validation du paiement");
       }
     } catch (error) {
       console.error("Erreur lors de la validation du paiement:", error);
-      alert("Erreur lors de la validation du paiement");
+      notify("Erreur lors de la validation du paiement");
     }
   };
 
@@ -345,6 +346,9 @@ export default function PaymentTrackingTab({
           attestationDate={attestationDate.toISOString()}
           validityStartDate={validityStartDate.toISOString()}
           validityEndDate={validityEndDate.toISOString()}
+          baseUrl={
+            typeof window !== "undefined" ? window.location.origin : ""
+          }
         />
       ).toBlob();
 
@@ -353,7 +357,7 @@ export default function PaymentTrackingTab({
       setPdfUrl(url);
     } catch (error) {
       console.error("Erreur lors de la génération du PDF:", error);
-      alert("Erreur lors de la génération de l'attestation");
+      notify("Erreur lors de la génération de l'attestation");
       setShowAttestationModal(false);
     } finally {
       setGeneratingAttestation(false);
@@ -415,7 +419,7 @@ export default function PaymentTrackingTab({
       Number.isNaN(ttc) ||
       !editForm.dueDate
     ) {
-      alert("Veuillez remplir correctement tous les champs obligatoires.");
+      notify("Veuillez remplir correctement tous les champs obligatoires.");
       return;
     }
 
@@ -469,14 +473,14 @@ export default function PaymentTrackingTab({
       if (res.ok) {
         await refreshData();
         closeEditModal();
-        alert("Échéance modifiée avec succès.");
+        notify("Échéance modifiée avec succès.");
       } else {
         const data = await res.json();
-        alert(data?.error ?? "Erreur lors de la modification de l'échéance.");
+        notify(data?.error ?? "Erreur lors de la modification de l'échéance.");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de la modification.");
+      notify("Erreur lors de la modification.");
     } finally {
       setSavingEdit(false);
     }
@@ -501,14 +505,14 @@ export default function PaymentTrackingTab({
       if (res.ok) {
         await refreshData();
         closeEditModal();
-        alert("Échéance marquée comme non payée.");
+        notify("Échéance marquée comme non payée.");
       } else {
         const data = await res.json();
-        alert(data?.error ?? "Erreur lors de l'annulation du paiement.");
+        notify(data?.error ?? "Erreur lors de l'annulation du paiement.");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de l'annulation du paiement.");
+      notify("Erreur lors de l'annulation du paiement.");
     } finally {
       setMarkingUnpaid(false);
     }
@@ -525,7 +529,7 @@ export default function PaymentTrackingTab({
         quote.formData?.mailAddress || quote.broker?.email || "";
 
       if (!clientEmail) {
-        alert(
+        notify(
           "Impossible d'envoyer l'email : adresse email du client manquante"
         );
         setSendingEmail(false);
@@ -535,7 +539,7 @@ export default function PaymentTrackingTab({
       // Validation de l'email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(clientEmail)) {
-        alert("L'adresse email du client n'est pas valide");
+        notify("L'adresse email du client n'est pas valide");
         setSendingEmail(false);
         return;
       }
@@ -574,14 +578,14 @@ export default function PaymentTrackingTab({
       });
 
       if (apiResponse.ok) {
-        alert(`Attestation envoyée par email à ${clientEmail} avec succès !`);
+        notify(`Attestation envoyée par email à ${clientEmail} avec succès !`);
       } else {
         const errorData = await apiResponse.json();
-        alert(`Erreur lors de l'envoi : ${errorData.error}`);
+        notify(`Erreur lors de l'envoi : ${errorData.error}`);
       }
     } catch (error) {
       console.error("Erreur envoi email attestation:", error);
-      alert("Erreur lors de l'envoi de l'email");
+      notify("Erreur lors de l'envoi de l'email");
     } finally {
       setSendingEmail(false);
     }

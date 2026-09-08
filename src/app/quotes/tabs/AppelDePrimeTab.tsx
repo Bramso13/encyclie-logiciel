@@ -25,6 +25,7 @@ import {
 interface LocalInstallment {
   id: string;
   installmentNumber: number;
+  vintageYear?: number;
   dueDate: string | null;
   periodStart: string | null;
   periodEnd: string | null;
@@ -133,10 +134,12 @@ export default function AppelDePrimeTab({
   quote,
   calculationResult,
   session,
+  preferredYear,
 }: {
   quote: Quote;
   calculationResult: CalculationResult | null;
   session: any;
+  preferredYear?: number;
 }) {
   const [installments, setInstallments] = useState<LocalInstallment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,20 +172,37 @@ export default function AppelDePrimeTab({
   );
   const [paymentMethod, setPaymentMethod] = useState<string>("BANK_TRANSFER");
   const [paying, setPaying] = useState(false);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | "all">("all");
+
+  const resolveCalcForYear = useCallback(
+    (year?: number) => {
+      if (year != null) {
+        const vintage = quote.vintages?.find((item) => item.year === year);
+        if (vintage?.calculatedPremium) return vintage.calculatedPremium;
+      }
+      return calculationResult;
+    },
+    [calculationResult, quote.vintages],
+  );
 
   // ── Fetch schedule ──────────────────────────────────────────────────────
   const fetchInstallments = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/quotes/${quote.id}/payment-schedule`);
+      const res = await fetch(`/api/quotes/${quote.id}/payment-schedule?all=true`);
       if (!res.ok) return;
       const raw = await res.json();
       const sched = raw.data ?? raw;
+      if (sched?.availableYears) {
+        setAvailableYears(sched.availableYears);
+      }
       if (sched?.payments) {
         const sorted: LocalInstallment[] = sched.payments
           .map((p: any) => ({
             id: p.id,
             installmentNumber: p.installmentNumber,
+            vintageYear: p.vintageYear,
             dueDate: p.dueDate ?? null,
             periodStart: p.periodStart ?? null,
             periodEnd: p.periodEnd ?? null,
@@ -198,10 +218,11 @@ export default function AppelDePrimeTab({
             emissionDate: p.emissionDate ?? null,
             paymentMethod: p.paymentMethod ?? null,
           }))
-          .sort(
-            (a: LocalInstallment, b: LocalInstallment) =>
-              a.installmentNumber - b.installmentNumber,
-          );
+          .sort((a: LocalInstallment, b: LocalInstallment) => {
+            const da = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+            const db = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+            return da - db;
+          });
         setInstallments(sorted);
         if (sorted.length > 0 && !activeTab) {
           setActiveTab(TAB_ID_ALL);
@@ -216,15 +237,34 @@ export default function AppelDePrimeTab({
     fetchInstallments();
   }, [fetchInstallments]);
 
+  useEffect(() => {
+    if (availableYears.length <= 1) {
+      setSelectedYear("all");
+      return;
+    }
+    const isBroker = session?.user?.role === "BROKER";
+    if (isBroker) {
+      const cal = new Date().getFullYear();
+      setSelectedYear(availableYears.includes(cal) ? cal : "all");
+      return;
+    }
+    if (preferredYear && availableYears.includes(preferredYear)) {
+      setSelectedYear(preferredYear);
+    }
+  }, [availableYears, session, preferredYear]);
+
   // ── Génération PDF par installment ──────────────────────────────────────
   const loadPdfForInstallment = useCallback(
     async (inst: LocalInstallment) => {
       if (pdfUrls[inst.id] || pdfLoading[inst.id]) return;
       setPdfLoading((prev) => ({ ...prev, [inst.id]: true }));
       try {
+        const year =
+          inst.vintageYear ??
+          (inst.dueDate ? new Date(inst.dueDate).getFullYear() : undefined);
         const singleCalcResult = buildSingleInstallmentCalcResult(
           inst.installmentNumber,
-          calculationResult,
+          resolveCalcForYear(year),
         );
         const res = await fetch("/api/generate-pdf", {
           method: "POST",
@@ -245,7 +285,7 @@ export default function AppelDePrimeTab({
         setPdfLoading((prev) => ({ ...prev, [inst.id]: false }));
       }
     },
-    [calculationResult, quote, pdfUrls, pdfLoading],
+    [calculationResult, quote, pdfUrls, pdfLoading, resolveCalcForYear],
   );
 
   // Aperçu PDF « toutes échéances » : `calculationResult` tel quel (identique au téléchargement)
@@ -513,6 +553,16 @@ export default function AppelDePrimeTab({
     color: "bg-gray-100 text-gray-600",
   };
 
+  const yearOf = (inst: LocalInstallment) =>
+    inst.vintageYear ??
+    (inst.dueDate ? new Date(inst.dueDate).getFullYear() : 0);
+  const filteredInstallments =
+    selectedYear === "all"
+      ? installments
+      : installments.filter((inst) => yearOf(inst) === selectedYear);
+  const visibleInstallments =
+    filteredInstallments.length > 0 ? filteredInstallments : installments;
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -622,6 +672,35 @@ export default function AppelDePrimeTab({
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {availableYears.length > 1 && (
+            <div className="flex flex-wrap gap-2 border-b border-gray-100 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setSelectedYear("all")}
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  selectedYear === "all"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                Tous les exercices
+              </button>
+              {availableYears.map((year) => (
+                <button
+                  key={year}
+                  type="button"
+                  onClick={() => setSelectedYear(year)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    selectedYear === year
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          )}
           {/* ── Onglets par échéance ─────────────────────────────────────── */}
           <div className="flex border-b border-gray-200 overflow-x-auto">
             {/* Onglet "Toutes les échéances" */}
@@ -636,7 +715,7 @@ export default function AppelDePrimeTab({
               <FileText className="w-4 h-4 text-indigo-500" />
               Toutes les échéances
             </button>
-            {installments.map((inst) => {
+            {visibleInstallments.map((inst) => {
               const isActive = activeTab === inst.id;
               const statusInfo = STATUS_LABELS[inst.status] ?? {
                 label: inst.status,
@@ -704,7 +783,7 @@ export default function AppelDePrimeTab({
                   </button>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {installments.map((inst) => {
+                  {visibleInstallments.map((inst) => {
                     const statusInfo = STATUS_LABELS[inst.status] ?? {
                       label: inst.status,
                       color: "bg-gray-100 text-gray-600",
@@ -767,7 +846,7 @@ export default function AppelDePrimeTab({
               </div>
             </div>
           )}
-          {installments.map((inst) => {
+          {visibleInstallments.map((inst) => {
             if (activeTab !== inst.id) return null;
             const pdfUrl = pdfUrls[inst.id];
             const isPdfLoading = pdfLoading[inst.id];

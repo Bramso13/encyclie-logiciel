@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL_NEW")
 }
 
 // BetterAuth tables
@@ -367,7 +367,9 @@ model Quote {
   documents QuoteDocument[]
   contract  InsuranceContract?
   workflowSteps WorkflowStep[]
-  paymentSchedule PaymentSchedule?
+  paymentSchedule PaymentSchedule[]
+  vintages        QuoteVintage[]
+  debitNotes      DebitNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -820,8 +822,10 @@ enum PaymentMethod {
 // Échéancier principal d'un devis
 model PaymentSchedule {
   id        String @id @default(cuid())
-  quoteId   String @unique @map("quote_id")
+  quoteId   String @map("quote_id")
   quote     Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  /// Millésime tarifaire (2026, 2027…) — un échéancier par exercice
+  vintageYear Int @default(2026) @map("vintage_year")
 
   // Informations générales de l'échéancier
   totalAmountHT  Float
@@ -846,7 +850,94 @@ model PaymentSchedule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([quoteId])
+  @@index([quoteId, vintageYear])
   @@map("payment_schedules")
+}
+
+/// Photographie tarifaire par exercice (CA, activités, prime) — distinct de QuoteVersion (audit)
+model QuoteVintage {
+  id                String   @id @default(cuid())
+  quoteId           String   @map("quote_id")
+  quote             Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  year              Int
+  chiffreAffaires   String   @map("chiffre_affaires")
+  activities        Json
+  calculatedPremium Json?    @map("calculated_premium")
+  createdById       String?  @map("created_by_id")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([quoteId, year])
+  @@index([quoteId])
+  @@map("quote_vintages")
+}
+
+model DebitNote {
+  id              String   @id @default(cuid())
+  quoteId         String   @map("quote_id")
+  quote           Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  periodStart     DateTime @map("period_start")
+  periodEnd       DateTime @map("period_end")
+  contractNumber  String?  @map("contract_number")
+  directorName    String?  @map("director_name")
+  clientName      String?  @map("client_name")
+  clientAddress   String?  @map("client_address")
+  clientCity      String?  @map("client_city")
+  intermediary    String?
+  brokerCode      String?  @map("broker_code")
+  companyName     String?  @map("company_name")
+  annualAmount    Float    @map("annual_amount")
+  totalCommission Float    @map("total_commission")
+  lines           DebitNoteLine[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([quoteId])
+  @@map("debit_notes")
+}
+
+model DebitNoteLine {
+  id              String          @id @default(cuid())
+  debitNoteId     String          @map("debit_note_id")
+  debitNote       DebitNote       @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+  installmentId   String          @unique @map("installment_id")
+  installment     PaymentInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+  periodDate      DateTime        @map("period_date")
+  amountTTC       Float           @map("amount_ttc")
+  primeRcdHT      Float           @map("prime_rcd_ht")
+  commission      Float
+  netHorsCom      Float           @map("net_hors_com")
+  paymentDate     DateTime?       @map("payment_date")
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([debitNoteId])
+  @@map("debit_note_lines")
+}
+
+model OverdueThresholdMail {
+  id        String   @id @default(cuid())
+  quoteId   String   @unique @map("quote_id")
+  sentAt    DateTime @default(now()) @map("sent_at")
+  overdueCount Int   @map("overdue_count")
+
+  @@map("overdue_threshold_mails")
+}
+
+/// Barème d'un exercice > 2026. 2025/2026 restent dans le code (prod).
+model TariffYear {
+  year             Int      @id
+  activityRates    Json     @map("activity_rates")
+  territoryTaxes   Json     @map("territory_taxes")
+  territoryPjTaxes Json     @map("territory_pj_taxes")
+  degressivity     Json
+  createdFromYear  Int?     @map("created_from_year")
+  increasePercent  Float?   @map("increase_percent")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("tariff_years")
 }
 
 // Échéances individuelles
@@ -902,6 +993,7 @@ model PaymentInstallment {
 
   // Relations
   transactions PaymentTransaction[]
+  debitNoteLines DebitNoteLine[]
 
   // Audit
   createdAt DateTime @default(now())

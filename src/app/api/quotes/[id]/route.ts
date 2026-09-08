@@ -30,7 +30,14 @@ export async function GET(
             },
           },
           broker: {
-            select: { id: true, name: true, companyName: true, email: true },
+            select: {
+              id: true,
+              name: true,
+              companyName: true,
+              email: true,
+              phone: true,
+              address: true,
+            },
           },
           documents: {
             select: {
@@ -52,6 +59,16 @@ export async function GET(
               reference: true,
               status: true,
             },
+          },
+          vintages: {
+            select: {
+              id: true,
+              year: true,
+              chiffreAffaires: true,
+              activities: true,
+              calculatedPremium: true,
+            },
+            orderBy: { year: "asc" },
           },
         },
       });

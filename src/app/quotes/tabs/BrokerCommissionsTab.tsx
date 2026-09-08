@@ -1,5 +1,6 @@
 import React from "react";
 import { CalculationResult } from "@/lib/types";
+import { EmptyState } from "@/components/ui/Feedback";
 
 interface BrokerCommissionsTabProps {
   calculationResult: CalculationResult;
@@ -25,9 +26,10 @@ export default function BrokerCommissionsTab({
   // Vérifier si le calculationResult et l'échéancier sont disponibles
   if (!calculationResult || !calculationResult.echeancier) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Aucun échéancier disponible</div>
-      </div>
+      <EmptyState
+        title="Aucun échéancier"
+        description="Les commissions s'affichent lorsque l'échéancier a été calculé."
+      />
     );
   }
 

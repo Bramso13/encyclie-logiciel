@@ -172,7 +172,10 @@ async function processRow(row: Row, lineNum: number): Promise<{ ok: boolean; err
     return { ok: false, error: `Devis ou contrat avec référence "${refActuelle}" introuvable` };
   }
 
-  let schedule = quote.paymentSchedule;
+  const pickSchedule = (
+    value: typeof quote.paymentSchedule | null | undefined,
+  ) => (Array.isArray(value) ? value[0] : value ?? undefined);
+  let schedule = pickSchedule(quote.paymentSchedule);
   const needsSchedule = !schedule || !schedule.payments?.length;
 
   if (needsSchedule) {
@@ -204,7 +207,7 @@ async function processRow(row: Row, lineNum: number): Promise<{ ok: boolean; err
             },
           },
         });
-        schedule = updated?.paymentSchedule ?? schedule;
+        schedule = pickSchedule(updated?.paymentSchedule) ?? schedule;
       }
     }
     if (!schedule?.payments?.length) {

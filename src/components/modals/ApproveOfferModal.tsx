@@ -1,7 +1,11 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
+import { formatDateFr } from "@/lib/ui/labels";
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { Button, inputClassName } from "@/components/ui/Controls";
+import { ErrorBanner } from "@/components/ui/Feedback";
 
 type QuoteForModal = {
   id: string;
@@ -16,7 +20,6 @@ interface ApproveOfferModalProps {
   onSuccess: () => void;
 }
 
-/** Extrait la date d'effet du devis depuis formData (dateEffet / dateDeffet / dateDebut). */
 function getQuoteDateEffet(formData: unknown): string | null {
   const fd = formData as Record<string, unknown> | null | undefined;
   if (!fd) return null;
@@ -53,8 +56,7 @@ export default function ApproveOfferModal({
         setCustomDate(qd);
       } else {
         setOption("other");
-        const today = new Date().toISOString().slice(0, 10);
-        setCustomDate(today);
+        setCustomDate(new Date().toISOString().slice(0, 10));
       }
       setError(null);
     }
@@ -73,7 +75,7 @@ export default function ApproveOfferModal({
     e.preventDefault();
     const startDate = getEffectiveStartDate();
     if (!startDate || !quote) {
-      setError("Veuillez choisir une date de début de contrat.");
+      setError("Choisissez une date de début de contrat.");
       return;
     }
     setLoading(true);
@@ -85,121 +87,89 @@ export default function ApproveOfferModal({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ startDate }),
-        }
+        },
       );
       const data = await response.json();
       if (!response.ok) {
         throw new Error(
-          data.error || data.message || "Erreur lors de la création du contrat"
+          data.error || data.message || "La création du contrat a échoué.",
         );
       }
       onClose();
       onSuccess();
-      alert(data.message || "Contrat créé avec succès.");
+      notify(data.message || "Contrat créé.", "success");
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Erreur lors de la création du contrat"
+          : "La création du contrat a échoué.",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Approuver l&apos;offre et créer le contrat
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="Fermer"
+    <Modal
+      open={isOpen}
+      title="Approuver l'offre et créer le contrat"
+      onClose={loading ? () => undefined : onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Annuler
+          </Button>
+          <Button
+            type="submit"
+            form="approve-offer-form"
+            disabled={loading || !getEffectiveStartDate()}
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          <p className="text-sm text-gray-600">
-            Choisissez la date de début du contrat (date d&apos;effet).
-          </p>
-
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="dateOption"
-                checked={option === "quote"}
-                onChange={() => setOption("quote")}
-                disabled={!hasQuoteDate}
-                className="rounded border-gray-300"
-              />
-              <span className={!hasQuoteDate ? "text-gray-400" : ""}>
-                Utiliser la date d&apos;effet du devis
-                {hasQuoteDate && quoteDateEffet && (
-                  <span className="ml-1 font-medium text-gray-700">
-                    ({new Date(quoteDateEffet).toLocaleDateString("fr-FR")})
-                  </span>
-                )}
-                {!hasQuoteDate && " (non renseignée)"}
-              </span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="dateOption"
-                checked={option === "other"}
-                onChange={() => setOption("other")}
-                className="rounded border-gray-300"
-              />
-              <span>Choisir une autre date</span>
-            </label>
-
-            {option === "other" && (
-              <div className="pl-6">
-                <input
-                  type="date"
-                  value={customDate}
-                  onChange={(e) => setCustomDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required={option === "other"}
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !getEffectiveStartDate()}
-              className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Création..." : "Valider et créer le contrat"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            {loading ? "Création…" : "Valider et créer le contrat"}
+          </Button>
+        </>
+      }
+    >
+      <form id="approve-offer-form" onSubmit={handleSubmit} className="space-y-4">
+        {error ? <ErrorBanner>{error}</ErrorBanner> : null}
+        <p className="text-ink-muted">
+          Choisissez la date d&apos;effet du contrat.
+        </p>
+        <label className="flex items-start gap-2">
+          <input
+            type="radio"
+            name="dateOption"
+            checked={option === "quote"}
+            onChange={() => setOption("quote")}
+            disabled={!hasQuoteDate}
+            className="mt-1"
+          />
+          <span className={!hasQuoteDate ? "text-ink-muted" : "text-ink"}>
+            Utiliser la date d&apos;effet du devis
+            {hasQuoteDate && quoteDateEffet
+              ? ` (${formatDateFr(quoteDateEffet)})`
+              : " (non renseignée)"}
+          </span>
+        </label>
+        <label className="flex items-start gap-2">
+          <input
+            type="radio"
+            name="dateOption"
+            checked={option === "other"}
+            onChange={() => setOption("other")}
+            className="mt-1"
+          />
+          <span>Choisir une autre date</span>
+        </label>
+        {option === "other" ? (
+          <input
+            type="date"
+            className={inputClassName}
+            value={customDate}
+            onChange={(e) => setCustomDate(e.target.value)}
+            required={option === "other"}
+          />
+        ) : null}
+      </form>
+    </Modal>
   );
 }

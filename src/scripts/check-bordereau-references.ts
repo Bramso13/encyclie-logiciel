@@ -94,7 +94,12 @@ async function main() {
       continue;
     }
 
-    if (!quote.paymentSchedule) {
+    const schedules = Array.isArray(quote.paymentSchedule)
+      ? quote.paymentSchedule
+      : quote.paymentSchedule
+        ? [quote.paymentSchedule]
+        : [];
+    if (!schedules.length) {
       results.push({
         ref,
         reason: "2_PAS_ECHÉANCIER",
@@ -104,7 +109,7 @@ async function main() {
       continue;
     }
 
-    const payments = quote.paymentSchedule.payments;
+    const payments = schedules.flatMap((schedule) => schedule.payments ?? []);
     if (payments.length === 0) {
       results.push({
         ref,

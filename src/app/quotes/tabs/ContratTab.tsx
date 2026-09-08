@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
 import { Quote, CalculationResult } from "@/lib/types";
 import { pdf } from "@react-pdf/renderer";
 import { useState, useEffect } from "react";
@@ -101,7 +102,7 @@ export default function ContratTab({
       document.body.removeChild(a);
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de la génération du PDF");
+      notify("Erreur lors de la génération du PDF");
     } finally {
       setLoading(false);
     }
@@ -142,10 +143,10 @@ export default function ContratTab({
         throw new Error(data?.error || "Erreur lors de l'envoi");
       }
 
-      alert("Contrat envoyé par email avec succès");
+      notify("Contrat envoyé par email avec succès");
     } catch (error) {
       console.error("Erreur envoi email contrat:", error);
-      alert("Erreur lors de l'envoi de l'email");
+      notify("Erreur lors de l'envoi de l'email");
     }
   };
 

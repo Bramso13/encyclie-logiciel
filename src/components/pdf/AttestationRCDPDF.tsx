@@ -5,52 +5,105 @@ import {
   Text,
   View,
   StyleSheet,
+  Image,
 } from "@react-pdf/renderer";
 import { Quote } from "@/lib/types";
 import { tableauTax } from "@/lib/tarificateurs/rcd";
+import { CABINET, CABINET_LEGAL_FOOTER } from "@/lib/cabinet";
 
-// Styles professionnels pour l'attestation
+const ENCYCLIE_ORANGE = "#F39200";
+const FOOTER_LEGAL = CABINET_LEGAL_FOOTER;
+
 const styles = StyleSheet.create({
   page: {
     flexDirection: "column",
     backgroundColor: "#FFFFFF",
-    padding: 40,
-    fontSize: 10,
-    lineHeight: 1.5,
+    paddingTop: 28,
+    paddingHorizontal: 36,
+    paddingBottom: 56,
+    fontSize: 9,
+    lineHeight: 1.45,
     fontFamily: "Helvetica",
+    color: "#111827",
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  logo: {
+    width: 86,
+    height: 42,
+    marginBottom: 8,
+    objectFit: "contain",
   },
   title: {
     fontSize: 14,
     fontWeight: "bold",
-    marginBottom: 15,
     textAlign: "center",
-    color: "#000000",
+    letterSpacing: 0.4,
+    color: "#111827",
+  },
+  subtitle: {
+    fontSize: 10,
+    textAlign: "center",
+    marginTop: 3,
+    color: "#374151",
+  },
+  headerRule: {
+    marginTop: 10,
+    height: 2,
+    width: "100%",
+    backgroundColor: ENCYCLIE_ORANGE,
+  },
+  clause: {
+    marginTop: 12,
+    marginBottom: 12,
+    fontSize: 8.5,
+    textAlign: "center",
+    fontStyle: "italic",
+    color: "#1f2937",
+  },
+  twoCols: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    gap: 12,
+  },
+  col: {
+    width: "48%",
+  },
+  blockTitle: {
+    fontSize: 10,
+    fontWeight: "bold",
+    marginBottom: 6,
+    color: ENCYCLIE_ORANGE,
+  },
+  field: {
+    flexDirection: "row",
+    marginBottom: 2,
+  },
+  fieldLabel: {
+    fontWeight: "bold",
+    marginRight: 4,
   },
   section: {
-    marginBottom: 15,
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
-    marginBottom: 8,
-    color: "#000000",
-    textDecoration: "underline",
-  },
-  subsectionTitle: {
-    fontSize: 11,
-    fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 6,
-    color: "#000000",
+    marginBottom: 5,
+    color: "#111827",
   },
   paragraph: {
-    fontSize: 10,
-    marginBottom: 8,
+    fontSize: 8.5,
+    marginBottom: 5,
     textAlign: "justify",
-    color: "#000000",
+  },
+  listItem: {
+    fontSize: 8.5,
+    marginBottom: 3,
+    paddingLeft: 8,
   },
   bold: {
     fontWeight: "bold",
@@ -59,56 +112,61 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   table: {
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: 6,
+    marginBottom: 8,
+    border: "1px solid #d1d5db",
   },
   tableRow: {
     flexDirection: "row",
-    borderBottom: "1px solid #000000",
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    borderBottom: "1px solid #e5e7eb",
   },
   tableHeader: {
-    backgroundColor: "#F3F4F6",
-    fontWeight: "bold",
-    fontSize: 9,
+    backgroundColor: "#FFF4E5",
   },
-  tableCell: {
+  th: {
     flex: 1,
-    fontSize: 9,
-    paddingHorizontal: 2,
-  },
-  tableCellCenter: {
+    padding: 5,
+    fontSize: 8,
+    fontWeight: "bold",
     textAlign: "center",
   },
-  infoField: {
-    flexDirection: "row",
-    marginBottom: 4,
-    fontSize: 10,
-  },
-  fieldLabel: {
-    fontWeight: "bold",
-    marginRight: 5,
-    minWidth: 120,
-  },
-  fieldValue: {
+  td: {
     flex: 1,
-  },
-  listItem: {
-    fontSize: 10,
-    marginBottom: 5,
-    paddingLeft: 10,
-  },
-  signatureSection: {
-    marginTop: 30,
-    fontSize: 10,
-  },
-  footer: {
-    marginTop: 20,
+    padding: 5,
     fontSize: 8,
-    color: "#666666",
+  },
+  tdCenter: {
+    textAlign: "center",
+  },
+  guaranteeRow: {
+    flexDirection: "row",
+    borderBottom: "1px solid #e5e7eb",
+  },
+  gCover: { width: "34%", padding: 4, fontSize: 7.5 },
+  gLimit: { width: "46%", padding: 4, fontSize: 7.5 },
+  gFran: { width: "20%", padding: 4, fontSize: 7.5, textAlign: "center" },
+  footer: {
+    position: "absolute",
+    bottom: 16,
+    left: 36,
+    right: 36,
+    borderTop: `1px solid ${ENCYCLIE_ORANGE}`,
+    paddingTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  footerLogo: {
+    width: 42,
+    height: 20,
+    objectFit: "contain",
+  },
+  footerText: {
+    flex: 1,
+    fontSize: 6.2,
+    color: "#6b7280",
     textAlign: "justify",
-    lineHeight: 1.3,
+    lineHeight: 1.25,
   },
 });
 
@@ -120,7 +178,22 @@ interface AttestationRCDPDFProps {
   attestationDate?: string;
   validityStartDate?: string;
   validityEndDate?: string;
+  baseUrl?: string;
 }
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return "xx/xx/xxxx";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+};
 
 const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
   quote,
@@ -130,23 +203,9 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
   attestationDate,
   validityStartDate,
   validityEndDate,
+  baseUrl,
 }) => {
-  // Fonction pour formater la date
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "xx/xx/xxxx";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  // Date actuelle si non fournie
+  const logoSrc = `${baseUrl ? baseUrl : ""}/couleur_1.png`;
   const today = new Date().toLocaleDateString("fr-FR", {
     day: "2-digit",
     month: "2-digit",
@@ -167,24 +226,22 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
   const contractStartDate = startDate
     ? formatDate(startDate)
     : quote?.formData?.dateDeffet
-    ? formatDate(quote.formData.dateDeffet)
-    : "xx/xx/xxxx";
+      ? formatDate(quote.formData.dateDeffet)
+      : "xx/xx/xxxx";
 
-  // Récupérer les activités garanties
   const activities = quote?.formData?.activities || [];
   const activitiesList = activities
-    .map((activity: any) => {
+    .map((activity: { code?: string }) => {
       const taxItem = tableauTax.find(
-        (tax) => tax.code.toString() === activity.code?.toString()
+        (tax) => tax.code.toString() === activity.code?.toString(),
       );
       return {
         code: activity.code || "",
         label: taxItem?.title || "",
       };
     })
-    .filter((act: any) => act.code && act.label);
+    .filter((act: { code: string; label: string }) => act.code && act.label);
 
-  // Données de l'entreprise
   const companyName =
     quote?.formData?.companyName || quote?.companyData?.companyName || "";
   const legalForm =
@@ -197,138 +254,162 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
   const siren = quote?.formData?.siret
     ? quote.formData.siret.substring(0, 9)
     : quote?.companyData?.siret
-    ? quote.companyData.siret.substring(0, 9)
-    : "";
+      ? quote.companyData.siret.substring(0, 9)
+      : "";
+
+  const broker = quote?.broker;
+  const brokerCabinet = broker?.companyName || broker?.name || "";
+  const brokerAddress = broker?.address || "";
+  const brokerPhone = broker?.phone || "";
+  const brokerEmail = broker?.email || "";
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* En-tête - Clause de suspension */}
         <View style={styles.header}>
-          <Text style={[styles.paragraph, styles.bold]}>
-            Conformément aux dispositions du présent contrat, il est convenu
-            qu'en cas de non-paiement de la prime d'assurance à(aux)
-            échéance(s) définie(s), les présentes garanties seront suspendues,
-            dans les conditions prévues à l'article L113-3 du Code des
-            assurances.
+          <Image src={logoSrc} style={styles.logo} />
+          <Text style={styles.title}>ATTESTATION D'ASSURANCE</Text>
+          <Text style={styles.subtitle}>
+            Assurance de Responsabilité Civile Professionnelle et Décennale
           </Text>
+          <View style={styles.headerRule} />
         </View>
 
-        {/* Informations du souscripteur */}
-        <View style={styles.section}>
-          <Text style={styles.subsectionTitle}>Le souscripteur</Text>
-          <View style={styles.infoField}>
-            <Text style={styles.fieldLabel}>Forme Juridique :</Text>
-            <Text style={styles.fieldValue}>{legalForm || "__________"}</Text>
+        <Text style={styles.clause}>
+          Conformément aux dispositions du présent contrat, il est convenu
+          qu'en cas de non-paiement de la prime d'assurance à(aux)
+          échéance(s) définie(s), les présentes garanties seront suspendues,
+          dans les conditions prévues à l'article L113-3 du Code des
+          assurances.
+        </Text>
+
+        <View style={styles.twoCols}>
+          <View style={styles.col}>
+            <Text style={styles.blockTitle}>Le souscripteur :</Text>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Forme Juridique :</Text>
+              <Text>{legalForm || "__________"}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Nom commercial :</Text>
+              <Text>{companyName || "__________"}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Rue :</Text>
+              <Text>{address || "__________"}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>CP Ville :</Text>
+              <Text>
+                {postalCode && city ? `${postalCode} ${city}` : "__________"}
+              </Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>N° Siren :</Text>
+              <Text>{siren || "__________"}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Numéro de contrat :</Text>
+              <Text>{contractNumber}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Date d'effet du contrat :</Text>
+              <Text>{contractStartDate}</Text>
+            </View>
           </View>
-          <View style={styles.infoField}>
-            <Text style={styles.fieldLabel}>Société :</Text>
-            <Text style={styles.fieldValue}>{companyName || "__________"}</Text>
-          </View>
-          <View style={styles.infoField}>
-            <Text style={styles.fieldLabel}>Rue :</Text>
-            <Text style={styles.fieldValue}>{address || "__________"}</Text>
-          </View>
-          <View style={styles.infoField}>
-            <Text style={styles.fieldLabel}>CP Ville :</Text>
-            <Text style={styles.fieldValue}>
-              {postalCode && city ? `${postalCode} ${city}` : "__________"}
-            </Text>
-          </View>
-          <View style={styles.infoField}>
-            <Text style={styles.fieldLabel}>N° Siren :</Text>
-            <Text style={styles.fieldValue}>{siren || "__________"}</Text>
-          </View>
-          <View style={styles.infoField}>
-            <Text style={styles.fieldLabel}>Numéro de contrat :</Text>
-            <Text style={styles.fieldValue}>{contractNumber}</Text>
-          </View>
-          <View style={styles.infoField}>
-            <Text style={styles.fieldLabel}>Date d'effet du contrat :</Text>
-            <Text style={styles.fieldValue}>{contractStartDate}</Text>
+          <View style={styles.col}>
+            <Text style={styles.blockTitle}>Votre intermédiaire :</Text>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>NOM DU CABINET :</Text>
+              <Text>{brokerCabinet || "ENCYCLIE CONSTRUCTION"}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>ADRESSE :</Text>
+              <Text>
+                {brokerAddress || CABINET.addressLine}
+              </Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>CP VILLE :</Text>
+              <Text>{brokerAddress ? "" : "75002 Paris"}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Tél :</Text>
+              <Text>{brokerPhone || "—"}</Text>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Email :</Text>
+              <Text>{brokerEmail || "—"}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Les assureurs */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Les assureurs</Text>
-          <Text style={[styles.paragraph, styles.listItem]}>
-            <Text style={styles.bold}>• FIDELIDADE :</Text> FIDELIDADE,
-            succursale française de la société FIDELIDADE Companhia de Seguros,
-            S.A, société anonyme de droit portugais, au capital de 150 000 000
-            euros, dont le siège social est situé Av. da Boavista, 1269-076
-            Lisboa, Portugal, immatriculée au Registre du commerce de Lisbonne
-            sous le numéro 500 276 280, établissement principal en France
-            situé 12-14, rond-point des Champs-Élysées 75008 Paris, immatriculée
-            au RCS Paris sous le numéro 422 443 128.
+          <Text style={styles.sectionTitle}>L'assureur</Text>
+          <Text style={styles.paragraph}>
+            FIDELIDADE, Succursale française de la société FIDELIDADE Companhia
+            de Seguros, S.A, Société Anonyme au capital de 509 263 524 Euros,
+            dont le siège social est sis à Lisbonne, Largo de Calhariz, 30
+            1249-01 Lisboa - Portugal, prise en sa succursale française sise :
+            Tour Aurore – 19ème étage, 18, place des Reflets – CS 90462 – 92976
+            Paris La Défense Cedex, immatriculée au Registre du Commerce et des
+            Sociétés de Nanterre, sous le numéro 413 175 191 et soumise au
+            contrôle de « l'Autoridade de Supervisão de Seguros e Fundos de
+            Pensões (ASF) ».
           </Text>
-          <Text style={[styles.paragraph, styles.listItem]}>
-            <Text style={styles.bold}>• Cfdp Assurances :</Text> Cfdp
-            Assurances, société anonyme au capital de 3 000 000 euros, dont le
-            siège social est situé 43 avenue du Général de Gaulle 69006 Lyon,
-            immatriculée au RCS Lyon sous le numéro 414 233 723, régie par le
-            code des assurances
-          </Text>
-          <Text style={[styles.paragraph, { marginTop: 10 }]}>
+          <Text style={[styles.paragraph, { marginTop: 6 }]}>
             Le {attestationDateFormatted},
           </Text>
           <Text style={styles.paragraph}>
-            <Text style={styles.bold}>Les assureurs attestent</Text> que la
-            personne dont l'identité est mentionnée ci-dessus est titulaire du
-            contrat d'Assurance responsabilité civile professionnelle et
-            décennale n° {contractNumber}, pour la période du{" "}
-            {startDateFormatted} au {endDateFormatted}.
+            L'assureur atteste que la personne dont l'identité est mentionnée
+            ci-dessus est titulaire du contrat d'Assurance responsabilité
+            civile professionnelle et décennale n° {contractNumber}, pour la
+            période du {startDateFormatted} au {endDateFormatted}.
           </Text>
           <Text style={styles.paragraph}>
             La présente attestation est valable du {validityStartFormatted}{" "}
             jusqu'au {validityEndFormatted} et ne constitue qu'une présomption
-            de garantie à la charge des assureurs. Elle ne peut engager les
-            assureurs au-delà des clauses et conditions du contrat auxquelles
-            elle se réfère
+            de garantie à la charge de l'Assureur. Elle ne peut engager
+            l'assureur au-delà des clauses et conditions du contrat auxquelles
+            elle se réfère.
           </Text>
         </View>
 
-        {/* Activités garanties */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activités garanties</Text>
           <Text style={[styles.paragraph, styles.italic]}>
             Activités réalisées dans le domaine du bâtiment suivant la
-            Nomenclature des activités souscrites avec Encyclie BAT
+            Nomenclature des activités souscrites avec Encyclie BAT (Se
+            reporter à l'annexe 1 intégrée à la présente attestation)
           </Text>
-          <Text style={[styles.paragraph, styles.italic]}>
-            (Se reporter à l'annexe 1 intégrée à la présente attestation)
+          <Text style={styles.paragraph}>
+            Vous êtes garantis exclusivement pour l'activité professionnelle ou
+            mission suivante :
           </Text>
-
-          <Text style={[styles.subsectionTitle, { marginTop: 10 }]}>
-            Vous êtes garantis exclusivement pour les activités professionnelles
-            ou missions suivantes :
-          </Text>
-
           {activitiesList.length > 0 ? (
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                <Text style={[styles.tableCell, styles.tableCellCenter]}>
+                <Text style={styles.th}>
                   N° d'activité, selon nomenclature, en annexe
                 </Text>
-                <Text style={[styles.tableCell, styles.tableCellCenter]}>
-                  Libellé(s)
-                </Text>
+                <Text style={styles.th}>Libellé(s)</Text>
               </View>
-              {activitiesList.map((activity: any, index: number) => (
-                <View key={index} style={styles.tableRow}>
-                  <Text style={[styles.tableCell, styles.tableCellCenter]}>
-                    {activity.code}
-                  </Text>
-                  <Text style={styles.tableCell}>{activity.label}</Text>
-                </View>
-              ))}
+              {activitiesList.map(
+                (activity: { code: string; label: string }, index: number) => (
+                  <View key={index} style={styles.tableRow}>
+                    <Text style={[styles.td, styles.tdCenter]}>
+                      {activity.code}
+                    </Text>
+                    <Text style={styles.td}>{activity.label}</Text>
+                  </View>
+                ),
+              )}
             </View>
           ) : (
             <Text style={styles.paragraph}>
               (Aucune activité spécifiée dans le contrat)
             </Text>
           )}
-
           <Text style={styles.paragraph}>
             Les travaux accessoires ou complémentaires compris le cas échéant
             dans la définition des activités ne doivent en aucun cas faire
@@ -338,14 +419,11 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
             </Text>
           </Text>
           <Text style={styles.paragraph}>
-            <Text style={styles.bold}>
-              Les activités sous-traitées sont celles qui sont garanties par le
-              présent contrat.
-            </Text>
+            Les activités sous-traitées sont celles qui sont garanties par le
+            présent contrat.
           </Text>
         </View>
 
-        {/* Conditions d'application */}
         <View style={styles.section}>
           <Text style={styles.paragraph}>
             Les garanties objet de la présente attestation s'appliquent
@@ -369,77 +447,30 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
             y compris honoraires déclaré par le maître d'ouvrage, n'est pas
             supérieur :
           </Text>
-          <Text style={[styles.listItem, { paddingLeft: 20 }]}>
-            - À la somme de{" "}
-            <Text style={styles.bold}>15 000 000 €</Text> pour les ouvrages
-            soumis à obligation d'assurance
+          <Text style={[styles.listItem, { paddingLeft: 18 }]}>
+            • À la somme de 15 000 000 € pour les ouvrages soumis à obligation
+            d'assurance
           </Text>
-          <Text style={[styles.listItem, { paddingLeft: 20 }]}>
-            - À la somme de <Text style={styles.bold}>1 000 000 €</Text> pour
-            les ouvrages non soumis à obligation d'assurance
-          </Text>
-          <Text style={styles.listItem}>
-            • <Text style={styles.bold}>
-              A l'exclusion des Ouvrages exceptionnels et/ou inusuels.
-            </Text>
+          <Text style={[styles.listItem, { paddingLeft: 18 }]}>
+            • À la somme de 1 000 000 € pour les ouvrages non soumis à
+            obligation d'assurance
           </Text>
           <Text style={styles.listItem}>
-            • Aux travaux, produits et procédés de construction suivante :
-          </Text>
-          <Text style={styles.paragraph}>
-            Travaux de construction répondant à une norme homologuée (NF DTU ou NF
-            EN), à des règles Professionnelles acceptées par la C2P1 ou à des
-            recommandations professionnelles du programme RAGE 2012 non mises en
-            observation par la C2P2
-          </Text>
-          <Text style={styles.paragraph}>
-            Pour des procédés ou produits faisant l'objet au jour de la
-            passation du marché :
+            • A l'exclusion des Ouvrages exceptionnels et/ou inusuels.
           </Text>
           <Text style={styles.listItem}>
-            • D'un Agrément Technique Européen (ATE) en cours de validité ou d'une
-            Evaluation Technique Européenne (ETE) bénéficiant d'un Document
-            Technique d'Application (DTA), ou d'un Avis Technique (ATec),
-            valides et non mis en observation par la C2P3
-          </Text>
-          <Text style={styles.listItem}>
-            • D'une Appréciation Technique d'Expérimentation (ATEx) avec avis
-            favorable,
-          </Text>
-          <Text style={styles.listItem}>
-            • D'un Pass'innovation « vert » en cours de validité ».
-          </Text>
-          <Text style={[styles.paragraph, styles.italic, { fontSize: 9 }]}>
-            1. Les règles professionnelles acceptées par la C2P (« Commission
-            Prévention Produits mis en œuvre » de l'Agence Qualité Construction)
-            sont listées à l'annexe 2 de la publication semestrielle de la C2P
-            et sont consultables sur le site de l'Agence Qualité Construction
-            (www.qualiteconstruction.com)
-          </Text>
-          <Text style={[styles.paragraph, styles.italic, { fontSize: 9 }]}>
-            2. Les recommandations professionnelles RAGE 2012 (« Règles de
-            l'Art Grenelle Environnement 2012 ») sont consultables sur le site
-            internet du programme RAGE
-            (reglesdelart-grenelle-environnement-2012.fr).
-          </Text>
-          <Text style={[styles.paragraph, styles.italic, { fontSize: 9 }]}>
-            3. Les communiqués de la C2P sont accessibles sur le site de
-            l'AQC (qualiteconstruction.com).
-          </Text>
-          <Text style={[styles.paragraph, styles.bold, { marginTop: 10 }]}>
-            Dans le cas où les travaux réalisés ne répondent pas aux
-            caractéristiques énoncées ci-dessus, l'assuré en informe l'assureur.
+            • pour des travaux de construction de technique courante, c'est-à-dire
+            répondant à une norme homologuée (NF DTU ou NF EN) ou à des règles
+            professionnelles acceptées par la C2P, ou mettant en œuvre des
+            procédés ou produits bénéficiant d'une ETE / DTA / ATec valides et
+            non mis en observation par la C2P, ou d'une ATEx avec avis favorable.
           </Text>
         </View>
 
-        {/* SECTION 1 : Responsabilité Civile Décennale */}
-        <View style={styles.section}>
+        <View style={styles.section} wrap={false}>
           <Text style={styles.sectionTitle}>
             SECTION 1 : Responsabilité Civile Décennale des ouvrages soumis à
             obligation d'assurance
-          </Text>
-          <Text style={[styles.subsectionTitle, { marginTop: 8 }]}>
-            Nature de la garantie :
           </Text>
           <Text style={styles.paragraph}>
             Le contrat garantit la responsabilité décennale de l'assuré visée
@@ -449,52 +480,17 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
             décennale, et pour des travaux de construction d'ouvrages qui y sont
             soumis, au regard de l'article L. 243-1-1 du même code. La garantie
             couvre les travaux de réparation, notamment en cas de remplacement
-            des ouvrages, qui comprennent également les travaux de démolition,
-            déblaiement, dépose ou de démontage éventuellement nécessaires.
-          </Text>
-          <Text style={[styles.subsectionTitle, { marginTop: 8 }]}>
-            Montant de la garantie :
+            des ouvrages.
           </Text>
           <Text style={styles.paragraph}>
             En habitation : le montant de la garantie couvre le coût des travaux
-            de réparation des dommages à l'ouvrage. Hors habitation : le montant
-            de la garantie couvre le coût des travaux de réparation des dommages
-            à l'ouvrage dans la limite du coût total de construction déclaré par
-            le maître d'ouvrage et sans pouvoir être supérieur au montant prévu
-            au I de l'article R. 243-3 du code des assurances. Lorsqu'un contrat
-            collectif de responsabilité décennale est souscrit au bénéfice de
-            l'assuré, le montant de la garantie est égal au montant de la
-            franchise absolue stipulée par ledit contrat collectif. Les frais de
-            défense sont inclus dans les présents montants de garantie.
-          </Text>
-          <Text style={[styles.subsectionTitle, { marginTop: 8 }]}>
-            Durée et maintien de la garantie :
-          </Text>
-          <Text style={styles.paragraph}>
-            Le contrat couvre, pour la durée de la responsabilité pesant sur
-            l'assuré en vertu des articles 1792 et suivants du code civil, les
-            travaux ayant fait l'objet d'une ouverture de chantier pendant la
-            période de validité fixée aux conditions particulières. La garantie
-            afférente à ces travaux est maintenue dans tous les cas pour la même
-            durée.
-          </Text>
-          <Text style={[styles.paragraph, styles.bold, { marginTop: 10 }]}>
-            La présente attestation ne peut engager l'assureur au-delà des
-            clauses et conditions du contrat auquel elle se réfère.
-          </Text>
-          <Text style={styles.paragraph}>
-            Sa responsabilité de sous-traitant couvre le paiement des travaux de
-            réparation des dommages de la nature de ceux visés aux articles 1792
-            et 1792-2 du Code civil et apparus après réception, lorsque la
-            responsabilité de l'assuré est engagée du fait des travaux de
-            construction d'ouvrages soumis à l'obligation d'assurance, qu'il a
-            réalisés en qualité de sous-traitant. Cette garantie est accordée,
-            conformément à l'article 1792-4-2 du Code civil, pour une durée ferme
-            de dix ans à compter de la réception.
+            de réparation des dommages à l'ouvrage. Hors habitation : dans la
+            limite du coût total de construction déclaré par le maître d'ouvrage
+            et sans pouvoir être supérieur au montant prévu au I de l'article R.
+            243-3 du code des assurances.
           </Text>
         </View>
 
-        {/* SECTION 2 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             SECTION 2 : Responsabilité Civile Décennale des ouvrages non soumis
@@ -502,17 +498,17 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
           </Text>
           <Text style={styles.paragraph}>
             Dans le cadre de la garantie de responsabilité décennale pour les
-            ouvrages non soumis à obligation d'assurance conformément à l'article
-            L 243-1-1 du Code des Assurances, ce contrat couvre les dommages
-            portant atteinte à la solidité de l'ouvrage. Les interventions de
-            l'assuré sur des chantiers de construction non soumis à l'obligation
-            d'assurance décennale dont le coût global des travaux tous corps
-            d'état HT y compris maîtrise d'œuvre, n'est pas supérieur à 1 000 000
-            €. Cette garantie est gérée selon le régime de la répartition.
+            ouvrages non soumis à obligation d'assurance conformément à
+            l'article L 243-1-1 du Code des Assurances, ce contrat couvre les
+            dommages portant atteinte à la solidité de l'ouvrage. Les
+            interventions de l'assuré sur des chantiers de construction non
+            soumis à l'obligation d'assurance décennale dont le coût global des
+            travaux tous corps d'état HT y compris maîtrise d'œuvre, n'est pas
+            supérieur à 1 000 000 €. Cette garantie est gérée selon le régime
+            de la répartition.
           </Text>
         </View>
 
-        {/* SECTION 3 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             SECTION 3 : Responsabilité Civile hors responsabilité décennale
@@ -520,42 +516,106 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
           <Text style={styles.paragraph}>
             Pour les marchés d'entreprise, en tant que locateur d'ouvrage ou
             sous-traitant, titulaire d'un marché de travaux que l'assuré exécute
-            lui-même ou avec son personnel, et pour lequel il peut accessoirement
-            faire appel à des sous-traitants.
-          </Text>
-          <Text style={styles.paragraph}>
-            Les garanties de Responsabilité Civile s'appliquent aux réclamations
-            formulées à l'encontre de l'Assuré pendant la Période de validité de
-            la garantie, selon les dispositions de l'article L 124-5 du Code
-            des Assurances.
+            lui-même ou avec son personnel, et pour lequel il peut
+            accessoirement faire appel à des sous-traitants. Les garanties de
+            Responsabilité Civile s'appliquent aux réclamations formulées à
+            l'encontre de l'Assuré pendant la Période de validité de la
+            garantie, selon les dispositions de l'article L 124-5 du Code des
+            Assurances.
           </Text>
         </View>
 
-        {/* TABLEAU DES MONTANTS DE GARANTIE */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>TABLEAU DES MONTANTS DE GARANTIE</Text>
-          <Text style={[styles.paragraph, { fontSize: 8, marginBottom: 5 }]}>
-            (Les montants détaillés sont disponibles dans les conditions
-            particulières du contrat)
+          <Text style={styles.sectionTitle}>
+            Tableau des montants de garantie
+          </Text>
+          <View style={styles.table}>
+            <View style={[styles.guaranteeRow, styles.tableHeader]}>
+              <Text style={styles.gCover}>COUVERTURE</Text>
+              <Text style={styles.gLimit}>LIMITES</Text>
+              <Text style={styles.gFran}>FRANCHISE</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>RC AVANT/APRÈS RÉCEPTION</Text>
+              <Text style={styles.gLimit}>2 000 000€ par année</Text>
+              <Text style={styles.gFran}>1 000€</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>DOMMAGES MATÉRIELS</Text>
+              <Text style={styles.gLimit}>1 500 000€ par année</Text>
+              <Text style={styles.gFran}>1 000€</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>DOMMAGES IMMATÉRIELS</Text>
+              <Text style={styles.gLimit}>
+                200 000€ par sinistre / 400 000€ par année
+              </Text>
+              <Text style={styles.gFran}>1 000€</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>ATTEINTES À L'ENVIRONNEMENT</Text>
+              <Text style={styles.gLimit}>
+                200 000€ par sinistre / 400 000€ par année
+              </Text>
+              <Text style={styles.gFran}>1 000€</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>FAUTES INEXCUSABLES</Text>
+              <Text style={styles.gLimit}>750 000€ par année</Text>
+              <Text style={styles.gFran}>1 000€</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>
+                R.C DECENNALE (ouvrages soumis à obligation)
+              </Text>
+              <Text style={styles.gLimit}>
+                Habitation : coût des travaux de réparation. Hors habitation :
+                dans la limite du coût déclaré, sans dépasser R. 243-3.
+              </Text>
+              <Text style={styles.gFran}>1 000€ (*)</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>R.C DECENNALE sous-traitant</Text>
+              <Text style={styles.gLimit}>2 000 000€</Text>
+              <Text style={styles.gFran}>1 000€ (*)</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>
+                R.C DECENNALE ouvrages non soumis
+              </Text>
+              <Text style={styles.gLimit}>
+                500 000€ par sinistre / 800 000€ par année
+              </Text>
+              <Text style={styles.gFran}>1 000€ (*)</Text>
+            </View>
+            <View style={styles.guaranteeRow}>
+              <Text style={styles.gCover}>
+                RC CONNEXES (bon fonctionnement, DIC, existants, intermédiaires)
+              </Text>
+              <Text style={styles.gLimit}>
+                600 000€ montant unique, dont 100 000€ au titre des dommages
+                intermédiaires et DIC cumulés
+              </Text>
+              <Text style={styles.gFran}>1 000€ (*)</Text>
+            </View>
+          </View>
+          <Text style={[styles.paragraph, { fontSize: 7.5 }]}>
+            (*) : Franchise doublée en cas de sous-traitance à une entreprise
+            non assurée en Responsabilité Civile Décennale pour ces travaux.
           </Text>
         </View>
 
-        {/* CLAUSES SPECIALES */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>CLAUSES SPECIALES :</Text>
+          <Text style={styles.sectionTitle}>Clauses spéciales :</Text>
           <Text style={styles.listItem}>
-            • Il est précisé que, conformément aux stipulations des présentes
-            Conditions particulières et conformément aux déclarations faites par
-            le souscripteur sur le questionnaire préalable d'assurance, seules
-            les activités susmentionnées sont garanties par le présent contrat à
-            l'exclusion de toutes autres activités même si elles sont mentionnées
-            au Kbis ou sur le papier en tête de l'assuré.
+            • Conformément aux déclarations faites par le souscripteur,
+            seules les activités susmentionnées sont garanties, à l'exclusion
+            de toutes autres même si elles figurent au Kbis.
           </Text>
           <Text style={styles.listItem}>
-            • Il est également précisé, que si l'assuré souhaite garantir, pour
-            son entreprise, d'autres activités que celles prévues au présent
-            contrat, ce dernier devra prévenir son intermédiaire afin de les
-            faire couvrir par une autre police d'assurance adaptée.
+            • Si l'assuré souhaite garantir d'autres activités, il devra
+            prévenir son intermédiaire afin de les faire couvrir par une autre
+            police adaptée.
           </Text>
           <Text style={styles.listItem}>
             • Le souscripteur ne souhaite pas être assuré par la garantie
@@ -564,42 +624,39 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
           </Text>
         </View>
 
-        {/* ENCYCLIE CONSTRUCTION */}
         <View style={styles.section}>
-          <Text style={[styles.subsectionTitle, { marginTop: 15 }]}>
-            ENCYCLIE CONSTRUCTION, 42 RUE NOTRE-DAME DES VICTOIRES 75002 PARIS
+          <Text style={[styles.paragraph, styles.bold]}>
+            ENCYCLIE CONSTRUCTION, {CABINET.fullAddress}
           </Text>
           <Text style={styles.paragraph}>
             Agissant pour le compte de l'assureur en vertu d'une convention de
             délégation de gestion.
           </Text>
           <Text style={styles.paragraph}>
-            <Text style={styles.bold}>Par la présente attestation</Text>,
-            l'Assureur s'engage, conformément au Code des Assurances, à couvrir
-            le risque et les garanties définis :
+            Par la présente attestation, l'Assureur s'engage, conformément au
+            Code des Assurances, à couvrir le risque et les garanties définis :
           </Text>
           <Text style={styles.listItem}>
-            • Aux dernières Conditions particulières en vigueur du contrat n°{" "}
-            <Text style={styles.bold}>{contractNumber}</Text>
+            ▪ Aux dernières Conditions particulières en vigueur du contrat n°{" "}
+            {contractNumber}
           </Text>
           <Text style={styles.listItem}>
-            • Aux Conditions Générales ENCYCLIE BAT-CG_FIDELIDADE_01052025
+            ▪ Aux Conditions Générales ENCYCLIE BAT-CG_FIDELIDADE_01052025
           </Text>
-          <Text style={[styles.paragraph, { marginTop: 10 }]}>
-            <Text style={styles.bold}>Avis au Preneur d'Assurance</Text> : Ce
-            contrat est soumis aux lois de la République Française.
+          <Text style={styles.paragraph}>
+            Avis au Preneur d'Assurance : Ce contrat est soumis aux lois de la
+            République Française.
           </Text>
+          <Text style={styles.paragraph}>
+            Fait à Paris, le {today}
+          </Text>
+          <Text style={styles.paragraph}>Pour l'assureur par délégation</Text>
+          <Text style={styles.bold}>Joshua Newoor, Président</Text>
         </View>
 
-        {/* Signature */}
-        <View style={styles.signatureSection}>
-          <Text style={styles.paragraph}>Fait à Paris, le {today}</Text>
-          <Text style={[styles.paragraph, { marginTop: 15 }]}>
-            Pour l'assureur par délégation
-          </Text>
-          <Text style={[styles.paragraph, { marginTop: 5 }]}>
-            Joshua Newoor, Président
-          </Text>
+        <View style={styles.footer} fixed>
+          <Image src={logoSrc} style={styles.footerLogo} />
+          <Text style={styles.footerText}>{FOOTER_LEGAL}</Text>
         </View>
       </Page>
     </Document>
@@ -607,11 +664,3 @@ const AttestationRCDPDF: React.FC<AttestationRCDPDFProps> = ({
 };
 
 export default AttestationRCDPDF;
-
-
-
-
-
-
-
-

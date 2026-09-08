@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
 import { useState, useEffect } from "react";
 import { Quote, CalculationResult, QuoteDocument } from "@/lib/types";
 import { useSession } from "@/lib/auth-client";
@@ -258,7 +259,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Erreur lors du téléchargement:", error);
-      alert("Erreur lors du téléchargement du document");
+      notify("Erreur lors du téléchargement du document");
     } finally {
       setDownloadingDocs((prev) => {
         const newSet = new Set(prev);
@@ -402,7 +403,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
   const handleSendOffer = async () => {
     if (selectedDocuments.size === 0) {
-      alert("Veuillez sélectionner au moins un document requis");
+      notify("Veuillez sélectionner au moins un document requis");
       return;
     }
 
@@ -482,10 +483,10 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
 
       setOfferSent(true);
       setOfferData(result.data);
-      alert("L'offre a été envoyée au courtier avec succès !");
+      notify("L'offre a été envoyée au courtier avec succès !");
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de l'envoi de l'offre");
+      notify("Erreur lors de l'envoi de l'offre");
     } finally {
       setSending(false);
     }
@@ -508,13 +509,13 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
       const result = await response.json();
 
       if (result.success) {
-        alert("Liste des documents sauvegardée !");
+        notify("Liste des documents sauvegardée !");
       } else {
         throw new Error(result.error || "Erreur lors de la sauvegarde");
       }
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de la sauvegarde");
+      notify("Erreur lors de la sauvegarde");
     }
   };
 
@@ -552,7 +553,7 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de la génération du PDF");
+      notify("Erreur lors de la génération du PDF");
     } finally {
       setGeneratingPdf(false);
     }

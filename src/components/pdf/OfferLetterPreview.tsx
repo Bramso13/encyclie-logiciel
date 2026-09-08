@@ -1,5 +1,6 @@
 import React from "react";
 import { Quote, FormData } from "@/lib/types";
+import { CABINET } from "@/lib/cabinet";
 
 interface OfferLetterPreviewProps {
   quote: Quote;
@@ -1132,8 +1133,8 @@ const OfferLetterPreview = ({ quote, formData }: OfferLetterPreviewProps) => {
             et d'opposition pour des motifs légitimes (incluant le
             traitement/profilage automatisé), de limitation du traitement et de
             décider du sort de leurs données après leur décès. Pour exercer ces
-            droits, contactez : ENCYCLIE DONNÉES PERSONNELLES, 42 RUE NOTRE-DAME
-            DES VICTOIRES 75002 PARIS, Email:
+            droits, contactez : ENCYCLIE DONNÉES PERSONNELLES, {CABINET.addressLine.toUpperCase()}{" "}
+            {CABINET.postalCityCaps}, Email:
             souscriptionRCD@encyclie-construction.com
           </p>
         </div>

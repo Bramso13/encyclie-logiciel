@@ -9,6 +9,7 @@ import {
   Image,
 } from "@react-pdf/renderer";
 import { getTaxeByRegion, tableauTax } from "@/lib/tarificateurs/rcd";
+import { CABINET_DISTRIBUTOR_LINE } from "@/lib/cabinet";
 
 // Définir les styles
 const styles = StyleSheet.create({
@@ -297,9 +298,7 @@ const LetterOfIntentPDF: React.FC<LetterOfIntentPDFProps> = ({
         Distribué et géré par :
       </Text>
       <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
-        ENCYCLIE CONSTRUCTION – 42 Rue Notre-Dame des Victoire, 75002 PARIS -
-        SAS au capital de 1 000 € - SIREN 897 796 785 – RCS ST NAZAIRE – N°
-        ORIAS : 21 004 564 –
+        {CABINET_DISTRIBUTOR_LINE}
       </Text>
       <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
         www.orias.fr – Sous le contrôle de l'ACPR, Autorité de Contrôle

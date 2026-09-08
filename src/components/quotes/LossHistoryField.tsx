@@ -54,7 +54,7 @@ interface LossHistoryFieldProps {
                 <input
                   type="number"
                   min="2020"
-                  max="2025"
+                  max={new Date().getFullYear()}
                   value={entry.year}
                   onChange={(e) =>
                     updateEntry(index, "year", Number(e.target.value))

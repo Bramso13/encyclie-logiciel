@@ -73,7 +73,7 @@ const useUsersStore = create<UsersState>()(
       error: null,
       pagination: {
         page: 1,
-        limit: 10,
+        limit: 100,
         total: 0,
         totalPages: 0,
       },
@@ -162,13 +162,18 @@ const useUsersStore = create<UsersState>()(
       },
 
       fetchBrokers: async () => {
-        const { setLoading, setError } = get();
+        const { setLoading, setError, setPagination, pagination } = get();
 
         setLoading(true);
         setError(null);
 
         try {
-          const response = await fetch("/api/users?role=BROKER");
+          const params = new URLSearchParams({
+            role: "BROKER",
+            page: String(pagination.page || 1),
+            limit: String(pagination.limit || 100),
+          });
+          const response = await fetch(`/api/users?${params}`);
           const result = await response.json();
 
           if (!result.success) {
@@ -178,6 +183,9 @@ const useUsersStore = create<UsersState>()(
           }
 
           set({ brokers: result.data.users });
+          if (result.data.pagination) {
+            setPagination(result.data.pagination);
+          }
         } catch (error) {
           setError(error instanceof Error ? error.message : "Erreur inconnue");
         } finally {
@@ -192,7 +200,7 @@ const useUsersStore = create<UsersState>()(
         setError(null);
 
         try {
-          const response = await fetch("/api/users?role=UNDERWRITER");
+          const response = await fetch("/api/users?role=UNDERWRITER&limit=100");
           const result = await response.json();
 
           if (!result.success) {

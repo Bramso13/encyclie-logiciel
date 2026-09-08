@@ -7,6 +7,11 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
+import { CABINET_DISTRIBUTOR_LINE } from "@/lib/cabinet";
+import {
+  isAggravatedPremium,
+  premiumCallTitle,
+} from "@/lib/quotes/aggravation";
 
 // Définir les styles
 const styles = StyleSheet.create({
@@ -251,6 +256,14 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
 }) => {
   const currentDate = new Date().toLocaleDateString("fr-FR");
   const logoSrc = `${baseUrl ? baseUrl : ""}/couleur_1.png`;
+  const firstDue = calculationResult?.echeancier?.echeances?.[0]?.date;
+  const millesimeYear = firstDue
+    ? new Date(String(firstDue).includes("/") ? firstDue.split("/").reverse().join("-") : firstDue).getFullYear()
+    : new Date().getFullYear();
+  const callTitle = premiumCallTitle(
+    Number.isFinite(millesimeYear) ? millesimeYear : new Date().getFullYear(),
+    isAggravatedPremium(calculationResult),
+  );
   const PageFooter = () => (
     <View
       style={{
@@ -268,9 +281,7 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
         Distribué et géré par :
       </Text>
       <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
-        ENCYCLIE CONSTRUCTION – 42 Rue Notre-Dame des Victoire, 75002 PARIS -
-        SAS au capital de 1 000 € - SIREN 897 796 785 – RCS ST NAZAIRE – N°
-        ORIAS : 21 004 564 –
+        {CABINET_DISTRIBUTOR_LINE}
       </Text>
       <Text style={{ fontSize: 6, color: "#374151", marginBottom: 2 }}>
         www.orias.fr – Sous le contrôle de l'ACPR, Autorité de Contrôle
@@ -291,6 +302,16 @@ const PremiumCallPDF: React.FC<PremiumCallPDFProps> = ({
           <View style={{ marginBottom: 10 }}>
             <Image src={logoSrc} style={{ width: 90, height: 45 }} />
           </View>
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "bold",
+              marginBottom: 10,
+              color: "#1f2937",
+            }}
+          >
+            {callTitle}
+          </Text>
 
           {/* Références de l'assuré */}
           <View style={styles.insuredInfo}>

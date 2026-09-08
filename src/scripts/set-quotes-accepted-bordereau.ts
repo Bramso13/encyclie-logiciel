@@ -101,7 +101,12 @@ async function main() {
     console.log("  Modifications :", updates.join(", "));
   }
 
-  const schedule = q154.paymentSchedule;
+  const schedules = Array.isArray(q154.paymentSchedule)
+    ? q154.paymentSchedule
+    : q154.paymentSchedule
+      ? [q154.paymentSchedule]
+      : [];
+  const schedule = schedules[0];
   if (!schedule || !schedule.payments.length) {
     console.log(
       "  Pas d'échéancier ou échéancier vide → créer les échéances pour que la ref apparaisse.",

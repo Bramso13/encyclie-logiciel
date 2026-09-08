@@ -97,7 +97,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
         postalCode: (data as any).postalCode || prev.postalCode,
         enCreation: false,
         nombreAnneeAssuranceContinue: 0,
-        codeNaf: data.codeNaf || prev.codeNaf,
+        code_naf: data.codeNaf || prev.code_naf || "",
       }));
     } catch (e: any) {
       setPappersError(e?.message || "Entreprise non trouvée");
@@ -931,7 +931,7 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
             </button>
           </div>
           {isFetchingPappers && (
-            <p className="mt-1 text-sm text-gray-500">Recherche Pappers…</p>
+            <p className="mt-1 text-sm text-gray-500">Recherche de l'entreprise…</p>
           )}
           {errors.siret && (
             <p className="mt-1 text-sm text-red-600">{errors.siret}</p>
@@ -1034,6 +1034,23 @@ export default function QuoteForm({ onSuccess, onCancel }: QuoteFormProps) {
           {errors.city && (
             <p className="mt-1 text-sm text-red-600">{errors.city}</p>
           )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="code_naf"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Code NAF / APE
+          </label>
+          <input
+            type="text"
+            id="code_naf"
+            value={formData.code_naf || ""}
+            onChange={(e) => handleFormDataChange("code_naf", e.target.value)}
+            placeholder="Rempli via SIRET, saisissable si absent"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
         </div>
 
         <div>

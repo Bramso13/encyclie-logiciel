@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail, sendEmailWithAttachment } from "@/lib/nodemailer";
+import { CABINET } from "@/lib/cabinet";
 
 export async function POST(request: NextRequest) {
   try {
@@ -155,9 +156,9 @@ const getLetterIntentTemplate = (brokerName: string, companyName: string) => {
           </div>
           
           <div class="footer">
-            <p>📧 Email : contact@encyclie-construction.fr</p>
-            <p>Téléphone : 01 85 09 42 06</p>
-            <p>📍 42 Rue Notre-Dame des Victoires, 75002 PARIS, metro Bourse</p>
+            <p>📧 Email : ${CABINET.email}</p>
+            <p>Téléphone : ${CABINET.phone}</p>
+            <p>📍 ${CABINET.addressLine}, ${CABINET.postalCityCaps}</p>
             <p>© ${new Date().getFullYear()} Encyclie Construction. Tous droits réservés.</p>
           </div>
         </body>
@@ -191,9 +192,9 @@ Cordialement,
 L'équipe commerciale
 Encyclie Construction
 
-Email : contact@encyclie-construction.fr
-Téléphone : 01 85 09 42 06
-42 Rue Notre-Dame des Victoires, 75002 PARIS, metro Bourse
+Email : ${CABINET.email}
+Téléphone : ${CABINET.phone}
+${CABINET.addressLine}, ${CABINET.postalCityCaps}
     `,
   };
 };

@@ -44,13 +44,18 @@ export function applyCalculationChange(
       newResult.autres.protectionJuridiqueTTC +
       newResult.autres.fraisFractionnementPrimeHT;
 
+    const honoraire = Number(newResult.honoraireGestion) || 0;
     newResult.totalTTC =
-      newResult.primeTotal + newResult.fraisGestion + newResult.autres.total;
+      newResult.primeTotal +
+      newResult.fraisGestion +
+      newResult.autres.total +
+      honoraire;
 
     newResult.totalTTCN1 =
       newResult.primeTotalN1 +
       newResult.fraisGestionN1 +
-      (newResult.autresN1?.total ?? 0);
+      (newResult.autresN1?.total ?? 0) +
+      honoraire;
   } else if (sectionKey === "frais_taxes") {
     if (fieldKey === "fraisGestion") {
       newResult.fraisGestion = value;
@@ -67,8 +72,12 @@ export function applyCalculationChange(
       newResult.autres.protectionJuridiqueTTC +
       newResult.autres.fraisFractionnementPrimeHT;
 
+    const honoraire = Number(newResult.honoraireGestion) || 0;
     newResult.totalTTC =
-      newResult.primeTotal + newResult.fraisGestion + newResult.autres.total;
+      newResult.primeTotal +
+      newResult.fraisGestion +
+      newResult.autres.total +
+      honoraire;
   }
 
   try {
@@ -80,7 +89,9 @@ export function applyCalculationChange(
       rcd: newResult.primeTotal,
       frais: newResult.autres.fraisFractionnementPrimeHT,
       reprise: newResult.reprisePasseResult?.primeReprisePasseTTC ?? 0,
-      fraisGestion: newResult.fraisGestion,
+      fraisGestion:
+        (newResult.fraisGestion || 0) +
+        (Number(newResult.honoraireGestion) || 0),
       periodicite: quote.formData.periodicity as
         | "annuel"
         | "semestriel"
@@ -90,7 +101,9 @@ export function applyCalculationChange(
       totalTTCN1: newResult.totalTTCN1,
       rcdN1: newResult.primeTotalN1,
       fraisN1: newResult.autresN1.fraisFractionnementPrimeHT,
-      fraisGestionN1: newResult.fraisGestionN1,
+      fraisGestionN1:
+        (newResult.fraisGestionN1 || 0) +
+        (Number(newResult.honoraireGestion) || 0),
     });
   } catch (error) {
     console.error("Erreur recalcul échéancier:", error);

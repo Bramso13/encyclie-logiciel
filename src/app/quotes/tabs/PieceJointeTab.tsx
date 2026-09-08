@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
 import { useState, useEffect } from "react";
 import {
   Quote,
@@ -144,7 +145,7 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
       }
     } catch (error) {
       console.error("Erreur lors de l'upload:", error);
-      alert("Erreur lors de l'upload du document");
+      notify("Erreur lors de l'upload du document");
     } finally {
       setUploading(false);
       setUploadingRequestId(null);
@@ -183,7 +184,7 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
       }
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur lors de la création de la demande de document");
+      notify("Erreur lors de la création de la demande de document");
     }
   };
 
@@ -219,12 +220,12 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
       window.URL.revokeObjectURL(url);
 
       // Afficher un message de succès
-      alert(
+      notify(
         `Document "${quoteDocument.originalName}" téléchargé avec succès !`
       );
     } catch (error) {
       console.error("Erreur lors du téléchargement:", error);
-      alert("Erreur lors du téléchargement du document");
+      notify("Erreur lors du téléchargement du document");
     } finally {
       // Retirer le document de la liste des téléchargements en cours
       setDownloadingDocs((prev) => {
@@ -280,13 +281,13 @@ export default function PieceJointeTab({ quote }: PieceJointeTabProps) {
           delete newNotes[documentId];
           return newNotes;
         });
-        alert(`Document ${isVerified ? "accepté" : "refusé"} avec succès !`);
+        notify(`Document ${isVerified ? "accepté" : "refusé"} avec succès !`);
       } else {
         throw new Error(result.error || "Erreur lors de la validation");
       }
     } catch (error) {
       console.error("Erreur lors de la validation:", error);
-      alert("Erreur lors de la validation du document");
+      notify("Erreur lors de la validation du document");
     } finally {
       setValidatingDocs((prev) => {
         const newSet = new Set(prev);

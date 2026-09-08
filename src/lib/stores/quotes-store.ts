@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { calendarYear } from "@/lib/quotes/exercise-year-filter";
+import { useExerciseYearStore } from "@/lib/stores/exercise-year-store";
 
 export type QuoteDocument = {
   id: string;
@@ -67,6 +69,7 @@ interface QuotesState {
     productId?: string;
     dateFrom?: string;
     dateTo?: string;
+    search?: string;
   };
 
   // Actions
@@ -101,7 +104,7 @@ const useQuotesStore = create<QuotesState>()(
       error: null,
       pagination: {
         page: 1,
-        limit: 10,
+        limit: 25,
         total: 0,
         totalPages: 0,
       },
@@ -113,6 +116,10 @@ const useQuotesStore = create<QuotesState>()(
       addQuote: (quote) =>
         set((state) => ({
           quotes: [quote, ...state.quotes],
+          pagination: {
+            ...state.pagination,
+            total: state.pagination.total + 1,
+          },
         })),
       updateQuote: (id, updates) =>
         set((state) => ({
@@ -129,6 +136,10 @@ const useQuotesStore = create<QuotesState>()(
           quotes: state.quotes.filter((q) => q.id !== id),
           currentQuote:
             state.currentQuote?.id === id ? null : state.currentQuote,
+          pagination: {
+            ...state.pagination,
+            total: Math.max(0, state.pagination.total - 1),
+          },
         })),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
@@ -154,8 +165,16 @@ const useQuotesStore = create<QuotesState>()(
           const params = new URLSearchParams({
             page: pagination.page.toString(),
             limit: pagination.limit.toString(),
-            ...filters,
           });
+          Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== "") {
+              params.set(key, String(value));
+            }
+          });
+          const exerciseYear = useExerciseYearStore.getState().exerciseYear;
+          if (exerciseYear !== calendarYear()) {
+            params.set("exerciseYear", String(exerciseYear));
+          }
 
           const response = await fetch(`/api/quotes?${params}`);
           const result = await response.json();

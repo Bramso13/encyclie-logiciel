@@ -1,902 +1,902 @@
 {
   "src/app/admin/bordereaux/page.tsx": {
-    "mtime": 1780577244.345577,
-    "ast_hash": "2c30ee7a477a9b3211711c08b269db24",
+    "mtime": 1788790234.8968434,
+    "ast_hash": "e59c7eed95b955181219e3601d3d5076",
     "semantic_hash": ""
   },
   "src/app/admin/import-payments/page.tsx": {
-    "mtime": 1780668612.111757,
-    "ast_hash": "dd263ea52b19a2e0e67ea89140c67393",
+    "mtime": 1788790236.1852744,
+    "ast_hash": "7bf4b6e5583d6ad05d49ea70c5c2eeb8",
     "semantic_hash": ""
   },
   "src/app/api/admin/bordereaux/[id]/download/route.ts": {
     "mtime": 1780669305.0125327,
     "ast_hash": "a432d24b9f5f1b9de7df1f7bc439703c",
-    "semantic_hash": ""
+    "semantic_hash": "a432d24b9f5f1b9de7df1f7bc439703c"
   },
   "src/app/api/admin/bordereaux/export-v2/route.ts": {
-    "mtime": 1780669304.1917017,
-    "ast_hash": "47e730de5d79800184539cf38f5b64ab",
+    "mtime": 1781616414.7487717,
+    "ast_hash": "d4af317cf639bd07f160e09625b0fad8",
     "semantic_hash": ""
   },
   "src/app/api/admin/bordereaux/export/route.ts": {
     "mtime": 1780669307.9033372,
     "ast_hash": "4f693638ac618efba7f97b77ac4fdcba",
-    "semantic_hash": ""
+    "semantic_hash": "4f693638ac618efba7f97b77ac4fdcba"
   },
   "src/app/api/admin/bordereaux/history/route.ts": {
     "mtime": 1771496199.658792,
     "ast_hash": "1c76ab4a9844548eb36fde86ec747200",
-    "semantic_hash": ""
+    "semantic_hash": "1c76ab4a9844548eb36fde86ec747200"
   },
   "src/app/api/admin/bordereaux/preview-v2/route.ts": {
     "mtime": 1771929893.4222982,
     "ast_hash": "b1a51dd2854cb3b06608ed6520cce2c5",
-    "semantic_hash": ""
+    "semantic_hash": "b1a51dd2854cb3b06608ed6520cce2c5"
   },
   "src/app/api/admin/bordereaux/preview/route.ts": {
     "mtime": 1771496199.658683,
     "ast_hash": "d6901b0c9cf0a35443f55066b19b6177",
-    "semantic_hash": ""
+    "semantic_hash": "d6901b0c9cf0a35443f55066b19b6177"
   },
   "src/app/api/admin/brokers/route.ts": {
     "mtime": 1769805635.4867432,
     "ast_hash": "456692777044e593b268e17dc32d0a8f",
-    "semantic_hash": ""
+    "semantic_hash": "456692777044e593b268e17dc32d0a8f"
   },
   "src/app/api/admin/ecarts-montants/[quoteId]/route.ts": {
     "mtime": 1774102647.5610282,
     "ast_hash": "1abf46928bddc260ccd611963795463a",
-    "semantic_hash": ""
+    "semantic_hash": "1abf46928bddc260ccd611963795463a"
   },
   "src/app/api/admin/ecarts-montants/route.ts": {
     "mtime": 1774102647.5630615,
     "ast_hash": "e076e149dcb7077fa3ef1bebc0e2e277",
-    "semantic_hash": ""
+    "semantic_hash": "e076e149dcb7077fa3ef1bebc0e2e277"
   },
   "src/app/api/admin/import-payments/route.ts": {
     "mtime": 1780668592.8976216,
     "ast_hash": "da3cb6be9c211a23cfb012650f61682a",
-    "semantic_hash": ""
+    "semantic_hash": "da3cb6be9c211a23cfb012650f61682a"
   },
   "src/app/api/admin/payments/reset/route.ts": {
     "mtime": 1780587137.170617,
     "ast_hash": "9d09e30863a9329b50318b5a530fe611",
-    "semantic_hash": ""
+    "semantic_hash": "9d09e30863a9329b50318b5a530fe611"
   },
   "src/app/api/admin/rectifier-montants/route.ts": {
     "mtime": 1771420299.6299622,
     "ast_hash": "cff0ad875a0746b76b5ee9b724fd2c8f",
-    "semantic_hash": ""
+    "semantic_hash": "cff0ad875a0746b76b5ee9b724fd2c8f"
   },
   "src/app/api/admin/run-echeancier-tests/route.ts": {
     "mtime": 1774102647.5610602,
     "ast_hash": "04e8304b8347920a29736f7e4e6a7b09",
-    "semantic_hash": ""
+    "semantic_hash": "04e8304b8347920a29736f7e4e6a7b09"
   },
   "src/app/api/auth/[...all]/route.ts": {
     "mtime": 1756929961.0514686,
     "ast_hash": "c22cf1dbf82088f479fbde2d86a2be59",
-    "semantic_hash": ""
+    "semantic_hash": "c22cf1dbf82088f479fbde2d86a2be59"
   },
   "src/app/api/auth/complete-broker-setup/route.ts": {
     "mtime": 1756929961.05158,
     "ast_hash": "60988ef40c248f5b03468b9644204a98",
-    "semantic_hash": ""
+    "semantic_hash": "60988ef40c248f5b03468b9644204a98"
   },
   "src/app/api/auth/send-password-reset-email/route.ts": {
     "mtime": 1770378569.000543,
     "ast_hash": "ad5763e6832683d7adde4d2c09197e92",
-    "semantic_hash": ""
+    "semantic_hash": "ad5763e6832683d7adde4d2c09197e92"
   },
   "src/app/api/auth/verify-invitation-token/route.ts": {
     "mtime": 1756929961.0517092,
     "ast_hash": "683f7fe670d90e5730a2fd1821d47ca5",
-    "semantic_hash": ""
+    "semantic_hash": "683f7fe670d90e5730a2fd1821d47ca5"
   },
   "src/app/api/brokers/code/route.ts": {
     "mtime": 1759336219.0149667,
     "ast_hash": "748bed45cebbcb2ee413f00f39d9fd33",
-    "semantic_hash": ""
+    "semantic_hash": "748bed45cebbcb2ee413f00f39d9fd33"
   },
   "src/app/api/brokers/info/route.ts": {
     "mtime": 1763054165.6751273,
     "ast_hash": "75129554475ca2b8525bc30e668eb979",
-    "semantic_hash": ""
+    "semantic_hash": "75129554475ca2b8525bc30e668eb979"
   },
   "src/app/api/brokers/route.ts": {
     "mtime": 1756929961.0518885,
     "ast_hash": "13ea7c5a369871ab297e511cf0c5ef6a",
-    "semantic_hash": ""
+    "semantic_hash": "13ea7c5a369871ab297e511cf0c5ef6a"
   },
   "src/app/api/email/invite-broker/route.ts": {
     "mtime": 1760024497.6686444,
     "ast_hash": "e5cafc5bf751a2b0d345b72c7448c8ab",
-    "semantic_hash": ""
+    "semantic_hash": "e5cafc5bf751a2b0d345b72c7448c8ab"
   },
   "src/app/api/email/send-attestation/route.ts": {
-    "mtime": 1764673438.4139562,
-    "ast_hash": "2acc30e6c537239ac29be92cd48b3a43",
+    "mtime": 1788867624.7471938,
+    "ast_hash": "c8b200e15d9ad061a4a475172c433cf9",
     "semantic_hash": ""
   },
   "src/app/api/email/send-contrat/route.ts": {
     "mtime": 1762438880.1404824,
     "ast_hash": "b0836226c0cd8c31281d7035ddbba437",
-    "semantic_hash": ""
+    "semantic_hash": "b0836226c0cd8c31281d7035ddbba437"
   },
   "src/app/api/email/send-letter-intent/route.ts": {
-    "mtime": 1763053893.8411095,
-    "ast_hash": "187be74754630983d5f83985bcc4802d",
+    "mtime": 1788867624.939174,
+    "ast_hash": "4f5f70592a10b53ff46b066494d3197b",
     "semantic_hash": ""
   },
   "src/app/api/email/send-offer-letter/route.ts": {
-    "mtime": 1760025049.5450149,
-    "ast_hash": "83baf711032abf7e697138e953e93f4f",
+    "mtime": 1788867624.7471817,
+    "ast_hash": "bfc3e60d15742a13ee712af61fd86acd",
     "semantic_hash": ""
   },
   "src/app/api/email/send-premium-call/route.ts": {
     "mtime": 1762434376.3041615,
     "ast_hash": "95427456e3757b70ae179c26f5c68efe",
-    "semantic_hash": ""
+    "semantic_hash": "95427456e3757b70ae179c26f5c68efe"
   },
   "src/app/api/emails/logs/route.ts": {
     "mtime": 1760024497.4903724,
     "ast_hash": "82c9adb70e2322f3787b0463c36777ab",
-    "semantic_hash": ""
+    "semantic_hash": "82c9adb70e2322f3787b0463c36777ab"
   },
   "src/app/api/generate-pdf/route.ts": {
     "mtime": 1778674215.2948482,
     "ast_hash": "574ba53b90e33706035b86e538dff555",
-    "semantic_hash": ""
+    "semantic_hash": "574ba53b90e33706035b86e538dff555"
   },
   "src/app/api/notifications/[id]/read/route.ts": {
     "mtime": 1756929961.0522819,
     "ast_hash": "022009345a86ce8a3609c9f894dbf5b8",
-    "semantic_hash": ""
+    "semantic_hash": "022009345a86ce8a3609c9f894dbf5b8"
   },
   "src/app/api/notifications/[id]/route.ts": {
     "mtime": 1756929961.0523708,
     "ast_hash": "d8a36bb6c9c7585fd9e85762d0bb315f",
-    "semantic_hash": ""
+    "semantic_hash": "d8a36bb6c9c7585fd9e85762d0bb315f"
   },
   "src/app/api/notifications/route.ts": {
     "mtime": 1756929961.0524542,
     "ast_hash": "d667425680ed63217c680ebb3ec9925e",
-    "semantic_hash": ""
+    "semantic_hash": "d667425680ed63217c680ebb3ec9925e"
   },
   "src/app/api/notifications/unread-count/route.ts": {
     "mtime": 1756929961.0525851,
     "ast_hash": "53c1cbd1014dedf219e7dd220c873515",
-    "semantic_hash": ""
+    "semantic_hash": "53c1cbd1014dedf219e7dd220c873515"
   },
   "src/app/api/pappers/route.ts": {
     "mtime": 1771347180.3803403,
     "ast_hash": "272f318197fbfb6a99f7fca8952858e9",
-    "semantic_hash": ""
+    "semantic_hash": "272f318197fbfb6a99f7fca8952858e9"
   },
   "src/app/api/payment-installments/[id]/mark-paid/route.ts": {
-    "mtime": 1770812624.5567453,
-    "ast_hash": "40ce7ef9197a1e32c2044cc12c7eb186",
+    "mtime": 1788867510.669964,
+    "ast_hash": "aaea4982cf97b0ebd3416d5b8747849d",
     "semantic_hash": ""
   },
   "src/app/api/payment-installments/[id]/mark-unpaid/route.ts": {
     "mtime": 1771323361.7629228,
     "ast_hash": "c2bb5b9e6ee626b01b19660298bc5e64",
-    "semantic_hash": ""
+    "semantic_hash": "c2bb5b9e6ee626b01b19660298bc5e64"
   },
   "src/app/api/payment-installments/[id]/send-reminder/route.ts": {
     "mtime": 1764673438.395375,
     "ast_hash": "d66722d51264cc7333bd1eefe3a0431d",
-    "semantic_hash": ""
+    "semantic_hash": "d66722d51264cc7333bd1eefe3a0431d"
   },
   "src/app/api/payment-installments/overdue/route.ts": {
-    "mtime": 1764673438.395081,
-    "ast_hash": "761fb3ad1e7940aee155d886fe666957",
+    "mtime": 1788867531.3292134,
+    "ast_hash": "b33b29c6a7abf84694150a885d7b9f0d",
     "semantic_hash": ""
   },
   "src/app/api/payment-installments/route.ts": {
     "mtime": 1758545604.903405,
     "ast_hash": "826ebaa51f53a31d1bc2c658679168f1",
-    "semantic_hash": ""
+    "semantic_hash": "826ebaa51f53a31d1bc2c658679168f1"
   },
   "src/app/api/products/[id]/route.ts": {
     "mtime": 1757443217.307262,
     "ast_hash": "1eb826e36fa531134f8d8ab4a000f588",
-    "semantic_hash": ""
+    "semantic_hash": "1eb826e36fa531134f8d8ab4a000f588"
   },
   "src/app/api/products/route.ts": {
     "mtime": 1756929961.052857,
     "ast_hash": "2c0903aeee23b1c456b427fe8d49ac6c",
-    "semantic_hash": ""
+    "semantic_hash": "2c0903aeee23b1c456b427fe8d49ac6c"
   },
   "src/app/api/quote-messages/[id]/read/route.ts": {
     "mtime": 1758491503.7027586,
     "ast_hash": "2de30c045b1f5e3bda4132280b625a7a",
-    "semantic_hash": ""
+    "semantic_hash": "2de30c045b1f5e3bda4132280b625a7a"
   },
   "src/app/api/quotes/[id]/approve-and-create-contract/route.ts": {
     "mtime": 1770147007.122836,
     "ast_hash": "78a774a6a75c6bcf6d4db42e8123a955",
-    "semantic_hash": ""
+    "semantic_hash": "78a774a6a75c6bcf6d4db42e8123a955"
   },
   "src/app/api/quotes/[id]/assign-broker/route.ts": {
     "mtime": 1770633633.2842867,
     "ast_hash": "fb1372dc05b77d585631e5d28309faff",
-    "semantic_hash": ""
+    "semantic_hash": "fb1372dc05b77d585631e5d28309faff"
   },
   "src/app/api/quotes/[id]/calculated-premium/route.ts": {
     "mtime": 1757692258.4751966,
     "ast_hash": "fc0e0aafc570d89d51aab43f8215b88b",
-    "semantic_hash": ""
+    "semantic_hash": "fc0e0aafc570d89d51aab43f8215b88b"
   },
   "src/app/api/quotes/[id]/contract/route.ts": {
     "mtime": 1771528927.7637196,
     "ast_hash": "434482099b2198cd9c9227b061a5f68d",
-    "semantic_hash": ""
+    "semantic_hash": "434482099b2198cd9c9227b061a5f68d"
   },
   "src/app/api/quotes/[id]/document-requests/route.ts": {
     "mtime": 1764673438.4073586,
     "ast_hash": "7aa42504ec8ad00948a4635b9b8b9d0c",
-    "semantic_hash": ""
+    "semantic_hash": "7aa42504ec8ad00948a4635b9b8b9d0c"
   },
   "src/app/api/quotes/[id]/documents/[documentId]/download/route.ts": {
     "mtime": 1758551395.7387836,
     "ast_hash": "9fad5ab0c0e92aeec93983ed9861a173",
-    "semantic_hash": ""
+    "semantic_hash": "9fad5ab0c0e92aeec93983ed9861a173"
   },
   "src/app/api/quotes/[id]/documents/[documentId]/route.ts": {
     "mtime": 1764673438.4140105,
     "ast_hash": "618e7ed42879c186194c51d024fd0c85",
-    "semantic_hash": ""
+    "semantic_hash": "618e7ed42879c186194c51d024fd0c85"
   },
   "src/app/api/quotes/[id]/documents/by-type/route.ts": {
     "mtime": 1770074906.918702,
     "ast_hash": "2191dca50bc4350ad38653da1f9f3461",
-    "semantic_hash": ""
+    "semantic_hash": "2191dca50bc4350ad38653da1f9f3461"
   },
   "src/app/api/quotes/[id]/documents/route.ts": {
     "mtime": 1764673438.4139562,
     "ast_hash": "2bd0119dbb3c21d9948490c64f061763",
-    "semantic_hash": ""
+    "semantic_hash": "2bd0119dbb3c21d9948490c64f061763"
   },
   "src/app/api/quotes/[id]/messages/route.ts": {
     "mtime": 1758636109.951475,
     "ast_hash": "88439aa1e1190b120690b101bbfe92bb",
-    "semantic_hash": ""
+    "semantic_hash": "88439aa1e1190b120690b101bbfe92bb"
   },
   "src/app/api/quotes/[id]/messages/unread-count/route.ts": {
     "mtime": 1758491503.6549542,
     "ast_hash": "6a3d61caacbf78f553aafc144efdd9b2",
-    "semantic_hash": ""
+    "semantic_hash": "6a3d61caacbf78f553aafc144efdd9b2"
   },
   "src/app/api/quotes/[id]/offer/route.ts": {
     "mtime": 1760020894.1824734,
     "ast_hash": "275da53f3515c4bf824ce2e34fec5bfa",
-    "semantic_hash": ""
+    "semantic_hash": "275da53f3515c4bf824ce2e34fec5bfa"
   },
   "src/app/api/quotes/[id]/payment-received/route.ts": {
     "mtime": 1771536215.078653,
     "ast_hash": "f1e93e5c7b44f271acb32eb664041804",
-    "semantic_hash": ""
+    "semantic_hash": "f1e93e5c7b44f271acb32eb664041804"
   },
   "src/app/api/quotes/[id]/payment-schedule/route.ts": {
-    "mtime": 1779708515.6739383,
-    "ast_hash": "082a90b071e9f04154e3ec4f92890f0c",
+    "mtime": 1788865853.810063,
+    "ast_hash": "bebfe316e01755a5a0d1c09c9a0e4b68",
     "semantic_hash": ""
   },
   "src/app/api/quotes/[id]/resiliate/route.ts": {
-    "mtime": 1772632888.1987798,
-    "ast_hash": "6dd9503b22bdcc50d491897c314d6696",
+    "mtime": 1788793987.5238025,
+    "ast_hash": "9ca95b744693acf6d0852ab82896c8c8",
     "semantic_hash": ""
   },
   "src/app/api/quotes/[id]/route.ts": {
-    "mtime": 1770999315.843068,
-    "ast_hash": "bc42b4d461a0c9eeb6b62233468ea7d2",
+    "mtime": 1788793970.934358,
+    "ast_hash": "01c74fedec858cb23c8c5f1bf5a196ec",
     "semantic_hash": ""
   },
   "src/app/api/quotes/[id]/status/route.ts": {
     "mtime": 1764673438.3950796,
     "ast_hash": "a03ca1320c6458e39c4f5237c1d30c4f",
-    "semantic_hash": ""
+    "semantic_hash": "a03ca1320c6458e39c4f5237c1d30c4f"
   },
   "src/app/api/quotes/[id]/validate-installment/route.ts": {
     "mtime": 1771536201.4354622,
     "ast_hash": "3b4ec9eb018287ba28da1e511ae66a22",
-    "semantic_hash": ""
+    "semantic_hash": "3b4ec9eb018287ba28da1e511ae66a22"
   },
   "src/app/api/quotes/[id]/versions/route.ts": {
     "mtime": 1764673438.3951113,
     "ast_hash": "3d6d982657b6d1b9c9b2a1d103c455f8",
-    "semantic_hash": ""
+    "semantic_hash": "3d6d982657b6d1b9c9b2a1d103c455f8"
   },
   "src/app/api/quotes/route.ts": {
-    "mtime": 1770742604.8897872,
-    "ast_hash": "08994cb591f43a82425f79755626e424",
+    "mtime": 1788865804.410685,
+    "ast_hash": "6c16db7df52d63767e55d6426905a629",
     "semantic_hash": ""
   },
   "src/app/api/upload/route.ts": {
     "mtime": 1772631858.280266,
     "ast_hash": "8f271aa4e8f81ef3ebc2bacf35ae6a11",
-    "semantic_hash": ""
+    "semantic_hash": "8f271aa4e8f81ef3ebc2bacf35ae6a11"
   },
   "src/app/api/users/[id]/route.ts": {
     "mtime": 1756929961.0537055,
     "ast_hash": "d3aeeb5b47c7a2ca253aa244e9e8443a",
-    "semantic_hash": ""
+    "semantic_hash": "d3aeeb5b47c7a2ca253aa244e9e8443a"
   },
   "src/app/api/users/route.ts": {
     "mtime": 1756929961.0537643,
     "ast_hash": "ef679ca6b60a47b358a1b50b13b1121f",
-    "semantic_hash": ""
+    "semantic_hash": "ef679ca6b60a47b358a1b50b13b1121f"
   },
   "src/app/api/workflow/steps/[id]/inputs/route.ts": {
     "mtime": 1757624873.0294504,
     "ast_hash": "37d86e56bf1cacbd77f51cc98bc24f2b",
-    "semantic_hash": ""
+    "semantic_hash": "37d86e56bf1cacbd77f51cc98bc24f2b"
   },
   "src/app/api/workflow/steps/[id]/messages/route.ts": {
     "mtime": 1757624897.4011362,
     "ast_hash": "7f6864af9b03bb908ceca9e36115cbf3",
-    "semantic_hash": ""
+    "semantic_hash": "7f6864af9b03bb908ceca9e36115cbf3"
   },
   "src/app/api/workflow/steps/[id]/route.ts": {
     "mtime": 1757689898.1316895,
     "ast_hash": "020d23599d07c9792274875fadc268e7",
-    "semantic_hash": ""
+    "semantic_hash": "020d23599d07c9792274875fadc268e7"
   },
   "src/app/api/workflow/steps/reorder/route.ts": {
     "mtime": 1757624873.0295663,
     "ast_hash": "37d86e56bf1cacbd77f51cc98bc24f2b",
-    "semantic_hash": ""
+    "semantic_hash": "37d86e56bf1cacbd77f51cc98bc24f2b"
   },
   "src/app/api/workflow/steps/route.ts": {
     "mtime": 1757689898.1269374,
     "ast_hash": "429f154912974adf2626fcbbe963377c",
-    "semantic_hash": ""
+    "semantic_hash": "429f154912974adf2626fcbbe963377c"
   },
   "src/app/api/workflow/templates/route.ts": {
     "mtime": 1757624873.0296788,
     "ast_hash": "37d86e56bf1cacbd77f51cc98bc24f2b",
-    "semantic_hash": ""
+    "semantic_hash": "37d86e56bf1cacbd77f51cc98bc24f2b"
   },
   "src/app/auth/setup-account/layout.tsx": {
     "mtime": 1759499295.0069067,
     "ast_hash": "533a5659204b04f2e939edf00bac9376",
-    "semantic_hash": ""
+    "semantic_hash": "533a5659204b04f2e939edf00bac9376"
   },
   "src/app/auth/setup-account/page.tsx": {
-    "mtime": 1757867326.698066,
-    "ast_hash": "11a27a77d7418003629ea96bce37b0e1",
+    "mtime": 1788789873.3582253,
+    "ast_hash": "2afc77453aebf38a9315255a5cc78e73",
     "semantic_hash": ""
   },
   "src/app/dashboard/AdminScreen.tsx": {
-    "mtime": 1779709283.4664536,
-    "ast_hash": "92d1ed9e6646e2e789705eddaaa30d65",
+    "mtime": 1788865922.5213804,
+    "ast_hash": "4058f11621848a390a6448221366642f",
     "semantic_hash": ""
   },
   "src/app/dashboard/BrokerScreen.tsx": {
-    "mtime": 1761820641.1288085,
-    "ast_hash": "3685b694e6fd84d3a4716223823a5ebe",
+    "mtime": 1788790031.7202759,
+    "ast_hash": "eb2e4d7842a55a1b0311c987ebb7abb4",
     "semantic_hash": ""
   },
   "src/app/dashboard/ClientScreen.tsx": {
     "mtime": 1756929961.054509,
     "ast_hash": "32ebf57c58b93443ae760297eac351b5",
-    "semantic_hash": ""
+    "semantic_hash": "32ebf57c58b93443ae760297eac351b5"
   },
   "src/app/dashboard/layout.tsx": {
     "mtime": 1759499295.0071397,
     "ast_hash": "1b47aa68c1c8dd3b6e9071d0c4d14d5b",
-    "semantic_hash": ""
+    "semantic_hash": "1b47aa68c1c8dd3b6e9071d0c4d14d5b"
   },
   "src/app/dashboard/page.tsx": {
-    "mtime": 1757792474.0211525,
-    "ast_hash": "11a25d104ebb873cb1a7ef7bc7088801",
+    "mtime": 1788789836.3149922,
+    "ast_hash": "2128d43e4dba8bb74d7dc31722a99ba1",
     "semantic_hash": ""
   },
   "src/app/forgot-password/page.tsx": {
-    "mtime": 1770377831.9402711,
-    "ast_hash": "18e9c8bd55ef9b7ec03e7f73226d97b5",
+    "mtime": 1788789843.2535877,
+    "ast_hash": "355fff9602c1246262369c4163f02e04",
     "semantic_hash": ""
   },
   "src/app/layout.tsx": {
-    "mtime": 1759499295.0076597,
-    "ast_hash": "bf0fb6388c0560d455a6ddc152b2fa87",
+    "mtime": 1788789825.881634,
+    "ast_hash": "a1ae51abada1123e6d535bd4a7fd8d0f",
     "semantic_hash": ""
   },
   "src/app/login/layout.tsx": {
     "mtime": 1760545278.5005028,
     "ast_hash": "561eebf140266780be382bf6a324164e",
-    "semantic_hash": ""
+    "semantic_hash": "561eebf140266780be382bf6a324164e"
   },
   "src/app/login/page.tsx": {
-    "mtime": 1769608812.2414398,
-    "ast_hash": "7ca3d0a2e42b8d4bcd9145582b820708",
+    "mtime": 1788789838.8731458,
+    "ast_hash": "073d150b562b7f7df2a0697b25f3fa9f",
     "semantic_hash": ""
   },
   "src/app/modifier_echeancier/page.tsx": {
-    "mtime": 1771420299.6387115,
-    "ast_hash": "1bf2c4c54778588ffffa33c17537b9f2",
+    "mtime": 1788790138.8249986,
+    "ast_hash": "5c1086207a2ce79417c6fc6d7cccf044",
     "semantic_hash": ""
   },
   "src/app/page.tsx": {
     "mtime": 1757795886.5124812,
     "ast_hash": "14de0837e1dc85180c3999d5532024a8",
-    "semantic_hash": ""
+    "semantic_hash": "14de0837e1dc85180c3999d5532024a8"
   },
   "src/app/quotes/[id]/layout.tsx": {
     "mtime": 1759499295.0080173,
     "ast_hash": "df9738a55b822d7bd4f2555eb7992575",
-    "semantic_hash": ""
+    "semantic_hash": "df9738a55b822d7bd4f2555eb7992575"
   },
   "src/app/quotes/[id]/page.tsx": {
-    "mtime": 1773090338.600499,
-    "ast_hash": "8f929f9474b7611088d670f25425c9e2",
+    "mtime": 1788867506.8183322,
+    "ast_hash": "597d51cad9521c8a11673364f57c0857",
     "semantic_hash": ""
   },
   "src/app/quotes/components/forms/ModificationForm.tsx": {
     "mtime": 1774102647.5630496,
     "ast_hash": "54ff6e9b2df676f8a09b0d5f90d729eb",
-    "semantic_hash": ""
+    "semantic_hash": "54ff6e9b2df676f8a09b0d5f90d729eb"
   },
   "src/app/quotes/components/forms/ParameterEditor.tsx": {
-    "mtime": 1769701775.445202,
-    "ast_hash": "b4b96b4c224d6c1ea0ccdee3967de2bd",
+    "mtime": 1788790161.3119254,
+    "ast_hash": "b7543d3fa26a53d5f0baa90c3fb85623",
     "semantic_hash": ""
   },
   "src/app/quotes/components/forms/SimpleParameterEditor.tsx": {
     "mtime": 1773089457.4327428,
     "ast_hash": "63b2932360de1b43dd945fe13ad01427",
-    "semantic_hash": ""
+    "semantic_hash": "63b2932360de1b43dd945fe13ad01427"
   },
   "src/app/quotes/components/forms/recalculateUtils.ts": {
     "mtime": 1769810020.3689682,
     "ast_hash": "9c11fafd6a6e71836a150145e28f5277",
-    "semantic_hash": ""
+    "semantic_hash": "9c11fafd6a6e71836a150145e28f5277"
   },
   "src/app/quotes/tabs/AggravationTab.tsx": {
-    "mtime": 1762439446.6256316,
-    "ast_hash": "2ff868b68348f1bc79e2be42514dff68",
+    "mtime": 1788867559.847549,
+    "ast_hash": "ebd9f9b6438a0803d30ad98a8e287104",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/AppelDePrimeTab.tsx": {
-    "mtime": 1774104079.177476,
-    "ast_hash": "af2b2663904c00da38306ef15581fa14",
+    "mtime": 1788865921.6076725,
+    "ast_hash": "c649b9d4c047fa9c551b863a700ee889",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/BordereauTab.tsx": {
-    "mtime": 1780575950.3417888,
-    "ast_hash": "ee97ce1aa6bfc9f7fb0a38286836bf98",
+    "mtime": 1788793997.4971519,
+    "ast_hash": "a12d8251cfc809d3b314432bd3995848",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/BrokerCommissionsTab.tsx": {
-    "mtime": 1762368493.2771943,
-    "ast_hash": "4bc248d1270c8122b65d30790fd9181c",
+    "mtime": 1788790790.9121933,
+    "ast_hash": "106b0e185275186c47107ec53cf81df5",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/CalculationTab.tsx": {
-    "mtime": 1776203740.886838,
-    "ast_hash": "87603b8674a90a9f53667359d1fc0ded",
+    "mtime": 1788792685.3196037,
+    "ast_hash": "2a187256fe11c486895aa78e8192bb3a",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/ChatTab.tsx": {
-    "mtime": 1758635979.8422148,
-    "ast_hash": "c1836be369cfbc601578c94a7c691254",
+    "mtime": 1788790777.264479,
+    "ast_hash": "fc411829b22a3508f72400d34379695b",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/ContratTab.tsx": {
-    "mtime": 1762442341.1932414,
-    "ast_hash": "e46c964da2f21fd353c9598af47c77cd",
+    "mtime": 1788790161.3070114,
+    "ast_hash": "c351412cfa2a47a0a36236bafb4dce5f",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/FormDataTab.tsx": {
-    "mtime": 1772721278.1568768,
-    "ast_hash": "2359c25277ec39484529916892f06d55",
+    "mtime": 1788792838.3047931,
+    "ast_hash": "406274c8249b7b0de87b9e3afaf26227",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/LetterTab.tsx": {
-    "mtime": 1763054187.5964038,
-    "ast_hash": "ce12ebb443cb92eff1b3dc23d6b74567",
+    "mtime": 1788790161.3060787,
+    "ast_hash": "d05d45e32b7e9625ec4914df4238e55e",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/OffreTab.tsx": {
-    "mtime": 1770074906.9522681,
-    "ast_hash": "7e9bc5521bd81b7569f1536eca9ca324",
+    "mtime": 1788790161.3081765,
+    "ast_hash": "a82d22a8a7b7cb28d32bd87c3f000f54",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/PieceJointeTab.tsx": {
-    "mtime": 1765197545.388241,
-    "ast_hash": "29e5b140b4d9086d05270604a8491cf2",
+    "mtime": 1788790161.305448,
+    "ast_hash": "a5db6a8c929700b3a902b4cc63776731",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/PremiumCallTab.tsx": {
-    "mtime": 1771323428.0108213,
-    "ast_hash": "35f4d4413d2e95fc935f72e31b0c7bd2",
+    "mtime": 1788792804.34011,
+    "ast_hash": "37d1c598ac6547c91439b17acf0c4f35",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/ResumeTab.tsx": {
-    "mtime": 1770633717.8538783,
-    "ast_hash": "1fc9a5aba03a4eb05942d151c204d83e",
+    "mtime": 1788790161.3088548,
+    "ast_hash": "301006b71e343f5082e24e57cedb6356",
     "semantic_hash": ""
   },
   "src/app/register/layout.tsx": {
     "mtime": 1759499295.0082476,
     "ast_hash": "5ba6660a1395e8c34ef96065b0d46d79",
-    "semantic_hash": ""
+    "semantic_hash": "5ba6660a1395e8c34ef96065b0d46d79"
   },
   "src/app/register/page.tsx": {
-    "mtime": 1756929961.0558133,
-    "ast_hash": "995947d29ba84f0be8af6707c9ee228e",
+    "mtime": 1788789842.9688954,
+    "ast_hash": "ca0a2adb138b3fa65768179445fb484e",
     "semantic_hash": ""
   },
   "src/app/reset-password/page.tsx": {
-    "mtime": 1769608812.2415133,
-    "ast_hash": "1ed467ea2b8278742eedee0df8a08e8c",
+    "mtime": 1788789859.361141,
+    "ast_hash": "4c33c8c8f1c2822f4384318c302a318b",
     "semantic_hash": ""
   },
   "src/components/admin/CorrespondanceTab.tsx": {
-    "mtime": 1760025049.5698586,
-    "ast_hash": "8a250eab0bb64bb72e824068a5dc9b23",
+    "mtime": 1788790707.9315755,
+    "ast_hash": "1f4a6eecda9e21d1302212127d74400c",
     "semantic_hash": ""
   },
   "src/components/admin/EcartsMontantsTab.tsx": {
-    "mtime": 1774102647.6636648,
-    "ast_hash": "4eca14a10edfbd09e14f1d44109b4d28",
+    "mtime": 1788790150.3296235,
+    "ast_hash": "8acd8f0189605c1bc5bea65b77d07f98",
     "semantic_hash": ""
   },
   "src/components/admin/ProductConfigTab.tsx": {
-    "mtime": 1758212160.0580049,
-    "ast_hash": "ea4702a196637bf48dc3b913614f0d00",
+    "mtime": 1788790161.2939055,
+    "ast_hash": "a35a83765bdc41bed42a6d46ab2236f2",
     "semantic_hash": ""
   },
   "src/components/messages/MessageComposer.tsx": {
-    "mtime": 1756929961.056075,
-    "ast_hash": "0a2779978bc90ceac4aecc15097fdb38",
+    "mtime": 1788790677.4354863,
+    "ast_hash": "e9b051074337081cb74c37919ebe3481",
     "semantic_hash": ""
   },
   "src/components/modals/AddBrokerModal.tsx": {
-    "mtime": 1756929961.0562105,
-    "ast_hash": "2c91a51cf5559f1e284a7a343b4ada5d",
+    "mtime": 1788790668.566655,
+    "ast_hash": "6f3143bf39ff57aa213997a663e64111",
     "semantic_hash": ""
   },
   "src/components/modals/ApproveOfferModal.tsx": {
-    "mtime": 1770147007.1188235,
-    "ast_hash": "f731969f9ad62e5565e152460bdf514f",
+    "mtime": 1788790678.1932988,
+    "ast_hash": "f9a87ad754af24380bfc604115c98e94",
     "semantic_hash": ""
   },
   "src/components/pdf/AttestationRCDPDF.tsx": {
-    "mtime": 1776204404.8480933,
-    "ast_hash": "a3b5dd372814fa72b00c436e03991612",
+    "mtime": 1788867128.8321393,
+    "ast_hash": "f06b2263bdcf92b891506458f4af9f89",
     "semantic_hash": ""
   },
   "src/components/pdf/ContratPDF.tsx": {
-    "mtime": 1778680413.504629,
-    "ast_hash": "5845eec93d91a420488903bda718fd78",
+    "mtime": 1788867635.4657176,
+    "ast_hash": "0020a4cf6837bea5b0e3de2a915c17e1",
     "semantic_hash": ""
   },
   "src/components/pdf/LetterOfIntentPDF.tsx": {
-    "mtime": 1771931530.322596,
-    "ast_hash": "24289370d96228b0555aef7a0ce14719",
+    "mtime": 1788867126.3992841,
+    "ast_hash": "21194840d8b1da508ed67c62c73391a3",
     "semantic_hash": ""
   },
   "src/components/pdf/OfferLetterPDF.tsx": {
-    "mtime": 1774461737.884187,
-    "ast_hash": "ccfe61edd96b30afa47c76ebf12a29de",
+    "mtime": 1788867127.4346824,
+    "ast_hash": "6315066756b6545b3880f5d9ea79fa84",
     "semantic_hash": ""
   },
   "src/components/pdf/OfferLetterPreview.tsx": {
-    "mtime": 1760021004.771901,
-    "ast_hash": "491c658e9647bb0e0f4a279c56bdaa61",
+    "mtime": 1788867635.4656315,
+    "ast_hash": "4661f55114e0f0fa7c144fc58dbe91b2",
     "semantic_hash": ""
   },
   "src/components/pdf/PremiumCallPDF.tsx": {
-    "mtime": 1775654203.6665046,
-    "ast_hash": "14716648001146b67456de97cdd9945d",
+    "mtime": 1788867108.8504844,
+    "ast_hash": "9b857983ffb14fff7ceca1204e386b5d",
     "semantic_hash": ""
   },
   "src/components/quotes/ActivityBreakdown.tsx": {
-    "mtime": 1770811013.7428918,
-    "ast_hash": "7b9090a5f30e505ba13675b89db4c3c5",
+    "mtime": 1788790795.4550345,
+    "ast_hash": "65b9528a8bddaf34f5391e111ef89faf",
     "semantic_hash": ""
   },
   "src/components/quotes/LossHistoryField.tsx": {
-    "mtime": 1756992810.005409,
-    "ast_hash": "108ab173032d16d8a94162a6a1b12d60",
+    "mtime": 1788790185.4879854,
+    "ast_hash": "e746a23756eae4ef2b2fad61ccbd8782",
     "semantic_hash": ""
   },
   "src/components/quotes/MultiSelect.tsx": {
-    "mtime": 1756929961.0563426,
-    "ast_hash": "d04f4066803770e52b06d2fd3069ecbd",
+    "mtime": 1788790181.4467957,
+    "ast_hash": "17fc32a2e3d473dc67089ce2acca7547",
     "semantic_hash": ""
   },
   "src/components/quotes/QuoteForm.tsx": {
-    "mtime": 1771347209.9621983,
-    "ast_hash": "86303acfd26c6f06004e83220714ef0d",
+    "mtime": 1788792687.4118328,
+    "ast_hash": "23c7539c21adca7502b97dedcddd3dd8",
     "semantic_hash": ""
   },
   "src/components/quotes/QuoteSuccessPage.tsx": {
-    "mtime": 1763054375.7066932,
-    "ast_hash": "30542500f4d37e3445f6590fea37da13",
+    "mtime": 1788790752.4483087,
+    "ast_hash": "32105e3d88c596463e6c5f738bb96b7a",
     "semantic_hash": ""
   },
   "src/components/quotes/QuoteValidationPage.tsx": {
-    "mtime": 1756929961.0567238,
-    "ast_hash": "2b9a932e48f9165b866d8b93567e7f51",
+    "mtime": 1788790723.7848644,
+    "ast_hash": "0dc2a91180e6181e7977b346eaf35b89",
     "semantic_hash": ""
   },
   "src/components/quotes/QuotesList.tsx": {
-    "mtime": 1772636669.387491,
-    "ast_hash": "31e6cbde4b787fb0d6f2b935e307a5b3",
+    "mtime": 1788865594.894649,
+    "ast_hash": "8180798243e1225f215a71ff551f0f23",
     "semantic_hash": ""
   },
   "src/components/workflow/AdminWorkflowManager.tsx": {
     "mtime": 1757689898.1316633,
     "ast_hash": "1582817a9641a49806322a56652ebff7",
-    "semantic_hash": ""
+    "semantic_hash": "1582817a9641a49806322a56652ebff7"
   },
   "src/components/workflow/BrokerWorkflowExecutor.tsx": {
     "mtime": 1757689898.13168,
     "ast_hash": "a3441e2afb673d529b866f42f192c61f",
-    "semantic_hash": ""
+    "semantic_hash": "a3441e2afb673d529b866f42f192c61f"
   },
   "src/components/workflow/StepEditorModal.tsx": {
     "mtime": 1757689898.1269493,
     "ast_hash": "0505774553ed4126ab2e71f77c87fe15",
-    "semantic_hash": ""
+    "semantic_hash": "0505774553ed4126ab2e71f77c87fe15"
   },
   "src/components/workflow/StepInputForm.tsx": {
     "mtime": 1757624310.170161,
     "ast_hash": "1223b7a3896872f0f61d262a191d73cf",
-    "semantic_hash": ""
+    "semantic_hash": "1223b7a3896872f0f61d262a191d73cf"
   },
   "src/components/workflow/StepMessagingPanel.tsx": {
     "mtime": 1757689898.131698,
     "ast_hash": "dbab5d095fd50665573180353e9d2bba",
-    "semantic_hash": ""
+    "semantic_hash": "dbab5d095fd50665573180353e9d2bba"
   },
   "src/components/workflow/WorkflowTimeline.tsx": {
     "mtime": 1757624310.1536767,
     "ast_hash": "19b73cd024cf571cf12937ac2e314052",
-    "semantic_hash": ""
+    "semantic_hash": "19b73cd024cf571cf12937ac2e314052"
   },
   "src/lib/api-utils.ts": {
     "mtime": 1758488621.559119,
     "ast_hash": "19737cb71d712e19b0f8ef522555262c",
-    "semantic_hash": ""
+    "semantic_hash": "19737cb71d712e19b0f8ef522555262c"
   },
   "src/lib/api/pappers.ts": {
     "mtime": 1771347189.7598262,
     "ast_hash": "30afd11345682dac7037b6f13021f8ef",
-    "semantic_hash": ""
+    "semantic_hash": "30afd11345682dac7037b6f13021f8ef"
   },
   "src/lib/api/workflow.ts": {
     "mtime": 1757689898.1259964,
     "ast_hash": "f4a0ff69d841e7302a1fb15a8f8c70af",
-    "semantic_hash": ""
+    "semantic_hash": "f4a0ff69d841e7302a1fb15a8f8c70af"
   },
   "src/lib/auth-client.ts": {
     "mtime": 1769608812.2414787,
     "ast_hash": "9e3f3698c2d6ad7f8e9ade28e3e2733b",
-    "semantic_hash": ""
+    "semantic_hash": "9e3f3698c2d6ad7f8e9ade28e3e2733b"
   },
   "src/lib/auth.ts": {
     "mtime": 1770654552.711789,
     "ast_hash": "df398d544f52667dd3d6328a58303e82",
-    "semantic_hash": ""
+    "semantic_hash": "df398d544f52667dd3d6328a58303e82"
   },
   "src/lib/bordereau/__tests__/bordereauMonthEventsV2.test.ts": {
     "mtime": 1780586749.281593,
     "ast_hash": "8e22b740cd691b3636f74918d09ab715",
-    "semantic_hash": ""
+    "semantic_hash": "8e22b740cd691b3636f74918d09ab715"
   },
   "src/lib/bordereau/__tests__/extractBordereauData.test.ts": {
     "mtime": 1769804806.503614,
     "ast_hash": "9844de1c37fc461c443957f775b00000",
-    "semantic_hash": ""
+    "semantic_hash": "9844de1c37fc461c443957f775b00000"
   },
   "src/lib/bordereau/__tests__/extractPolicesV2.test.ts": {
-    "mtime": 1772629345.2974396,
-    "ast_hash": "9e3af22480aeb226cfd214652eb3b0ea",
+    "mtime": 1788793127.7918482,
+    "ast_hash": "6b6a816a5b3139bc4874b596342eec72",
     "semantic_hash": ""
   },
   "src/lib/bordereau/__tests__/generateCSV.test.ts": {
     "mtime": 1780669308.6729465,
     "ast_hash": "72cfa6caf867af21600696b3f0d241b5",
-    "semantic_hash": ""
+    "semantic_hash": "72cfa6caf867af21600696b3f0d241b5"
   },
   "src/lib/bordereau/__tests__/utils.test.ts": {
     "mtime": 1769804805.1821246,
     "ast_hash": "cc8569a00950705e22eb4dd6a0bce6cc",
-    "semantic_hash": ""
+    "semantic_hash": "cc8569a00950705e22eb4dd6a0bce6cc"
   },
   "src/lib/bordereau/bordereauMonthEventsV2.ts": {
-    "mtime": 1780586747.8983276,
-    "ast_hash": "99417080108de3c4700cf01d282ea4e0",
+    "mtime": 1781616820.0674195,
+    "ast_hash": "c29eefb342e33a7743a10000ff1b8f98",
     "semantic_hash": ""
   },
   "src/lib/bordereau/config.ts": {
     "mtime": 1771496199.6586637,
     "ast_hash": "13bbd41966a96bfa82c3b705f4a06266",
-    "semantic_hash": ""
+    "semantic_hash": "13bbd41966a96bfa82c3b705f4a06266"
   },
   "src/lib/bordereau/extractBordereauData.ts": {
-    "mtime": 1771496199.6587858,
-    "ast_hash": "97df4f3d07f0ab8e5bbb242b3dd334c3",
+    "mtime": 1788793997.1607602,
+    "ast_hash": "662c2fa3b85d0977a18bbfa48f829834",
     "semantic_hash": ""
   },
   "src/lib/bordereau/extractPolicesV2.ts": {
-    "mtime": 1780584855.0657585,
-    "ast_hash": "0a5993722ec8fcbf0eab883235edf9a1",
+    "mtime": 1781616365.6264312,
+    "ast_hash": "fce5b3d8ea8cd1f50108bf7744e007ac",
     "semantic_hash": ""
   },
   "src/lib/bordereau/extractQuittancesV2.ts": {
-    "mtime": 1780584716.3591924,
-    "ast_hash": "e83e473a788eb67bd13c2fe4c92703ed",
+    "mtime": 1782916212.267626,
+    "ast_hash": "7b9157ec9d55c60d00ac2c913ff2a025",
     "semantic_hash": ""
   },
   "src/lib/bordereau/generateCSV.ts": {
     "mtime": 1780669303.0545452,
     "ast_hash": "bd3cca373b8105fd400661f249b2c451",
-    "semantic_hash": ""
+    "semantic_hash": "bd3cca373b8105fd400661f249b2c451"
   },
   "src/lib/bordereau/index.ts": {
-    "mtime": 1780669303.1399877,
-    "ast_hash": "0da7ff1631268778aafecd484bf6db89",
+    "mtime": 1782911536.8791735,
+    "ast_hash": "0f66421a9bb2fb52bad0599f260b3474",
     "semantic_hash": ""
   },
   "src/lib/bordereau/types.ts": {
     "mtime": 1772630065.6907575,
     "ast_hash": "cc33e6eda3dbbe9d76764e7e2de6bbe4",
-    "semantic_hash": ""
+    "semantic_hash": "cc33e6eda3dbbe9d76764e7e2de6bbe4"
   },
   "src/lib/bordereau/utils.ts": {
     "mtime": 1771536643.3344185,
     "ast_hash": "665dfe9b4b3db5a8699b358cff852f46",
-    "semantic_hash": ""
+    "semantic_hash": "665dfe9b4b3db5a8699b358cff852f46"
   },
   "src/lib/calculation-apply.ts": {
-    "mtime": 1774102647.5630736,
-    "ast_hash": "44c6c690b096e9764af8a96123c3c616",
+    "mtime": 1788792690.627071,
+    "ast_hash": "3c9dd06d7781a37b74c3c43fd14e49be",
     "semantic_hash": ""
   },
   "src/lib/nodemailer.ts": {
     "mtime": 1769608812.2415,
     "ast_hash": "72b7a78fc07fd5678825010c7e30a0c0",
-    "semantic_hash": ""
+    "semantic_hash": "72b7a78fc07fd5678825010c7e30a0c0"
   },
   "src/lib/payment-csv-import.ts": {
-    "mtime": 1780668592.869264,
-    "ast_hash": "dfa2f8b03bb4482270283242f20fe456",
+    "mtime": 1788794363.7081208,
+    "ast_hash": "34fbd18becb7f35c77a93b8d67fa6acb",
     "semantic_hash": ""
   },
   "src/lib/payment-schedule-utils.ts": {
-    "mtime": 1779708433.4789674,
-    "ast_hash": "3a226e9a80e2688b50a4e9fa63c9d3dd",
+    "mtime": 1788794065.2234316,
+    "ast_hash": "0531e17a9a367adbde247ae167e3742f",
     "semantic_hash": ""
   },
   "src/lib/prisma.ts": {
     "mtime": 1756929961.0572717,
     "ast_hash": "af98f4bc3e6416ccc5e6fb211767b568",
-    "semantic_hash": ""
+    "semantic_hash": "af98f4bc3e6416ccc5e6fb211767b568"
   },
   "src/lib/quotes/echeance-row-values.test.ts": {
-    "mtime": 1776203749.8517292,
-    "ast_hash": "859449ed4b9521499747bb93f27372e3",
+    "mtime": 1782915085.071151,
+    "ast_hash": "bd0716b3d5e9ae04cb3d3be4961b9b0a",
     "semantic_hash": ""
   },
   "src/lib/quotes/echeance-row-values.ts": {
-    "mtime": 1776203737.3994014,
-    "ast_hash": "a34d49e3ed6c9cebbc54ccbba69084c2",
+    "mtime": 1782916965.7467809,
+    "ast_hash": "ee23843d40cce1946300689df634ae7b",
     "semantic_hash": ""
   },
   "src/lib/stores/messages-store.ts": {
     "mtime": 1756929961.0574324,
     "ast_hash": "10a0188450c436dfca21f5a1f647f54e",
-    "semantic_hash": ""
+    "semantic_hash": "10a0188450c436dfca21f5a1f647f54e"
   },
   "src/lib/stores/products-store.ts": {
     "mtime": 1756929961.0575373,
     "ast_hash": "49240f6d14c894f2325b91e7801658c9",
-    "semantic_hash": ""
+    "semantic_hash": "49240f6d14c894f2325b91e7801658c9"
   },
   "src/lib/stores/quote-chat-store.ts": {
     "mtime": 1758636216.9924848,
     "ast_hash": "82597117aecac5ca887c9a94daa32684",
-    "semantic_hash": ""
+    "semantic_hash": "82597117aecac5ca887c9a94daa32684"
   },
   "src/lib/stores/quotes-store.ts": {
-    "mtime": 1756929961.0576751,
-    "ast_hash": "34ea555a7909c92326f1a72ac450e84f",
+    "mtime": 1788867510.5821717,
+    "ast_hash": "e8ff88ac5bceec1cec840bea0a8dec88",
     "semantic_hash": ""
   },
   "src/lib/stores/users-store.ts": {
-    "mtime": 1756929961.0577865,
-    "ast_hash": "408985dde83e640d8620e006df748b72",
+    "mtime": 1788792704.6381319,
+    "ast_hash": "b0fcebfa54b476329f17717b53aacc58",
     "semantic_hash": ""
   },
   "src/lib/stores/workflow-store.ts": {
     "mtime": 1757689898.1269288,
     "ast_hash": "714f3af686134cc9284b23a71fb2fc6c",
-    "semantic_hash": ""
+    "semantic_hash": "714f3af686134cc9284b23a71fb2fc6c"
   },
   "src/lib/supabase-client.ts": {
     "mtime": 1756929961.0578601,
     "ast_hash": "bbcaec1a5cbf74a4d02434d59a56fd7b",
-    "semantic_hash": ""
+    "semantic_hash": "bbcaec1a5cbf74a4d02434d59a56fd7b"
   },
   "src/lib/tarificateurs/__tests__/genererEcheancier.test.ts": {
     "mtime": 1776203792.8691213,
     "ast_hash": "332e74e0da94df9903c296ae769793f5",
-    "semantic_hash": ""
+    "semantic_hash": "332e74e0da94df9903c296ae769793f5"
   },
   "src/lib/tarificateurs/rcd.ts": {
-    "mtime": 1776203730.5870395,
-    "ast_hash": "436cc9b4d249627e5753a74fd94f2edc",
+    "mtime": 1788865527.4833775,
+    "ast_hash": "002c9de43ed58e8f5e790db9d9e040ca",
     "semantic_hash": ""
   },
   "src/lib/tarificateurs/runEcheancierTests.ts": {
     "mtime": 1776203793.4635327,
     "ast_hash": "83bb475ced5e863d7e13fd1b9a631433",
-    "semantic_hash": ""
+    "semantic_hash": "83bb475ced5e863d7e13fd1b9a631433"
   },
   "src/lib/tarificateurs/validateEcheancierInvariants.ts": {
     "mtime": 1776203820.2187831,
     "ast_hash": "92bc002ed08e6491f97585e438630583",
-    "semantic_hash": ""
+    "semantic_hash": "92bc002ed08e6491f97585e438630583"
   },
   "src/lib/types.ts": {
-    "mtime": 1774102647.5612159,
-    "ast_hash": "a079b54d900fae0f6d19578d3a6c48df",
+    "mtime": 1788793967.760543,
+    "ast_hash": "9178e11b95827f123fcac4b78c407d62",
     "semantic_hash": ""
   },
   "src/lib/types/workflow.ts": {
     "mtime": 1757689898.1269429,
     "ast_hash": "75a3069baaccc7da5333eb773e9396d6",
-    "semantic_hash": ""
+    "semantic_hash": "75a3069baaccc7da5333eb773e9396d6"
   },
   "src/lib/utils.ts": {
-    "mtime": 1773090354.0820107,
-    "ast_hash": "c36131b898cc77ed82b36ab543b7c136",
+    "mtime": 1788865554.0921633,
+    "ast_hash": "272a4a8ba4c371b0725b31d2d5b80b79",
     "semantic_hash": ""
   },
   "src/lib/validations.ts": {
-    "mtime": 1770767629.7278783,
-    "ast_hash": "4304acd5576c7258e10d34a172e7abfc",
+    "mtime": 1788792692.694429,
+    "ast_hash": "9d2857dc77b7fdf4bb2e7ccc3b98267f",
     "semantic_hash": ""
   },
   "src/middleware.ts": {
-    "mtime": 1757792330.26845,
-    "ast_hash": "32ad26625691efcaaa053c3cb8f8f3df",
+    "mtime": 1788867560.006511,
+    "ast_hash": "07d1c6ed7b8063e8ac09818b36b3ea9a",
     "semantic_hash": ""
   },
   "src/scripts/check-bordereau-references.ts": {
-    "mtime": 1771003357.8293474,
-    "ast_hash": "fa07100dcfc53ac9912d41f3dcd9137b",
+    "mtime": 1788794111.166814,
+    "ast_hash": "c94dd2a141ec02f6c572798211456baf",
     "semantic_hash": ""
   },
   "src/scripts/import-brokers.ts": {
     "mtime": 1770074906.9054613,
     "ast_hash": "9d30e1f118e43cf0da3443b0137165a6",
-    "semantic_hash": ""
+    "semantic_hash": "9d30e1f118e43cf0da3443b0137165a6"
   },
   "src/scripts/import-payments-from-csv.ts": {
     "mtime": 1779709264.3882957,
     "ast_hash": "fec242716eac1c4da4c250e1b96f93a8",
-    "semantic_hash": ""
+    "semantic_hash": "fec242716eac1c4da4c250e1b96f93a8"
   },
   "src/scripts/recalcul-echeancier.ts": {
-    "mtime": 1779708501.2266278,
-    "ast_hash": "e7d2c201ddac37898f58a9faa8363a41",
+    "mtime": 1788794110.6333694,
+    "ast_hash": "251265bc92877e9b1ab87be70bbeb19a",
     "semantic_hash": ""
   },
   "src/scripts/set-quotes-accepted-bordereau.ts": {
-    "mtime": 1771004159.6223242,
-    "ast_hash": "44817a65c16eb1395bf33119da18419f",
+    "mtime": 1788794111.727069,
+    "ast_hash": "1cf05ad39eccd0d3a59e5bcc9e2b9353",
     "semantic_hash": ""
   },
   "src/scripts/update-quotes-from-file.ts": {
-    "mtime": 1770837852.640264,
-    "ast_hash": "35762ebb4b644ea70fe32bb88927dcdf",
+    "mtime": 1788794124.0547326,
+    "ast_hash": "48cd2be285fa1be48a7a8555260b7bee",
     "semantic_hash": ""
   },
   "src/app/quotes/tabs/ATTESTATION RCD - XXX.docx.md": {
@@ -914,1109 +914,1729 @@
     "ast_hash": "110d43c3eb1effe3f16ac9b2186d7a3f",
     "semantic_hash": ""
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/.claude/settings.local.json": {
+  ".claude/settings.local.json": {
     "mtime": 1757536865.1428769,
     "ast_hash": "111acd43fcdfaee2dfec9865a6c42c04",
     "semantic_hash": "111acd43fcdfaee2dfec9865a6c42c04"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/eslint.config.mjs": {
+  "eslint.config.mjs": {
     "mtime": 1756929961.0453694,
     "ast_hash": "30c05dca6b5a9ced1c5c57201ee8cb2b",
     "semantic_hash": "30c05dca6b5a9ced1c5c57201ee8cb2b"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/next.config.ts": {
+  "next.config.ts": {
     "mtime": 1769810057.2682009,
     "ast_hash": "96ee2cb768cc99b9f22185c6061be15b",
     "semantic_hash": "96ee2cb768cc99b9f22185c6061be15b"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/package.json": {
-    "mtime": 1779708507.051681,
-    "ast_hash": "e391ffdc7fca5fdf95eddc030871d290",
-    "semantic_hash": "e391ffdc7fca5fdf95eddc030871d290"
+  "package.json": {
+    "mtime": 1782911166.8957453,
+    "ast_hash": "b082a1e34002fdfce2c853f552667a51",
+    "semantic_hash": ""
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/postcss.config.mjs": {
+  "postcss.config.mjs": {
     "mtime": 1756929961.0465937,
     "ast_hash": "675899342e765a4d16acd75a53389101",
     "semantic_hash": "675899342e765a4d16acd75a53389101"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250203120000_bordereau_v2_schema_quote_code_naf/migration.sql": {
+  "prisma/migrations/20250203120000_bordereau_v2_schema_quote_code_naf/migration.sql": {
     "mtime": 1771496199.6586916,
     "ast_hash": "2ab861e7f5b44f927e65bfa124a1dbf3",
     "semantic_hash": "2ab861e7f5b44f927e65bfa124a1dbf3"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250728154703_first/migration.sql": {
+  "prisma/migrations/20250728154703_first/migration.sql": {
     "mtime": 1756929961.046923,
     "ast_hash": "dd8bbfbcff851feb8f0198202b017df4",
     "semantic_hash": "dd8bbfbcff851feb8f0198202b017df4"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250728155716_better_auth_verif/migration.sql": {
+  "prisma/migrations/20250728155716_better_auth_verif/migration.sql": {
     "mtime": 1756929961.047186,
     "ast_hash": "3c248fc28c7bd54d4571fdb46ae512d7",
     "semantic_hash": "3c248fc28c7bd54d4571fdb46ae512d7"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250728160018_better_auth_mieux/migration.sql": {
+  "prisma/migrations/20250728160018_better_auth_mieux/migration.sql": {
     "mtime": 1756929961.0473278,
     "ast_hash": "21cbe74b25e70bf21ac84dc37e9cc2c4",
     "semantic_hash": "21cbe74b25e70bf21ac84dc37e9cc2c4"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250728160556_better_auth_encore/migration.sql": {
+  "prisma/migrations/20250728160556_better_auth_encore/migration.sql": {
     "mtime": 1756929961.047467,
     "ast_hash": "15593d0fdb0ba58e2bd5ec362307aafb",
     "semantic_hash": "15593d0fdb0ba58e2bd5ec362307aafb"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250728222325_ajout_fonction_contrat/migration.sql": {
+  "prisma/migrations/20250728222325_ajout_fonction_contrat/migration.sql": {
     "mtime": 1756929961.0476453,
     "ast_hash": "96ff3a3d2cf7c0eb414620fd94aaaf46",
     "semantic_hash": "96ff3a3d2cf7c0eb414620fd94aaaf46"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250803215806_devis_avec_etape/migration.sql": {
+  "prisma/migrations/20250803215806_devis_avec_etape/migration.sql": {
     "mtime": 1756929961.047772,
     "ast_hash": "7cb81cfe47b41476273b5f11e212308f",
     "semantic_hash": "7cb81cfe47b41476273b5f11e212308f"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250804225212_incomplete_info_projectstatus/migration.sql": {
+  "prisma/migrations/20250804225212_incomplete_info_projectstatus/migration.sql": {
     "mtime": 1756929961.0478897,
     "ast_hash": "0f00583a4725f8e9346c697419da4a5c",
     "semantic_hash": "0f00583a4725f8e9346c697419da4a5c"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250804230032_incomplete_info_for_quote/migration.sql": {
+  "prisma/migrations/20250804230032_incomplete_info_for_quote/migration.sql": {
     "mtime": 1756929961.0480185,
     "ast_hash": "fe00ba2c7ce6a8e567145325b1214744",
     "semantic_hash": "fe00ba2c7ce6a8e567145325b1214744"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250805192433_document_type_quote_document/migration.sql": {
+  "prisma/migrations/20250805192433_document_type_quote_document/migration.sql": {
     "mtime": 1756929961.0481384,
     "ast_hash": "bf5a6da5b688e02e66dce92056046b77",
     "semantic_hash": "bf5a6da5b688e02e66dce92056046b77"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250807135935_verif_document/migration.sql": {
+  "prisma/migrations/20250807135935_verif_document/migration.sql": {
     "mtime": 1756929961.0482652,
     "ast_hash": "123f646ee5379ddf49cf24ef37bfa8cf",
     "semantic_hash": "123f646ee5379ddf49cf24ef37bfa8cf"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250828204802_broker_profile_on_user/migration.sql": {
+  "prisma/migrations/20250828204802_broker_profile_on_user/migration.sql": {
     "mtime": 1756929961.0483923,
     "ast_hash": "5da6d15d52c376fdb7f4e2e7233f47c7",
     "semantic_hash": "5da6d15d52c376fdb7f4e2e7233f47c7"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250828205405_pass_reset_on_user/migration.sql": {
+  "prisma/migrations/20250828205405_pass_reset_on_user/migration.sql": {
     "mtime": 1756929961.0484998,
     "ast_hash": "2ca2c7508f49b65abdb97023ae643160",
     "semantic_hash": "2ca2c7508f49b65abdb97023ae643160"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250828212038_add_broker_invitation/migration.sql": {
+  "prisma/migrations/20250828212038_add_broker_invitation/migration.sql": {
     "mtime": 1756929961.0486054,
     "ast_hash": "dcb024be9829ee0d44a6e0d0555adad0",
     "semantic_hash": "dcb024be9829ee0d44a6e0d0555adad0"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250904185222_mapping_field_dans_insurance_product/migration.sql": {
+  "prisma/migrations/20250904185222_mapping_field_dans_insurance_product/migration.sql": {
     "mtime": 1757011942.7497125,
     "ast_hash": "a96f0c864ebd735d01e33ac1acced1a2",
     "semantic_hash": "a96f0c864ebd735d01e33ac1acced1a2"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250911205117_add_workflow_system/migration.sql": {
+  "prisma/migrations/20250911205117_add_workflow_system/migration.sql": {
     "mtime": 1757623877.8265748,
     "ast_hash": "69dab95527ac0eb347c99a325a97cac2",
     "semantic_hash": "69dab95527ac0eb347c99a325a97cac2"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250912151540_calcul_rcd_dans_quote_table/migration.sql": {
+  "prisma/migrations/20250912151540_calcul_rcd_dans_quote_table/migration.sql": {
     "mtime": 1757690140.0758452,
     "ast_hash": "8fb6aa9ea911e82575411954061ad45d",
     "semantic_hash": "8fb6aa9ea911e82575411954061ad45d"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250921202118_chat_pour_le_devis/migration.sql": {
+  "prisma/migrations/20250921202118_chat_pour_le_devis/migration.sql": {
     "mtime": 1758486078.5120602,
     "ast_hash": "ae85597cebe93d2d2a8072afb35fe202",
     "semantic_hash": "ae85597cebe93d2d2a8072afb35fe202"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250922115755_echeancier_tracking_quote/migration.sql": {
+  "prisma/migrations/20250922115755_echeancier_tracking_quote/migration.sql": {
     "mtime": 1758542275.1791549,
     "ast_hash": "e444504ce172da08330c4819680fc342",
     "semantic_hash": "e444504ce172da08330c4819680fc342"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20250922141456_add_document_requests/migration.sql": {
+  "prisma/migrations/20250922141456_add_document_requests/migration.sql": {
     "mtime": 1758550496.4331098,
     "ast_hash": "5d0216f6aad932f6cda6cfc53ca6852b",
     "semantic_hash": "5d0216f6aad932f6cda6cfc53ca6852b"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20251008000000_add_offer_data/migration.sql": {
+  "prisma/migrations/20251008000000_add_offer_data/migration.sql": {
     "mtime": 1759939925.1537957,
     "ast_hash": "01999909c3acbbc6577cb1aad03b3e61",
     "semantic_hash": "01999909c3acbbc6577cb1aad03b3e61"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20251009153846_add_email_logs/migration.sql": {
+  "prisma/migrations/20251009153846_add_email_logs/migration.sql": {
     "mtime": 1760024326.3043647,
     "ast_hash": "b28a920d9cc3a7e921653b7d8eeb3007",
     "semantic_hash": "b28a920d9cc3a7e921653b7d8eeb3007"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20251030142304_add_quote_versionning/migration.sql": {
+  "prisma/migrations/20251030142304_add_quote_versionning/migration.sql": {
     "mtime": 1762380199.4822643,
     "ast_hash": "6f1e74f707588d61e07c233f63e8d78a",
     "semantic_hash": "6f1e74f707588d61e07c233f63e8d78a"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20251105220338_add_document_email_types/migration.sql": {
+  "prisma/migrations/20251105220338_add_document_email_types/migration.sql": {
     "mtime": 1762380218.6194701,
     "ast_hash": "f04f299494781bca101b93472359b813",
     "semantic_hash": "f04f299494781bca101b93472359b813"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20260109193335_add_password_reset_email_type/migration.sql": {
+  "prisma/migrations/20260109193335_add_password_reset_email_type/migration.sql": {
     "mtime": 1769608812.241359,
     "ast_hash": "d7248f860955fe32a7f600db118e53e9",
     "semantic_hash": "d7248f860955fe32a7f600db118e53e9"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/migrations/20260319220000_add_quote_modifie_a_la_main/migration.sql": {
+  "prisma/migrations/20260319220000_add_quote_modifie_a_la_main/migration.sql": {
     "mtime": 1774102647.560991,
     "ast_hash": "1068b8a750d2b8b12acb9a65ebc22a09",
     "semantic_hash": "1068b8a750d2b8b12acb9a65ebc22a09"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/rcdFormDataResult.json": {
+  "prisma/rcdFormDataResult.json": {
     "mtime": 1756929961.048747,
     "ast_hash": "fe7b65e94697af60ca4480077ccef63e",
     "semantic_hash": "fe7b65e94697af60ca4480077ccef63e"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/rcdFormFields.json": {
+  "prisma/rcdFormFields.json": {
     "mtime": 1756929961.048916,
     "ast_hash": "50e6897e2097130a80e0c1018d4d3e64",
     "semantic_hash": "50e6897e2097130a80e0c1018d4d3e64"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/rcdStepConfig.json": {
+  "prisma/rcdStepConfig.json": {
     "mtime": 1760187693.4404812,
     "ast_hash": "5cc931a716bef6589cf2f651373bf0d6",
     "semantic_hash": "5cc931a716bef6589cf2f651373bf0d6"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/prisma/test.json": {
+  "prisma/test.json": {
     "mtime": 1756929961.0493577,
     "ast_hash": "74b634b151ebffcb43c38f2026489d2b",
     "semantic_hash": "74b634b151ebffcb43c38f2026489d2b"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/rcd-form-fields.json": {
+  "rcd-form-fields.json": {
     "mtime": 1756929961.051114,
     "ast_hash": "a84a8ed158d0bc764ee537e9a43fc6ce",
     "semantic_hash": "a84a8ed158d0bc764ee537e9a43fc6ce"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/rcd-step-config.json": {
+  "rcd-step-config.json": {
     "mtime": 1756929961.0511954,
     "ast_hash": "688e5606afca14828f18d8fde53d8ac7",
     "semantic_hash": "688e5606afca14828f18d8fde53d8ac7"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/scripts/compare-bordereau-jan.ts": {
+  "scripts/compare-bordereau-jan.ts": {
     "mtime": 1780584123.7953312,
     "ast_hash": "35e6e3b7d5a31e773f1baaf8ebbd8444",
     "semantic_hash": "35e6e3b7d5a31e773f1baaf8ebbd8444"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/admin/bordereaux/page.tsx": {
-    "mtime": 1780577244.345577,
-    "ast_hash": "2c30ee7a477a9b3211711c08b269db24",
-    "semantic_hash": "2c30ee7a477a9b3211711c08b269db24"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/admin/import-payments/page.tsx": {
-    "mtime": 1780668612.111757,
-    "ast_hash": "dd263ea52b19a2e0e67ea89140c67393",
-    "semantic_hash": "dd263ea52b19a2e0e67ea89140c67393"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/bordereaux/[id]/download/route.ts": {
-    "mtime": 1780669305.0125327,
-    "ast_hash": "a432d24b9f5f1b9de7df1f7bc439703c",
-    "semantic_hash": "a432d24b9f5f1b9de7df1f7bc439703c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/bordereaux/export-v2/route.ts": {
-    "mtime": 1780669304.1917017,
-    "ast_hash": "47e730de5d79800184539cf38f5b64ab",
-    "semantic_hash": "47e730de5d79800184539cf38f5b64ab"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/bordereaux/export/route.ts": {
-    "mtime": 1780669307.9033372,
-    "ast_hash": "4f693638ac618efba7f97b77ac4fdcba",
-    "semantic_hash": "4f693638ac618efba7f97b77ac4fdcba"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/bordereaux/history/route.ts": {
-    "mtime": 1771496199.658792,
-    "ast_hash": "1c76ab4a9844548eb36fde86ec747200",
-    "semantic_hash": "1c76ab4a9844548eb36fde86ec747200"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/bordereaux/preview-v2/route.ts": {
-    "mtime": 1771929893.4222982,
-    "ast_hash": "b1a51dd2854cb3b06608ed6520cce2c5",
-    "semantic_hash": "b1a51dd2854cb3b06608ed6520cce2c5"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/bordereaux/preview/route.ts": {
-    "mtime": 1771496199.658683,
-    "ast_hash": "d6901b0c9cf0a35443f55066b19b6177",
-    "semantic_hash": "d6901b0c9cf0a35443f55066b19b6177"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/brokers/route.ts": {
-    "mtime": 1769805635.4867432,
-    "ast_hash": "456692777044e593b268e17dc32d0a8f",
-    "semantic_hash": "456692777044e593b268e17dc32d0a8f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/ecarts-montants/[quoteId]/route.ts": {
-    "mtime": 1774102647.5610282,
-    "ast_hash": "1abf46928bddc260ccd611963795463a",
-    "semantic_hash": "1abf46928bddc260ccd611963795463a"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/ecarts-montants/route.ts": {
-    "mtime": 1774102647.5630615,
-    "ast_hash": "e076e149dcb7077fa3ef1bebc0e2e277",
-    "semantic_hash": "e076e149dcb7077fa3ef1bebc0e2e277"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/import-payments/route.ts": {
-    "mtime": 1780668592.8976216,
-    "ast_hash": "da3cb6be9c211a23cfb012650f61682a",
-    "semantic_hash": "da3cb6be9c211a23cfb012650f61682a"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/payments/reset/route.ts": {
-    "mtime": 1780587137.170617,
-    "ast_hash": "9d09e30863a9329b50318b5a530fe611",
-    "semantic_hash": "9d09e30863a9329b50318b5a530fe611"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/rectifier-montants/route.ts": {
-    "mtime": 1771420299.6299622,
-    "ast_hash": "cff0ad875a0746b76b5ee9b724fd2c8f",
-    "semantic_hash": "cff0ad875a0746b76b5ee9b724fd2c8f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/admin/run-echeancier-tests/route.ts": {
-    "mtime": 1774102647.5610602,
-    "ast_hash": "04e8304b8347920a29736f7e4e6a7b09",
-    "semantic_hash": "04e8304b8347920a29736f7e4e6a7b09"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/auth/[...all]/route.ts": {
-    "mtime": 1756929961.0514686,
-    "ast_hash": "c22cf1dbf82088f479fbde2d86a2be59",
-    "semantic_hash": "c22cf1dbf82088f479fbde2d86a2be59"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/auth/complete-broker-setup/route.ts": {
-    "mtime": 1756929961.05158,
-    "ast_hash": "60988ef40c248f5b03468b9644204a98",
-    "semantic_hash": "60988ef40c248f5b03468b9644204a98"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/auth/send-password-reset-email/route.ts": {
-    "mtime": 1770378569.000543,
-    "ast_hash": "ad5763e6832683d7adde4d2c09197e92",
-    "semantic_hash": "ad5763e6832683d7adde4d2c09197e92"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/auth/verify-invitation-token/route.ts": {
-    "mtime": 1756929961.0517092,
-    "ast_hash": "683f7fe670d90e5730a2fd1821d47ca5",
-    "semantic_hash": "683f7fe670d90e5730a2fd1821d47ca5"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/brokers/code/route.ts": {
-    "mtime": 1759336219.0149667,
-    "ast_hash": "748bed45cebbcb2ee413f00f39d9fd33",
-    "semantic_hash": "748bed45cebbcb2ee413f00f39d9fd33"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/brokers/info/route.ts": {
-    "mtime": 1763054165.6751273,
-    "ast_hash": "75129554475ca2b8525bc30e668eb979",
-    "semantic_hash": "75129554475ca2b8525bc30e668eb979"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/brokers/route.ts": {
-    "mtime": 1756929961.0518885,
-    "ast_hash": "13ea7c5a369871ab297e511cf0c5ef6a",
-    "semantic_hash": "13ea7c5a369871ab297e511cf0c5ef6a"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/email/invite-broker/route.ts": {
-    "mtime": 1760024497.6686444,
-    "ast_hash": "e5cafc5bf751a2b0d345b72c7448c8ab",
-    "semantic_hash": "e5cafc5bf751a2b0d345b72c7448c8ab"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/email/send-attestation/route.ts": {
-    "mtime": 1764673438.4139562,
-    "ast_hash": "2acc30e6c537239ac29be92cd48b3a43",
-    "semantic_hash": "2acc30e6c537239ac29be92cd48b3a43"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/email/send-contrat/route.ts": {
-    "mtime": 1762438880.1404824,
-    "ast_hash": "b0836226c0cd8c31281d7035ddbba437",
-    "semantic_hash": "b0836226c0cd8c31281d7035ddbba437"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/email/send-letter-intent/route.ts": {
-    "mtime": 1763053893.8411095,
-    "ast_hash": "187be74754630983d5f83985bcc4802d",
-    "semantic_hash": "187be74754630983d5f83985bcc4802d"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/email/send-offer-letter/route.ts": {
-    "mtime": 1760025049.5450149,
-    "ast_hash": "83baf711032abf7e697138e953e93f4f",
-    "semantic_hash": "83baf711032abf7e697138e953e93f4f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/email/send-premium-call/route.ts": {
-    "mtime": 1762434376.3041615,
-    "ast_hash": "95427456e3757b70ae179c26f5c68efe",
-    "semantic_hash": "95427456e3757b70ae179c26f5c68efe"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/emails/logs/route.ts": {
-    "mtime": 1760024497.4903724,
-    "ast_hash": "82c9adb70e2322f3787b0463c36777ab",
-    "semantic_hash": "82c9adb70e2322f3787b0463c36777ab"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/generate-pdf/route.ts": {
-    "mtime": 1778674215.2948482,
-    "ast_hash": "574ba53b90e33706035b86e538dff555",
-    "semantic_hash": "574ba53b90e33706035b86e538dff555"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/notifications/[id]/read/route.ts": {
-    "mtime": 1756929961.0522819,
-    "ast_hash": "022009345a86ce8a3609c9f894dbf5b8",
-    "semantic_hash": "022009345a86ce8a3609c9f894dbf5b8"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/notifications/[id]/route.ts": {
-    "mtime": 1756929961.0523708,
-    "ast_hash": "d8a36bb6c9c7585fd9e85762d0bb315f",
-    "semantic_hash": "d8a36bb6c9c7585fd9e85762d0bb315f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/notifications/route.ts": {
-    "mtime": 1756929961.0524542,
-    "ast_hash": "d667425680ed63217c680ebb3ec9925e",
-    "semantic_hash": "d667425680ed63217c680ebb3ec9925e"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/notifications/unread-count/route.ts": {
-    "mtime": 1756929961.0525851,
-    "ast_hash": "53c1cbd1014dedf219e7dd220c873515",
-    "semantic_hash": "53c1cbd1014dedf219e7dd220c873515"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/pappers/route.ts": {
-    "mtime": 1771347180.3803403,
-    "ast_hash": "272f318197fbfb6a99f7fca8952858e9",
-    "semantic_hash": "272f318197fbfb6a99f7fca8952858e9"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/payment-installments/[id]/mark-paid/route.ts": {
-    "mtime": 1770812624.5567453,
-    "ast_hash": "40ce7ef9197a1e32c2044cc12c7eb186",
-    "semantic_hash": "40ce7ef9197a1e32c2044cc12c7eb186"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/payment-installments/[id]/mark-unpaid/route.ts": {
-    "mtime": 1771323361.7629228,
-    "ast_hash": "c2bb5b9e6ee626b01b19660298bc5e64",
-    "semantic_hash": "c2bb5b9e6ee626b01b19660298bc5e64"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/payment-installments/[id]/send-reminder/route.ts": {
-    "mtime": 1764673438.395375,
-    "ast_hash": "d66722d51264cc7333bd1eefe3a0431d",
-    "semantic_hash": "d66722d51264cc7333bd1eefe3a0431d"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/payment-installments/overdue/route.ts": {
-    "mtime": 1764673438.395081,
-    "ast_hash": "761fb3ad1e7940aee155d886fe666957",
-    "semantic_hash": "761fb3ad1e7940aee155d886fe666957"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/payment-installments/route.ts": {
-    "mtime": 1758545604.903405,
-    "ast_hash": "826ebaa51f53a31d1bc2c658679168f1",
-    "semantic_hash": "826ebaa51f53a31d1bc2c658679168f1"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/products/[id]/route.ts": {
-    "mtime": 1757443217.307262,
-    "ast_hash": "1eb826e36fa531134f8d8ab4a000f588",
-    "semantic_hash": "1eb826e36fa531134f8d8ab4a000f588"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/products/route.ts": {
-    "mtime": 1756929961.052857,
-    "ast_hash": "2c0903aeee23b1c456b427fe8d49ac6c",
-    "semantic_hash": "2c0903aeee23b1c456b427fe8d49ac6c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quote-messages/[id]/read/route.ts": {
-    "mtime": 1758491503.7027586,
-    "ast_hash": "2de30c045b1f5e3bda4132280b625a7a",
-    "semantic_hash": "2de30c045b1f5e3bda4132280b625a7a"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/approve-and-create-contract/route.ts": {
-    "mtime": 1770147007.122836,
-    "ast_hash": "78a774a6a75c6bcf6d4db42e8123a955",
-    "semantic_hash": "78a774a6a75c6bcf6d4db42e8123a955"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/assign-broker/route.ts": {
-    "mtime": 1770633633.2842867,
-    "ast_hash": "fb1372dc05b77d585631e5d28309faff",
-    "semantic_hash": "fb1372dc05b77d585631e5d28309faff"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/calculated-premium/route.ts": {
-    "mtime": 1757692258.4751966,
-    "ast_hash": "fc0e0aafc570d89d51aab43f8215b88b",
-    "semantic_hash": "fc0e0aafc570d89d51aab43f8215b88b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/contract/route.ts": {
-    "mtime": 1771528927.7637196,
-    "ast_hash": "434482099b2198cd9c9227b061a5f68d",
-    "semantic_hash": "434482099b2198cd9c9227b061a5f68d"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/document-requests/route.ts": {
-    "mtime": 1764673438.4073586,
-    "ast_hash": "7aa42504ec8ad00948a4635b9b8b9d0c",
-    "semantic_hash": "7aa42504ec8ad00948a4635b9b8b9d0c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/documents/[documentId]/download/route.ts": {
-    "mtime": 1758551395.7387836,
-    "ast_hash": "9fad5ab0c0e92aeec93983ed9861a173",
-    "semantic_hash": "9fad5ab0c0e92aeec93983ed9861a173"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/documents/[documentId]/route.ts": {
-    "mtime": 1764673438.4140105,
-    "ast_hash": "618e7ed42879c186194c51d024fd0c85",
-    "semantic_hash": "618e7ed42879c186194c51d024fd0c85"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/documents/by-type/route.ts": {
-    "mtime": 1770074906.918702,
-    "ast_hash": "2191dca50bc4350ad38653da1f9f3461",
-    "semantic_hash": "2191dca50bc4350ad38653da1f9f3461"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/documents/route.ts": {
-    "mtime": 1764673438.4139562,
-    "ast_hash": "2bd0119dbb3c21d9948490c64f061763",
-    "semantic_hash": "2bd0119dbb3c21d9948490c64f061763"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/messages/route.ts": {
-    "mtime": 1758636109.951475,
-    "ast_hash": "88439aa1e1190b120690b101bbfe92bb",
-    "semantic_hash": "88439aa1e1190b120690b101bbfe92bb"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/messages/unread-count/route.ts": {
-    "mtime": 1758491503.6549542,
-    "ast_hash": "6a3d61caacbf78f553aafc144efdd9b2",
-    "semantic_hash": "6a3d61caacbf78f553aafc144efdd9b2"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/offer/route.ts": {
-    "mtime": 1760020894.1824734,
-    "ast_hash": "275da53f3515c4bf824ce2e34fec5bfa",
-    "semantic_hash": "275da53f3515c4bf824ce2e34fec5bfa"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/payment-received/route.ts": {
-    "mtime": 1771536215.078653,
-    "ast_hash": "f1e93e5c7b44f271acb32eb664041804",
-    "semantic_hash": "f1e93e5c7b44f271acb32eb664041804"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/payment-schedule/route.ts": {
-    "mtime": 1779708515.6739383,
-    "ast_hash": "082a90b071e9f04154e3ec4f92890f0c",
-    "semantic_hash": "082a90b071e9f04154e3ec4f92890f0c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/resiliate/route.ts": {
-    "mtime": 1772632888.1987798,
-    "ast_hash": "6dd9503b22bdcc50d491897c314d6696",
-    "semantic_hash": "6dd9503b22bdcc50d491897c314d6696"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/route.ts": {
-    "mtime": 1770999315.843068,
-    "ast_hash": "bc42b4d461a0c9eeb6b62233468ea7d2",
-    "semantic_hash": "bc42b4d461a0c9eeb6b62233468ea7d2"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/status/route.ts": {
-    "mtime": 1764673438.3950796,
-    "ast_hash": "a03ca1320c6458e39c4f5237c1d30c4f",
-    "semantic_hash": "a03ca1320c6458e39c4f5237c1d30c4f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/validate-installment/route.ts": {
-    "mtime": 1771536201.4354622,
-    "ast_hash": "3b4ec9eb018287ba28da1e511ae66a22",
-    "semantic_hash": "3b4ec9eb018287ba28da1e511ae66a22"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/[id]/versions/route.ts": {
-    "mtime": 1764673438.3951113,
-    "ast_hash": "3d6d982657b6d1b9c9b2a1d103c455f8",
-    "semantic_hash": "3d6d982657b6d1b9c9b2a1d103c455f8"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/quotes/route.ts": {
-    "mtime": 1770742604.8897872,
-    "ast_hash": "08994cb591f43a82425f79755626e424",
-    "semantic_hash": "08994cb591f43a82425f79755626e424"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/upload/route.ts": {
-    "mtime": 1772631858.280266,
-    "ast_hash": "8f271aa4e8f81ef3ebc2bacf35ae6a11",
-    "semantic_hash": "8f271aa4e8f81ef3ebc2bacf35ae6a11"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/users/[id]/route.ts": {
-    "mtime": 1756929961.0537055,
-    "ast_hash": "d3aeeb5b47c7a2ca253aa244e9e8443a",
-    "semantic_hash": "d3aeeb5b47c7a2ca253aa244e9e8443a"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/users/route.ts": {
-    "mtime": 1756929961.0537643,
-    "ast_hash": "ef679ca6b60a47b358a1b50b13b1121f",
-    "semantic_hash": "ef679ca6b60a47b358a1b50b13b1121f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/workflow/steps/[id]/inputs/route.ts": {
-    "mtime": 1757624873.0294504,
-    "ast_hash": "37d86e56bf1cacbd77f51cc98bc24f2b",
-    "semantic_hash": "37d86e56bf1cacbd77f51cc98bc24f2b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/workflow/steps/[id]/messages/route.ts": {
-    "mtime": 1757624897.4011362,
-    "ast_hash": "7f6864af9b03bb908ceca9e36115cbf3",
-    "semantic_hash": "7f6864af9b03bb908ceca9e36115cbf3"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/workflow/steps/[id]/route.ts": {
-    "mtime": 1757689898.1316895,
-    "ast_hash": "020d23599d07c9792274875fadc268e7",
-    "semantic_hash": "020d23599d07c9792274875fadc268e7"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/workflow/steps/reorder/route.ts": {
-    "mtime": 1757624873.0295663,
-    "ast_hash": "37d86e56bf1cacbd77f51cc98bc24f2b",
-    "semantic_hash": "37d86e56bf1cacbd77f51cc98bc24f2b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/workflow/steps/route.ts": {
-    "mtime": 1757689898.1269374,
-    "ast_hash": "429f154912974adf2626fcbbe963377c",
-    "semantic_hash": "429f154912974adf2626fcbbe963377c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/api/workflow/templates/route.ts": {
-    "mtime": 1757624873.0296788,
-    "ast_hash": "37d86e56bf1cacbd77f51cc98bc24f2b",
-    "semantic_hash": "37d86e56bf1cacbd77f51cc98bc24f2b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/auth/setup-account/layout.tsx": {
-    "mtime": 1759499295.0069067,
-    "ast_hash": "533a5659204b04f2e939edf00bac9376",
-    "semantic_hash": "533a5659204b04f2e939edf00bac9376"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/auth/setup-account/page.tsx": {
-    "mtime": 1757867326.698066,
-    "ast_hash": "11a27a77d7418003629ea96bce37b0e1",
-    "semantic_hash": "11a27a77d7418003629ea96bce37b0e1"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/dashboard/AdminScreen.tsx": {
-    "mtime": 1779709283.4664536,
-    "ast_hash": "92d1ed9e6646e2e789705eddaaa30d65",
-    "semantic_hash": "92d1ed9e6646e2e789705eddaaa30d65"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/dashboard/BrokerScreen.tsx": {
-    "mtime": 1761820641.1288085,
-    "ast_hash": "3685b694e6fd84d3a4716223823a5ebe",
-    "semantic_hash": "3685b694e6fd84d3a4716223823a5ebe"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/dashboard/ClientScreen.tsx": {
-    "mtime": 1756929961.054509,
-    "ast_hash": "32ebf57c58b93443ae760297eac351b5",
-    "semantic_hash": "32ebf57c58b93443ae760297eac351b5"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/dashboard/layout.tsx": {
-    "mtime": 1759499295.0071397,
-    "ast_hash": "1b47aa68c1c8dd3b6e9071d0c4d14d5b",
-    "semantic_hash": "1b47aa68c1c8dd3b6e9071d0c4d14d5b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/dashboard/page.tsx": {
-    "mtime": 1757792474.0211525,
-    "ast_hash": "11a25d104ebb873cb1a7ef7bc7088801",
-    "semantic_hash": "11a25d104ebb873cb1a7ef7bc7088801"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/forgot-password/page.tsx": {
-    "mtime": 1770377831.9402711,
-    "ast_hash": "18e9c8bd55ef9b7ec03e7f73226d97b5",
-    "semantic_hash": "18e9c8bd55ef9b7ec03e7f73226d97b5"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/layout.tsx": {
-    "mtime": 1759499295.0076597,
-    "ast_hash": "bf0fb6388c0560d455a6ddc152b2fa87",
-    "semantic_hash": "bf0fb6388c0560d455a6ddc152b2fa87"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/login/layout.tsx": {
-    "mtime": 1760545278.5005028,
-    "ast_hash": "561eebf140266780be382bf6a324164e",
-    "semantic_hash": "561eebf140266780be382bf6a324164e"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/login/page.tsx": {
-    "mtime": 1769608812.2414398,
-    "ast_hash": "7ca3d0a2e42b8d4bcd9145582b820708",
-    "semantic_hash": "7ca3d0a2e42b8d4bcd9145582b820708"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/modifier_echeancier/page.tsx": {
-    "mtime": 1771420299.6387115,
-    "ast_hash": "1bf2c4c54778588ffffa33c17537b9f2",
-    "semantic_hash": "1bf2c4c54778588ffffa33c17537b9f2"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/page.tsx": {
-    "mtime": 1757795886.5124812,
-    "ast_hash": "14de0837e1dc85180c3999d5532024a8",
-    "semantic_hash": "14de0837e1dc85180c3999d5532024a8"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/[id]/layout.tsx": {
-    "mtime": 1759499295.0080173,
-    "ast_hash": "df9738a55b822d7bd4f2555eb7992575",
-    "semantic_hash": "df9738a55b822d7bd4f2555eb7992575"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/[id]/page.tsx": {
-    "mtime": 1773090338.600499,
-    "ast_hash": "8f929f9474b7611088d670f25425c9e2",
-    "semantic_hash": "8f929f9474b7611088d670f25425c9e2"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/components/forms/ModificationForm.tsx": {
-    "mtime": 1774102647.5630496,
-    "ast_hash": "54ff6e9b2df676f8a09b0d5f90d729eb",
-    "semantic_hash": "54ff6e9b2df676f8a09b0d5f90d729eb"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/components/forms/ParameterEditor.tsx": {
-    "mtime": 1769701775.445202,
-    "ast_hash": "b4b96b4c224d6c1ea0ccdee3967de2bd",
-    "semantic_hash": "b4b96b4c224d6c1ea0ccdee3967de2bd"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/components/forms/SimpleParameterEditor.tsx": {
-    "mtime": 1773089457.4327428,
-    "ast_hash": "63b2932360de1b43dd945fe13ad01427",
-    "semantic_hash": "63b2932360de1b43dd945fe13ad01427"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/components/forms/recalculateUtils.ts": {
-    "mtime": 1769810020.3689682,
-    "ast_hash": "9c11fafd6a6e71836a150145e28f5277",
-    "semantic_hash": "9c11fafd6a6e71836a150145e28f5277"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/AggravationTab.tsx": {
-    "mtime": 1762439446.6256316,
-    "ast_hash": "2ff868b68348f1bc79e2be42514dff68",
-    "semantic_hash": "2ff868b68348f1bc79e2be42514dff68"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/AppelDePrimeTab.tsx": {
-    "mtime": 1774104079.177476,
-    "ast_hash": "af2b2663904c00da38306ef15581fa14",
-    "semantic_hash": "af2b2663904c00da38306ef15581fa14"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/BordereauTab.tsx": {
-    "mtime": 1780575950.3417888,
-    "ast_hash": "ee97ce1aa6bfc9f7fb0a38286836bf98",
-    "semantic_hash": "ee97ce1aa6bfc9f7fb0a38286836bf98"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/BrokerCommissionsTab.tsx": {
-    "mtime": 1762368493.2771943,
-    "ast_hash": "4bc248d1270c8122b65d30790fd9181c",
-    "semantic_hash": "4bc248d1270c8122b65d30790fd9181c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/CalculationTab.tsx": {
-    "mtime": 1776203740.886838,
-    "ast_hash": "87603b8674a90a9f53667359d1fc0ded",
-    "semantic_hash": "87603b8674a90a9f53667359d1fc0ded"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/ChatTab.tsx": {
-    "mtime": 1758635979.8422148,
-    "ast_hash": "c1836be369cfbc601578c94a7c691254",
-    "semantic_hash": "c1836be369cfbc601578c94a7c691254"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/ContratTab.tsx": {
-    "mtime": 1762442341.1932414,
-    "ast_hash": "e46c964da2f21fd353c9598af47c77cd",
-    "semantic_hash": "e46c964da2f21fd353c9598af47c77cd"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/FormDataTab.tsx": {
-    "mtime": 1772721278.1568768,
-    "ast_hash": "2359c25277ec39484529916892f06d55",
-    "semantic_hash": "2359c25277ec39484529916892f06d55"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/LetterTab.tsx": {
-    "mtime": 1763054187.5964038,
-    "ast_hash": "ce12ebb443cb92eff1b3dc23d6b74567",
-    "semantic_hash": "ce12ebb443cb92eff1b3dc23d6b74567"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/OffreTab.tsx": {
-    "mtime": 1770074906.9522681,
-    "ast_hash": "7e9bc5521bd81b7569f1536eca9ca324",
-    "semantic_hash": "7e9bc5521bd81b7569f1536eca9ca324"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/PieceJointeTab.tsx": {
-    "mtime": 1765197545.388241,
-    "ast_hash": "29e5b140b4d9086d05270604a8491cf2",
-    "semantic_hash": "29e5b140b4d9086d05270604a8491cf2"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/PremiumCallTab.tsx": {
-    "mtime": 1771323428.0108213,
-    "ast_hash": "35f4d4413d2e95fc935f72e31b0c7bd2",
-    "semantic_hash": "35f4d4413d2e95fc935f72e31b0c7bd2"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/quotes/tabs/ResumeTab.tsx": {
-    "mtime": 1770633717.8538783,
-    "ast_hash": "1fc9a5aba03a4eb05942d151c204d83e",
-    "semantic_hash": "1fc9a5aba03a4eb05942d151c204d83e"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/register/layout.tsx": {
-    "mtime": 1759499295.0082476,
-    "ast_hash": "5ba6660a1395e8c34ef96065b0d46d79",
-    "semantic_hash": "5ba6660a1395e8c34ef96065b0d46d79"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/register/page.tsx": {
-    "mtime": 1756929961.0558133,
-    "ast_hash": "995947d29ba84f0be8af6707c9ee228e",
-    "semantic_hash": "995947d29ba84f0be8af6707c9ee228e"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/app/reset-password/page.tsx": {
-    "mtime": 1769608812.2415133,
-    "ast_hash": "1ed467ea2b8278742eedee0df8a08e8c",
-    "semantic_hash": "1ed467ea2b8278742eedee0df8a08e8c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/admin/CorrespondanceTab.tsx": {
-    "mtime": 1760025049.5698586,
-    "ast_hash": "8a250eab0bb64bb72e824068a5dc9b23",
-    "semantic_hash": "8a250eab0bb64bb72e824068a5dc9b23"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/admin/EcartsMontantsTab.tsx": {
-    "mtime": 1774102647.6636648,
-    "ast_hash": "4eca14a10edfbd09e14f1d44109b4d28",
-    "semantic_hash": "4eca14a10edfbd09e14f1d44109b4d28"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/admin/ProductConfigTab.tsx": {
-    "mtime": 1758212160.0580049,
-    "ast_hash": "ea4702a196637bf48dc3b913614f0d00",
-    "semantic_hash": "ea4702a196637bf48dc3b913614f0d00"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/messages/MessageComposer.tsx": {
-    "mtime": 1756929961.056075,
-    "ast_hash": "0a2779978bc90ceac4aecc15097fdb38",
-    "semantic_hash": "0a2779978bc90ceac4aecc15097fdb38"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/modals/AddBrokerModal.tsx": {
-    "mtime": 1756929961.0562105,
-    "ast_hash": "2c91a51cf5559f1e284a7a343b4ada5d",
-    "semantic_hash": "2c91a51cf5559f1e284a7a343b4ada5d"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/modals/ApproveOfferModal.tsx": {
-    "mtime": 1770147007.1188235,
-    "ast_hash": "f731969f9ad62e5565e152460bdf514f",
-    "semantic_hash": "f731969f9ad62e5565e152460bdf514f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/pdf/AttestationRCDPDF.tsx": {
-    "mtime": 1776204404.8480933,
-    "ast_hash": "a3b5dd372814fa72b00c436e03991612",
-    "semantic_hash": "a3b5dd372814fa72b00c436e03991612"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/pdf/ContratPDF.tsx": {
-    "mtime": 1778680413.504629,
-    "ast_hash": "5845eec93d91a420488903bda718fd78",
-    "semantic_hash": "5845eec93d91a420488903bda718fd78"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/pdf/LetterOfIntentPDF.tsx": {
-    "mtime": 1771931530.322596,
-    "ast_hash": "24289370d96228b0555aef7a0ce14719",
-    "semantic_hash": "24289370d96228b0555aef7a0ce14719"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/pdf/OfferLetterPDF.tsx": {
-    "mtime": 1774461737.884187,
-    "ast_hash": "ccfe61edd96b30afa47c76ebf12a29de",
-    "semantic_hash": "ccfe61edd96b30afa47c76ebf12a29de"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/pdf/OfferLetterPreview.tsx": {
-    "mtime": 1760021004.771901,
-    "ast_hash": "491c658e9647bb0e0f4a279c56bdaa61",
-    "semantic_hash": "491c658e9647bb0e0f4a279c56bdaa61"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/pdf/PremiumCallPDF.tsx": {
-    "mtime": 1775654203.6665046,
-    "ast_hash": "14716648001146b67456de97cdd9945d",
-    "semantic_hash": "14716648001146b67456de97cdd9945d"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/quotes/ActivityBreakdown.tsx": {
-    "mtime": 1770811013.7428918,
-    "ast_hash": "7b9090a5f30e505ba13675b89db4c3c5",
-    "semantic_hash": "7b9090a5f30e505ba13675b89db4c3c5"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/quotes/LossHistoryField.tsx": {
-    "mtime": 1756992810.005409,
-    "ast_hash": "108ab173032d16d8a94162a6a1b12d60",
-    "semantic_hash": "108ab173032d16d8a94162a6a1b12d60"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/quotes/MultiSelect.tsx": {
-    "mtime": 1756929961.0563426,
-    "ast_hash": "d04f4066803770e52b06d2fd3069ecbd",
-    "semantic_hash": "d04f4066803770e52b06d2fd3069ecbd"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/quotes/QuoteForm.tsx": {
-    "mtime": 1771347209.9621983,
-    "ast_hash": "86303acfd26c6f06004e83220714ef0d",
-    "semantic_hash": "86303acfd26c6f06004e83220714ef0d"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/quotes/QuoteSuccessPage.tsx": {
-    "mtime": 1763054375.7066932,
-    "ast_hash": "30542500f4d37e3445f6590fea37da13",
-    "semantic_hash": "30542500f4d37e3445f6590fea37da13"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/quotes/QuoteValidationPage.tsx": {
-    "mtime": 1756929961.0567238,
-    "ast_hash": "2b9a932e48f9165b866d8b93567e7f51",
-    "semantic_hash": "2b9a932e48f9165b866d8b93567e7f51"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/quotes/QuotesList.tsx": {
-    "mtime": 1772636669.387491,
-    "ast_hash": "31e6cbde4b787fb0d6f2b935e307a5b3",
-    "semantic_hash": "31e6cbde4b787fb0d6f2b935e307a5b3"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/workflow/AdminWorkflowManager.tsx": {
-    "mtime": 1757689898.1316633,
-    "ast_hash": "1582817a9641a49806322a56652ebff7",
-    "semantic_hash": "1582817a9641a49806322a56652ebff7"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/workflow/BrokerWorkflowExecutor.tsx": {
-    "mtime": 1757689898.13168,
-    "ast_hash": "a3441e2afb673d529b866f42f192c61f",
-    "semantic_hash": "a3441e2afb673d529b866f42f192c61f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/workflow/StepEditorModal.tsx": {
-    "mtime": 1757689898.1269493,
-    "ast_hash": "0505774553ed4126ab2e71f77c87fe15",
-    "semantic_hash": "0505774553ed4126ab2e71f77c87fe15"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/workflow/StepInputForm.tsx": {
-    "mtime": 1757624310.170161,
-    "ast_hash": "1223b7a3896872f0f61d262a191d73cf",
-    "semantic_hash": "1223b7a3896872f0f61d262a191d73cf"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/workflow/StepMessagingPanel.tsx": {
-    "mtime": 1757689898.131698,
-    "ast_hash": "dbab5d095fd50665573180353e9d2bba",
-    "semantic_hash": "dbab5d095fd50665573180353e9d2bba"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/components/workflow/WorkflowTimeline.tsx": {
-    "mtime": 1757624310.1536767,
-    "ast_hash": "19b73cd024cf571cf12937ac2e314052",
-    "semantic_hash": "19b73cd024cf571cf12937ac2e314052"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/api-utils.ts": {
-    "mtime": 1758488621.559119,
-    "ast_hash": "19737cb71d712e19b0f8ef522555262c",
-    "semantic_hash": "19737cb71d712e19b0f8ef522555262c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/api/pappers.ts": {
-    "mtime": 1771347189.7598262,
-    "ast_hash": "30afd11345682dac7037b6f13021f8ef",
-    "semantic_hash": "30afd11345682dac7037b6f13021f8ef"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/api/workflow.ts": {
-    "mtime": 1757689898.1259964,
-    "ast_hash": "f4a0ff69d841e7302a1fb15a8f8c70af",
-    "semantic_hash": "f4a0ff69d841e7302a1fb15a8f8c70af"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/auth-client.ts": {
-    "mtime": 1769608812.2414787,
-    "ast_hash": "9e3f3698c2d6ad7f8e9ade28e3e2733b",
-    "semantic_hash": "9e3f3698c2d6ad7f8e9ade28e3e2733b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/auth.ts": {
-    "mtime": 1770654552.711789,
-    "ast_hash": "df398d544f52667dd3d6328a58303e82",
-    "semantic_hash": "df398d544f52667dd3d6328a58303e82"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/__tests__/bordereauMonthEventsV2.test.ts": {
-    "mtime": 1780586749.281593,
-    "ast_hash": "8e22b740cd691b3636f74918d09ab715",
-    "semantic_hash": "8e22b740cd691b3636f74918d09ab715"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/__tests__/extractBordereauData.test.ts": {
-    "mtime": 1769804806.503614,
-    "ast_hash": "9844de1c37fc461c443957f775b00000",
-    "semantic_hash": "9844de1c37fc461c443957f775b00000"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/__tests__/extractPolicesV2.test.ts": {
-    "mtime": 1772629345.2974396,
-    "ast_hash": "9e3af22480aeb226cfd214652eb3b0ea",
-    "semantic_hash": "9e3af22480aeb226cfd214652eb3b0ea"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/__tests__/generateCSV.test.ts": {
-    "mtime": 1780669308.6729465,
-    "ast_hash": "72cfa6caf867af21600696b3f0d241b5",
-    "semantic_hash": "72cfa6caf867af21600696b3f0d241b5"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/__tests__/utils.test.ts": {
-    "mtime": 1769804805.1821246,
-    "ast_hash": "cc8569a00950705e22eb4dd6a0bce6cc",
-    "semantic_hash": "cc8569a00950705e22eb4dd6a0bce6cc"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/bordereauMonthEventsV2.ts": {
-    "mtime": 1780586747.8983276,
-    "ast_hash": "99417080108de3c4700cf01d282ea4e0",
-    "semantic_hash": "99417080108de3c4700cf01d282ea4e0"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/config.ts": {
-    "mtime": 1771496199.6586637,
-    "ast_hash": "13bbd41966a96bfa82c3b705f4a06266",
-    "semantic_hash": "13bbd41966a96bfa82c3b705f4a06266"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/extractBordereauData.ts": {
-    "mtime": 1771496199.6587858,
-    "ast_hash": "97df4f3d07f0ab8e5bbb242b3dd334c3",
-    "semantic_hash": "97df4f3d07f0ab8e5bbb242b3dd334c3"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/extractPolicesV2.ts": {
-    "mtime": 1780584855.0657585,
-    "ast_hash": "0a5993722ec8fcbf0eab883235edf9a1",
-    "semantic_hash": "0a5993722ec8fcbf0eab883235edf9a1"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/extractQuittancesV2.ts": {
-    "mtime": 1780584716.3591924,
-    "ast_hash": "e83e473a788eb67bd13c2fe4c92703ed",
-    "semantic_hash": "e83e473a788eb67bd13c2fe4c92703ed"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/generateCSV.ts": {
-    "mtime": 1780669303.0545452,
-    "ast_hash": "bd3cca373b8105fd400661f249b2c451",
-    "semantic_hash": "bd3cca373b8105fd400661f249b2c451"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/index.ts": {
-    "mtime": 1780669303.1399877,
-    "ast_hash": "0da7ff1631268778aafecd484bf6db89",
-    "semantic_hash": "0da7ff1631268778aafecd484bf6db89"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/types.ts": {
-    "mtime": 1772630065.6907575,
-    "ast_hash": "cc33e6eda3dbbe9d76764e7e2de6bbe4",
-    "semantic_hash": "cc33e6eda3dbbe9d76764e7e2de6bbe4"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/bordereau/utils.ts": {
-    "mtime": 1771536643.3344185,
-    "ast_hash": "665dfe9b4b3db5a8699b358cff852f46",
-    "semantic_hash": "665dfe9b4b3db5a8699b358cff852f46"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/calculation-apply.ts": {
-    "mtime": 1774102647.5630736,
-    "ast_hash": "44c6c690b096e9764af8a96123c3c616",
-    "semantic_hash": "44c6c690b096e9764af8a96123c3c616"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/nodemailer.ts": {
-    "mtime": 1769608812.2415,
-    "ast_hash": "72b7a78fc07fd5678825010c7e30a0c0",
-    "semantic_hash": "72b7a78fc07fd5678825010c7e30a0c0"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/payment-csv-import.ts": {
-    "mtime": 1780668592.869264,
-    "ast_hash": "dfa2f8b03bb4482270283242f20fe456",
-    "semantic_hash": "dfa2f8b03bb4482270283242f20fe456"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/payment-schedule-utils.ts": {
-    "mtime": 1779708433.4789674,
-    "ast_hash": "3a226e9a80e2688b50a4e9fa63c9d3dd",
-    "semantic_hash": "3a226e9a80e2688b50a4e9fa63c9d3dd"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/prisma.ts": {
-    "mtime": 1756929961.0572717,
-    "ast_hash": "af98f4bc3e6416ccc5e6fb211767b568",
-    "semantic_hash": "af98f4bc3e6416ccc5e6fb211767b568"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/quotes/echeance-row-values.test.ts": {
-    "mtime": 1776203749.8517292,
-    "ast_hash": "859449ed4b9521499747bb93f27372e3",
-    "semantic_hash": "859449ed4b9521499747bb93f27372e3"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/quotes/echeance-row-values.ts": {
-    "mtime": 1776203737.3994014,
-    "ast_hash": "a34d49e3ed6c9cebbc54ccbba69084c2",
-    "semantic_hash": "a34d49e3ed6c9cebbc54ccbba69084c2"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/stores/messages-store.ts": {
-    "mtime": 1756929961.0574324,
-    "ast_hash": "10a0188450c436dfca21f5a1f647f54e",
-    "semantic_hash": "10a0188450c436dfca21f5a1f647f54e"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/stores/products-store.ts": {
-    "mtime": 1756929961.0575373,
-    "ast_hash": "49240f6d14c894f2325b91e7801658c9",
-    "semantic_hash": "49240f6d14c894f2325b91e7801658c9"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/stores/quote-chat-store.ts": {
-    "mtime": 1758636216.9924848,
-    "ast_hash": "82597117aecac5ca887c9a94daa32684",
-    "semantic_hash": "82597117aecac5ca887c9a94daa32684"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/stores/quotes-store.ts": {
-    "mtime": 1756929961.0576751,
-    "ast_hash": "34ea555a7909c92326f1a72ac450e84f",
-    "semantic_hash": "34ea555a7909c92326f1a72ac450e84f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/stores/users-store.ts": {
-    "mtime": 1756929961.0577865,
-    "ast_hash": "408985dde83e640d8620e006df748b72",
-    "semantic_hash": "408985dde83e640d8620e006df748b72"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/stores/workflow-store.ts": {
-    "mtime": 1757689898.1269288,
-    "ast_hash": "714f3af686134cc9284b23a71fb2fc6c",
-    "semantic_hash": "714f3af686134cc9284b23a71fb2fc6c"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/supabase-client.ts": {
-    "mtime": 1756929961.0578601,
-    "ast_hash": "bbcaec1a5cbf74a4d02434d59a56fd7b",
-    "semantic_hash": "bbcaec1a5cbf74a4d02434d59a56fd7b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/tarificateurs/__tests__/genererEcheancier.test.ts": {
-    "mtime": 1776203792.8691213,
-    "ast_hash": "332e74e0da94df9903c296ae769793f5",
-    "semantic_hash": "332e74e0da94df9903c296ae769793f5"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/tarificateurs/rcd.ts": {
-    "mtime": 1776203730.5870395,
-    "ast_hash": "436cc9b4d249627e5753a74fd94f2edc",
-    "semantic_hash": "436cc9b4d249627e5753a74fd94f2edc"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/tarificateurs/runEcheancierTests.ts": {
-    "mtime": 1776203793.4635327,
-    "ast_hash": "83bb475ced5e863d7e13fd1b9a631433",
-    "semantic_hash": "83bb475ced5e863d7e13fd1b9a631433"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/tarificateurs/validateEcheancierInvariants.ts": {
-    "mtime": 1776203820.2187831,
-    "ast_hash": "92bc002ed08e6491f97585e438630583",
-    "semantic_hash": "92bc002ed08e6491f97585e438630583"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/types.ts": {
-    "mtime": 1774102647.5612159,
-    "ast_hash": "a079b54d900fae0f6d19578d3a6c48df",
-    "semantic_hash": "a079b54d900fae0f6d19578d3a6c48df"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/types/workflow.ts": {
-    "mtime": 1757689898.1269429,
-    "ast_hash": "75a3069baaccc7da5333eb773e9396d6",
-    "semantic_hash": "75a3069baaccc7da5333eb773e9396d6"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/utils.ts": {
-    "mtime": 1773090354.0820107,
-    "ast_hash": "c36131b898cc77ed82b36ab543b7c136",
-    "semantic_hash": "c36131b898cc77ed82b36ab543b7c136"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/lib/validations.ts": {
-    "mtime": 1770767629.7278783,
-    "ast_hash": "4304acd5576c7258e10d34a172e7abfc",
-    "semantic_hash": "4304acd5576c7258e10d34a172e7abfc"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/middleware.ts": {
-    "mtime": 1757792330.26845,
-    "ast_hash": "32ad26625691efcaaa053c3cb8f8f3df",
-    "semantic_hash": "32ad26625691efcaaa053c3cb8f8f3df"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/scripts/check-bordereau-references.ts": {
-    "mtime": 1771003357.8293474,
-    "ast_hash": "fa07100dcfc53ac9912d41f3dcd9137b",
-    "semantic_hash": "fa07100dcfc53ac9912d41f3dcd9137b"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/scripts/import-brokers.ts": {
-    "mtime": 1770074906.9054613,
-    "ast_hash": "9d30e1f118e43cf0da3443b0137165a6",
-    "semantic_hash": "9d30e1f118e43cf0da3443b0137165a6"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/scripts/import-payments-from-csv.ts": {
-    "mtime": 1779709264.3882957,
-    "ast_hash": "fec242716eac1c4da4c250e1b96f93a8",
-    "semantic_hash": "fec242716eac1c4da4c250e1b96f93a8"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/scripts/recalcul-echeancier.ts": {
-    "mtime": 1779708501.2266278,
-    "ast_hash": "e7d2c201ddac37898f58a9faa8363a41",
-    "semantic_hash": "e7d2c201ddac37898f58a9faa8363a41"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/scripts/set-quotes-accepted-bordereau.ts": {
-    "mtime": 1771004159.6223242,
-    "ast_hash": "44817a65c16eb1395bf33119da18419f",
-    "semantic_hash": "44817a65c16eb1395bf33119da18419f"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/src/scripts/update-quotes-from-file.ts": {
-    "mtime": 1770837852.640264,
-    "ast_hash": "35762ebb4b644ea70fe32bb88927dcdf",
-    "semantic_hash": "35762ebb4b644ea70fe32bb88927dcdf"
-  },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/test.json": {
+  "test.json": {
     "mtime": 1756929961.0583336,
     "ast_hash": "c72bda6ea7ecca9c01a082a4242dd793",
     "semantic_hash": "c72bda6ea7ecca9c01a082a4242dd793"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/tsconfig.json": {
+  "tsconfig.json": {
     "mtime": 1756929961.0584195,
     "ast_hash": "0cf97a81150d3b8904f285780896980d",
     "semantic_hash": "0cf97a81150d3b8904f285780896980d"
   },
-  "/Users/bramsrobben/devProject/encyclie-logiciel/vitest.config.ts": {
+  "vitest.config.ts": {
     "mtime": 1771496199.6587582,
     "ast_hash": "74e6f85a7240c69a89cf7f59c1e01c04",
     "semantic_hash": "74e6f85a7240c69a89cf7f59c1e01c04"
+  },
+  "src/components/admin/AdminBrokersPanel.tsx": {
+    "mtime": 1788792723.998619,
+    "ast_hash": "1c024c94529bddb7d0733ca38f1a75e4",
+    "semantic_hash": ""
+  },
+  "src/components/admin/AdminMessagesPanel.tsx": {
+    "mtime": 1788789927.646111,
+    "ast_hash": "bdd72d1a43526e627aab8a0e5e4753db",
+    "semantic_hash": ""
+  },
+  "src/components/admin/AdminOverduePaymentsPanel.tsx": {
+    "mtime": 1788867533.737826,
+    "ast_hash": "5c50d805550e9736467e33389e33f462",
+    "semantic_hash": ""
+  },
+  "src/components/admin/AdminQuotesPanel.tsx": {
+    "mtime": 1788789912.1341124,
+    "ast_hash": "2ae17702464e3d6cc0eaf4613b48a52c",
+    "semantic_hash": ""
+  },
+  "src/components/admin/AdminVersionsPanel.tsx": {
+    "mtime": 1788789953.83447,
+    "ast_hash": "3867414f8e7742b0b20714d2df55cad8",
+    "semantic_hash": ""
+  },
+  "src/components/admin/BordereauxAdminView.tsx": {
+    "mtime": 1788865982.7521334,
+    "ast_hash": "7f7f78a85cc222f919a29b84ad186c7a",
+    "semantic_hash": ""
+  },
+  "src/components/admin/ImportPaymentsAdminView.tsx": {
+    "mtime": 1788790231.501971,
+    "ast_hash": "9820c10651f83d28ce1d6d53f1202c83",
+    "semantic_hash": ""
+  },
+  "src/components/pdf/primesTableRows.tsx": {
+    "mtime": 1783948109.203188,
+    "ast_hash": "b7b9deb91eea8d03eaf438bede7a0a0d",
+    "semantic_hash": ""
+  },
+  "src/components/ui/AppShell.tsx": {
+    "mtime": 1788867508.488444,
+    "ast_hash": "7e6d8fcde929f458d5c5e9528b04d551",
+    "semantic_hash": ""
+  },
+  "src/components/ui/AuthenticatedAppShell.tsx": {
+    "mtime": 1788789973.481755,
+    "ast_hash": "01a1070ff380155b16f91660acc4fde3",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Controls.tsx": {
+    "mtime": 1788789799.14368,
+    "ast_hash": "0c8a4868e548790eec358259e555e412",
+    "semantic_hash": ""
+  },
+  "src/components/ui/DataDisplay.tsx": {
+    "mtime": 1788867534.3310666,
+    "ast_hash": "1b9fca805f5f0c021b7122a91a0f8ee5",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Feedback.tsx": {
+    "mtime": 1788789791.1238835,
+    "ast_hash": "91842075afba5c38a7023b02af4370b6",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Modal.tsx": {
+    "mtime": 1788790790.9133172,
+    "ast_hash": "83f5555eb2a20e77b76dc51143163d2c",
+    "semantic_hash": ""
+  },
+  "src/components/ui/ToastHost.tsx": {
+    "mtime": 1788789813.59029,
+    "ast_hash": "757a6ad850a65dc1dab9b3d707e34997",
+    "semantic_hash": ""
+  },
+  "src/hooks/useDelayedFlag.ts": {
+    "mtime": 1788789777.478667,
+    "ast_hash": "2ba53c231ce37472f1e9e10c6a664646",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/__tests__/prorata.test.ts": {
+    "mtime": 1782916216.4488957,
+    "ast_hash": "ddab334ffd04c360d177faa302b572da",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/__tests__/quittanceAmountsV2.test.ts": {
+    "mtime": 1782916223.287754,
+    "ast_hash": "c90b0748234114b9f94bd50125e1ab6c",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/__tests__/verifyBordereauExportAlignment.test.ts": {
+    "mtime": 1782913663.1283486,
+    "ast_hash": "f7ffdc3483cce4648adf107491a4ee4a",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/__tests__/verifyPremierEcheanceBordereau.test.ts": {
+    "mtime": 1782911195.591192,
+    "ast_hash": "91ce8af8ab5e1f19fb9af7bf48c1fe43",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/dateRange.ts": {
+    "mtime": 1782911519.0299063,
+    "ast_hash": "a19d4738dce09baec230cd90bd8b41d7",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/loadScriptEnv.ts": {
+    "mtime": 1782911519.2984731,
+    "ast_hash": "64b7d6c2f10a64744b5a633bd8a0e79c",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/prorata.ts": {
+    "mtime": 1782916186.9653323,
+    "ast_hash": "ac4291f79b82598b4c88530eb1256b38",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/quittanceAmountsV2.ts": {
+    "mtime": 1782916191.9701724,
+    "ast_hash": "03443fda6fddaf4fb2afd77a758db37a",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/verifyBordereauExportAlignment.ts": {
+    "mtime": 1782916205.2571797,
+    "ast_hash": "34f5ed0d2088c9eae732d74d0187981a",
+    "semantic_hash": ""
+  },
+  "src/lib/bordereau/verifyPremierEcheanceBordereau.ts": {
+    "mtime": 1782910063.0108914,
+    "ast_hash": "4c38e1756f3ca4e3ace1477ac2dcd026",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/__tests__/attestation-dates.test.ts": {
+    "mtime": 1783947530.6983483,
+    "ast_hash": "a78b64a7c03979495e9f275dac187bca",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/__tests__/primes-table-calculations.test.ts": {
+    "mtime": 1783948118.9409695,
+    "ast_hash": "fdabd336b28a0e264d44f0f22773a7ee",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/attestation-dates.ts": {
+    "mtime": 1783947487.6821606,
+    "ast_hash": "85b635b17a2487f0dfaf5d6c01c1b808",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/primes-table-calculations.ts": {
+    "mtime": 1783948101.7516847,
+    "ast_hash": "d278f5e777518e6a52e0ac1b04621221",
+    "semantic_hash": ""
+  },
+  "src/lib/ui/labels.test.ts": {
+    "mtime": 1788789779.3460267,
+    "ast_hash": "91fca9787f6583e1261f8f07b2152782",
+    "semantic_hash": ""
+  },
+  "src/lib/ui/labels.ts": {
+    "mtime": 1788789774.8509912,
+    "ast_hash": "c874e995479f81deb409c1bd2ce1644e",
+    "semantic_hash": ""
+  },
+  "src/lib/ui/notify.ts": {
+    "mtime": 1788789775.9022791,
+    "ast_hash": "930420efd66d9dd7e8066c22ff7132e2",
+    "semantic_hash": ""
+  },
+  "src/scripts/verify-bordereau-premier-echeances.ts": {
+    "mtime": 1782911535.0827765,
+    "ast_hash": "e016ac8620e9e484437489fcafcfe85a",
+    "semantic_hash": ""
+  },
+  "src/scripts/verify-bordereau-quittances-export.ts": {
+    "mtime": 1782913614.5086663,
+    "ast_hash": "c359ef2e0e58ce78dcff3a92ad5dded3",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agent-teams/team-all.yaml": {
+    "mtime": 1757536215.600801,
+    "ast_hash": "e18f8af8112b35883623d665564ec506",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agent-teams/team-fullstack.yaml": {
+    "mtime": 1757536215.600424,
+    "ast_hash": "dac272d020f264124fca0576511651e0",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agent-teams/team-ide-minimal.yaml": {
+    "mtime": 1757536215.6001823,
+    "ast_hash": "00e7bcc9de37aced1231b0c21be94d4b",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agent-teams/team-no-ui.yaml": {
+    "mtime": 1757536215.5999622,
+    "ast_hash": "1627d0212e70b0e0f4c8e1925c565c96",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/analyst.md": {
+    "mtime": 1757536215.6037579,
+    "ast_hash": "2d3e11836a306045fc15c2dccce20940",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/architect.md": {
+    "mtime": 1757536215.6035187,
+    "ast_hash": "4a01ee3a6328dc4e6bc38639bdeae49e",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/bmad-master.md": {
+    "mtime": 1757536215.6032844,
+    "ast_hash": "0a6eeaf7fa72404e78ae85d62aaec949",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/bmad-orchestrator.md": {
+    "mtime": 1757536215.6030514,
+    "ast_hash": "b50f150438185e55c8798cd151a7139a",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/dev.md": {
+    "mtime": 1757536215.602706,
+    "ast_hash": "6f89895476ac22a596d80a87a79e094f",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/pm.md": {
+    "mtime": 1757536215.6023467,
+    "ast_hash": "c3cf0a1a248bb51173b4c30f1b8c39e5",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/po.md": {
+    "mtime": 1757536215.6020422,
+    "ast_hash": "6e2e8a796cecc81840d57baa0eea4e01",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/qa.md": {
+    "mtime": 1757536215.6017842,
+    "ast_hash": "14a70f890ee3aed0cc957f1d32252c6d",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/sm.md": {
+    "mtime": 1757536215.60149,
+    "ast_hash": "5f9660d2ac453b471cbd3e2720114f54",
+    "semantic_hash": ""
+  },
+  ".bmad-core/agents/ux-expert.md": {
+    "mtime": 1757536215.6011226,
+    "ast_hash": "f87536eebcb8b15eafa558b4ce30249b",
+    "semantic_hash": ""
+  },
+  ".bmad-core/checklists/architect-checklist.md": {
+    "mtime": 1757536215.5944674,
+    "ast_hash": "d12ab7fdaa74e8ce73b5b4d8ae93629c",
+    "semantic_hash": ""
+  },
+  ".bmad-core/checklists/change-checklist.md": {
+    "mtime": 1757536215.5940223,
+    "ast_hash": "29ea477ad7af4c84b80ba62955c333ff",
+    "semantic_hash": ""
+  },
+  ".bmad-core/checklists/pm-checklist.md": {
+    "mtime": 1757536215.5935776,
+    "ast_hash": "8e5d05f5de0e1cec9b6c8174e801bd3c",
+    "semantic_hash": ""
+  },
+  ".bmad-core/checklists/po-master-checklist.md": {
+    "mtime": 1757536215.593028,
+    "ast_hash": "30ff22eeb730e24a7e443fd96320f04f",
+    "semantic_hash": ""
+  },
+  ".bmad-core/checklists/story-dod-checklist.md": {
+    "mtime": 1757536215.5925825,
+    "ast_hash": "6897c602c84207a7e6cd039b90e751dd",
+    "semantic_hash": ""
+  },
+  ".bmad-core/checklists/story-draft-checklist.md": {
+    "mtime": 1757536215.5922024,
+    "ast_hash": "ab30507d46ca477c79248d0b1557a69e",
+    "semantic_hash": ""
+  },
+  ".bmad-core/core-config.yaml": {
+    "mtime": 1757536215.6514359,
+    "ast_hash": "79cfd97a609d8c7164973d335b621adf",
+    "semantic_hash": ""
+  },
+  ".bmad-core/data/bmad-kb.md": {
+    "mtime": 1757536215.6053169,
+    "ast_hash": "e6751ff40260fc6c395d7676ab3ebb3d",
+    "semantic_hash": ""
+  },
+  ".bmad-core/data/brainstorming-techniques.md": {
+    "mtime": 1757536215.6049635,
+    "ast_hash": "8bc90a4b760ab1665f87a8f66ec183a5",
+    "semantic_hash": ""
+  },
+  ".bmad-core/data/elicitation-methods.md": {
+    "mtime": 1757536215.6047635,
+    "ast_hash": "3954b4908582faa6daf856582df53ba2",
+    "semantic_hash": ""
+  },
+  ".bmad-core/data/technical-preferences.md": {
+    "mtime": 1757536215.6044836,
+    "ast_hash": "0324a8de3105fd046be8bce5c671a3af",
+    "semantic_hash": ""
+  },
+  ".bmad-core/data/test-levels-framework.md": {
+    "mtime": 1757536215.6042666,
+    "ast_hash": "35ab70199b2169b1349ee2a57320a468",
+    "semantic_hash": ""
+  },
+  ".bmad-core/data/test-priorities-matrix.md": {
+    "mtime": 1757536215.6040254,
+    "ast_hash": "ab1074ab7e8434bfcedcd29218539e30",
+    "semantic_hash": ""
+  },
+  ".bmad-core/enhanced-ide-development-workflow.md": {
+    "mtime": 1757536215.6125112,
+    "ast_hash": "2d603df90265c407c63e9eb29dc04fd6",
+    "semantic_hash": ""
+  },
+  ".bmad-core/install-manifest.yaml": {
+    "mtime": 1757536215.6640022,
+    "ast_hash": "f68f8e3a34929a44ccd83b3b095a5fcb",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/advanced-elicitation.md": {
+    "mtime": 1757536215.610573,
+    "ast_hash": "7938874621579ef6e0719b00a520af8f",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/apply-qa-fixes.md": {
+    "mtime": 1757536215.610371,
+    "ast_hash": "8e970c6fa09a1cd903a5bcb045cfb04f",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/brownfield-create-epic.md": {
+    "mtime": 1757536215.610169,
+    "ast_hash": "bdc017e9eb2e84ba320aabbb7e75d92b",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/brownfield-create-story.md": {
+    "mtime": 1757536215.6099079,
+    "ast_hash": "5e70bc7b69c5e9119d880ef10ca6aa03",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/correct-course.md": {
+    "mtime": 1757536215.6096935,
+    "ast_hash": "2d6a171ecdfebb5bec151683441ffa9e",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/create-brownfield-story.md": {
+    "mtime": 1757536215.6094685,
+    "ast_hash": "9a7c28e1b93d52e25c969eb0172c6c44",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/create-deep-research-prompt.md": {
+    "mtime": 1757536215.609203,
+    "ast_hash": "f128035d4b78536c8a6df865822725a4",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/create-doc.md": {
+    "mtime": 1757536215.6116703,
+    "ast_hash": "20dd16d7cd217f1d60c987a1347771da",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/create-next-story.md": {
+    "mtime": 1757536215.608983,
+    "ast_hash": "895a25cfde6a18ef37dde4fd77553c6e",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/document-project.md": {
+    "mtime": 1757536215.6087472,
+    "ast_hash": "1760e58d9ab1c12cc0be85c05dc3fb65",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/execute-checklist.md": {
+    "mtime": 1757536215.6114876,
+    "ast_hash": "d23258cba06fbecb70c8a6d9ac51e692",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/facilitate-brainstorming-session.md": {
+    "mtime": 1757536215.608385,
+    "ast_hash": "e7857d70daf300596d0d6357d14626e3",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/generate-ai-frontend-prompt.md": {
+    "mtime": 1757536215.6081483,
+    "ast_hash": "9b5066c87bba330f1fc84d5bcf674491",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/index-docs.md": {
+    "mtime": 1757536215.607927,
+    "ast_hash": "60e230c8726e2ae815d90e164861f634",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/kb-mode-interaction.md": {
+    "mtime": 1757536215.6076982,
+    "ast_hash": "2b5692741121dee0e78ce35fb9bd287f",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/nfr-assess.md": {
+    "mtime": 1757536215.6075084,
+    "ast_hash": "feb679e0c986de690e6390691909848b",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/qa-gate.md": {
+    "mtime": 1757536215.6072638,
+    "ast_hash": "2af9e9344e2e83d7cd498c924bfc1027",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/review-story.md": {
+    "mtime": 1757536215.6070495,
+    "ast_hash": "15706ab9ab77975fed88a9e13edd556c",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/risk-profile.md": {
+    "mtime": 1757536215.6067202,
+    "ast_hash": "45b3f795641a5e06e9b249501ca07d3d",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/shard-doc.md": {
+    "mtime": 1757536215.6064222,
+    "ast_hash": "5ece12b73cb88d1f6f5f0595687fc5f8",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/test-design.md": {
+    "mtime": 1757536215.606191,
+    "ast_hash": "fb407cf66f1108fa722ea2f6885fbae7",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/trace-requirements.md": {
+    "mtime": 1757536215.6059575,
+    "ast_hash": "76f54121e09f8309420f61522dc52730",
+    "semantic_hash": ""
+  },
+  ".bmad-core/tasks/validate-next-story.md": {
+    "mtime": 1757536215.6056972,
+    "ast_hash": "e1ad520b657669a4abb53620c2e65be7",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/architecture-tmpl.yaml": {
+    "mtime": 1757536215.599715,
+    "ast_hash": "15d3e9c65b26dc229fa3534acab0c0a9",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/brainstorming-output-tmpl.yaml": {
+    "mtime": 1757536215.5993142,
+    "ast_hash": "a2b4e7b91ae1beebd76ad985bce2133d",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/brownfield-architecture-tmpl.yaml": {
+    "mtime": 1757536215.599033,
+    "ast_hash": "142a0a3e5e9022344816ce918b270165",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/brownfield-prd-tmpl.yaml": {
+    "mtime": 1757536215.5987105,
+    "ast_hash": "cba9d5f86569006cdedd70d89f8de67f",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/competitor-analysis-tmpl.yaml": {
+    "mtime": 1757536215.5983152,
+    "ast_hash": "8195643ecb7409bd939705fb34c2de89",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/front-end-architecture-tmpl.yaml": {
+    "mtime": 1757536215.5979548,
+    "ast_hash": "008ad46ff93e06004bb53c47b299c815",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/front-end-spec-tmpl.yaml": {
+    "mtime": 1757536215.5975857,
+    "ast_hash": "884bf1225d4b800f21ac22f6ea05a6d5",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/fullstack-architecture-tmpl.yaml": {
+    "mtime": 1757536215.5971348,
+    "ast_hash": "f4c68ba0108a5f352bcccae287a6b8a8",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/market-research-tmpl.yaml": {
+    "mtime": 1757536215.596634,
+    "ast_hash": "1f2c18638acc586625c958d4b8810e14",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/prd-tmpl.yaml": {
+    "mtime": 1757536215.596205,
+    "ast_hash": "f2bbfcc3dba1d76561fb2e6e0721ed7d",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/project-brief-tmpl.yaml": {
+    "mtime": 1757536215.5958054,
+    "ast_hash": "9d3c744d3e5961166a1921cad4bd246d",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/qa-gate-tmpl.yaml": {
+    "mtime": 1757536215.595135,
+    "ast_hash": "eefe20ea2fe66e63b4f9d5c5f6abbcbf",
+    "semantic_hash": ""
+  },
+  ".bmad-core/templates/story-tmpl.yaml": {
+    "mtime": 1757536215.5948496,
+    "ast_hash": "063a106efa8ae482cbf92b90eb059b94",
+    "semantic_hash": ""
+  },
+  ".bmad-core/user-guide.md": {
+    "mtime": 1757536215.6127653,
+    "ast_hash": "a7e095dbab47b11fa79fbfffdb90278a",
+    "semantic_hash": ""
+  },
+  ".bmad-core/utils/bmad-doc-template.md": {
+    "mtime": 1757536215.6121013,
+    "ast_hash": "75b0bb86740ce72e00586cb4aeb4b772",
+    "semantic_hash": ""
+  },
+  ".bmad-core/utils/workflow-management.md": {
+    "mtime": 1757536215.6118429,
+    "ast_hash": "90e35de4380cb42ee589f240b2f63128",
+    "semantic_hash": ""
+  },
+  ".bmad-core/workflows/brownfield-fullstack.yaml": {
+    "mtime": 1757536215.5917354,
+    "ast_hash": "63f3abb8acc3147b9ae33bb8deb04d8e",
+    "semantic_hash": ""
+  },
+  ".bmad-core/workflows/brownfield-service.yaml": {
+    "mtime": 1757536215.5912354,
+    "ast_hash": "4c5c49e2cd9fe2044944e03d50638386",
+    "semantic_hash": ""
+  },
+  ".bmad-core/workflows/brownfield-ui.yaml": {
+    "mtime": 1757536215.5908034,
+    "ast_hash": "efa775460b165820bab3954243d4fca1",
+    "semantic_hash": ""
+  },
+  ".bmad-core/workflows/greenfield-fullstack.yaml": {
+    "mtime": 1757536215.5902834,
+    "ast_hash": "c194701c91fc75f8a6fc5726dc57b40c",
+    "semantic_hash": ""
+  },
+  ".bmad-core/workflows/greenfield-service.yaml": {
+    "mtime": 1757536215.5896964,
+    "ast_hash": "41aec3f008d60d9ab2c4688883be8e4b",
+    "semantic_hash": ""
+  },
+  ".bmad-core/workflows/greenfield-ui.yaml": {
+    "mtime": 1757536215.5889094,
+    "ast_hash": "d4b40d14819030f02d63210fce28db34",
+    "semantic_hash": ""
+  },
+  ".bmad-core/working-in-the-brownfield.md": {
+    "mtime": 1757536215.6130304,
+    "ast_hash": "13a21c11fbb6745d31f4905dc5f0b9a3",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/analyst.md": {
+    "mtime": 1757536215.6416585,
+    "ast_hash": "b7fa460546fe5dd7151e3f7cff41cd79",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/architect.md": {
+    "mtime": 1757536215.6413152,
+    "ast_hash": "0ec0eea0f5b2cd9d7ff1b3f17467ef8f",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/bmad-master.md": {
+    "mtime": 1757536215.6408648,
+    "ast_hash": "d17b80bb6951b7ec4f118df2bf9dd10c",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/bmad-orchestrator.md": {
+    "mtime": 1757536215.640558,
+    "ast_hash": "883c7c7480ce5275f6da3a3ff38ce21d",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/dev.md": {
+    "mtime": 1757536215.640222,
+    "ast_hash": "0d2262a61527ac1a0e075c6f42f8b552",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/pm.md": {
+    "mtime": 1757536215.6399164,
+    "ast_hash": "9c0b7cf9a0f0816cbd0ee3999b17e3df",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/po.md": {
+    "mtime": 1757536215.6395872,
+    "ast_hash": "a4db6b4c37076711ed1f6f0cf295752e",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/qa.md": {
+    "mtime": 1757536215.6392496,
+    "ast_hash": "6fe3daa37fed2496524dbacffdb0eb28",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/sm.md": {
+    "mtime": 1757536215.638898,
+    "ast_hash": "81feaec989c52287827aefff39220b16",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/agents/ux-expert.md": {
+    "mtime": 1757536215.63852,
+    "ast_hash": "cdf8607fef107552347e50a18b6db228",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/advanced-elicitation.md": {
+    "mtime": 1757536215.6499312,
+    "ast_hash": "c081852512d912a4dd8a0040bf8c6cba",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/apply-qa-fixes.md": {
+    "mtime": 1757536215.649623,
+    "ast_hash": "257a80919bca8ed7ed394321e582c109",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/brownfield-create-epic.md": {
+    "mtime": 1757536215.6492977,
+    "ast_hash": "cd92fb4621bdf18aaf2c6d74d21086f0",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/brownfield-create-story.md": {
+    "mtime": 1757536215.6490014,
+    "ast_hash": "cb45a62e36e9b72f183cf779c705d944",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/correct-course.md": {
+    "mtime": 1757536215.648661,
+    "ast_hash": "5480899fe8d364ecbc1d0176d2ebf5e3",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/create-brownfield-story.md": {
+    "mtime": 1757536215.6483624,
+    "ast_hash": "25aa0c0bc00d0b12c98145e50e5af354",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/create-deep-research-prompt.md": {
+    "mtime": 1757536215.6479638,
+    "ast_hash": "5eb3162aff8d2d2bc344943a2ba66009",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/create-doc.md": {
+    "mtime": 1757536215.6475644,
+    "ast_hash": "1ca71b9ec551c00d6136fe05402a0e6d",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/create-next-story.md": {
+    "mtime": 1757536215.6472895,
+    "ast_hash": "be8638fa6cabe23c564cc09be5f7dab0",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/document-project.md": {
+    "mtime": 1757536215.646992,
+    "ast_hash": "f52845bbc32fad14f84e2c3d0c3a185d",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/execute-checklist.md": {
+    "mtime": 1757536215.6466076,
+    "ast_hash": "7c19c5d18902175cfa266aaf1ba7f1fe",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/facilitate-brainstorming-session.md": {
+    "mtime": 1757536215.6462924,
+    "ast_hash": "5a3ea5075dc034654f02124bdd4d268a",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/generate-ai-frontend-prompt.md": {
+    "mtime": 1757536215.6460214,
+    "ast_hash": "898493a9ffd070e0d3ee5d466510e7cd",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/index-docs.md": {
+    "mtime": 1757536215.6457276,
+    "ast_hash": "f6eff85df4433087a2ca6eecc4deac3c",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/kb-mode-interaction.md": {
+    "mtime": 1757536215.6454234,
+    "ast_hash": "d7d3302617b74498639599b1ee529f49",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/nfr-assess.md": {
+    "mtime": 1757536215.644813,
+    "ast_hash": "92063ed3ddb1e5582f33acf7e9a14b30",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/qa-gate.md": {
+    "mtime": 1757536215.644431,
+    "ast_hash": "42c4b501bc2aa8d6284f71ea18cac7b2",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/review-story.md": {
+    "mtime": 1757536215.6440525,
+    "ast_hash": "c65fbd76602e7351d76f33807b9ac74c",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/risk-profile.md": {
+    "mtime": 1757536215.643547,
+    "ast_hash": "0696730d1446c529c5f99262c5b81fee",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/shard-doc.md": {
+    "mtime": 1757536215.6431246,
+    "ast_hash": "0ca312680f6d179b8a6de012983d7487",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/test-design.md": {
+    "mtime": 1757536215.6427433,
+    "ast_hash": "922cb107ecbd9d965b732b6444494749",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/trace-requirements.md": {
+    "mtime": 1757536215.6423926,
+    "ast_hash": "129d6fe30c308459fac1588e007e9848",
+    "semantic_hash": ""
+  },
+  ".claude/commands/BMad/tasks/validate-next-story.md": {
+    "mtime": 1757536215.6420448,
+    "ast_hash": "d841b0d0d4ab46c729b2ed9b4e281e0f",
+    "semantic_hash": ""
+  },
+  "CP RCD DATE-XXX.docx.md": {
+    "mtime": 1776204670.0256357,
+    "ast_hash": "6bafd85c25f38a68e61c6c808d3ff3f8",
+    "semantic_hash": ""
+  },
+  "IMPLEMENTATION_SUMMARY.md": {
+    "mtime": 1759940262.8877032,
+    "ast_hash": "e0a12433ae15fc3615087cf2bcb8b0cf",
+    "semantic_hash": ""
+  },
+  "OFFER_TAB_WORKFLOW.md": {
+    "mtime": 1759939925.1435294,
+    "ast_hash": "d60984e8f72bedba72b9d11d3a19c073",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1771496199.6587284,
+    "ast_hash": "027dda0b56c13660fd87a74c2088660a",
+    "semantic_hash": ""
+  },
+  "WORKFLOW_SYSTEM.md": {
+    "mtime": 1757624310.1700766,
+    "ast_hash": "122d8117fbde9367acfc744643328ca1",
+    "semantic_hash": ""
+  },
+  "condGenerale.txt": {
+    "mtime": 1778680289.4125392,
+    "ast_hash": "8378e0ccda796c954ca81e630a673315",
+    "semantic_hash": ""
+  },
+  "docs/analyse-ecart-totaux-vs-echeancier.md": {
+    "mtime": 1773417147.9432895,
+    "ast_hash": "7a53660873ba6b288e947d49cd19288c",
+    "semantic_hash": ""
+  },
+  "docs/attestation-rcd-modele.md": {
+    "mtime": 1788787610.5606573,
+    "ast_hash": "53092dbcc1c6629bfedf22711b2c0e95",
+    "semantic_hash": ""
+  },
+  "docs/attestation-rcd-modele.txt": {
+    "mtime": 1788787621.2468557,
+    "ast_hash": "53092dbcc1c6629bfedf22711b2c0e95",
+    "semantic_hash": ""
+  },
+  "docs/audit-ux-admin-courtier.md": {
+    "mtime": 1788789773.9848964,
+    "ast_hash": "b57f898dd7a1d21044ad80652209b491",
+    "semantic_hash": ""
+  },
+  "docs/bordereau-pourquoi-references-absentes.md": {
+    "mtime": 1771002211.7235217,
+    "ast_hash": "088df7b6028947fffa879fdf71406135",
+    "semantic_hash": ""
+  },
+  "docs/contrat-maintenance-securite.md": {
+    "mtime": 1788781006.426132,
+    "ast_hash": "c8f4287f8818e99c962cdf44234d9faa",
+    "semantic_hash": ""
+  },
+  "docs/devis-mission-millesime-2027.md": {
+    "mtime": 1788781006.4256768,
+    "ast_hash": "02b85f89569c4b83789779383d35528b",
+    "semantic_hash": ""
+  },
+  "docs/devis-missions-nouveau-contrat.md": {
+    "mtime": 1788781006.4256995,
+    "ast_hash": "ceb7f44892506b431a9494daf12fc510",
+    "semantic_hash": ""
+  },
+  "docs/epics/bordereau-fidelidade-scope-clarifie.md": {
+    "mtime": 1772629345.1192968,
+    "ast_hash": "20b31d276d5dd2c04dbba89df5ab718e",
+    "semantic_hash": ""
+  },
+  "docs/epics/epic-bordereau-fidelidade.md": {
+    "mtime": 1771496199.6586995,
+    "ast_hash": "9b5d8372cb3d1af2e494f4ded7cc19d5",
+    "semantic_hash": ""
+  },
+  "docs/mail-accompagnement-rapport-echeancier.md": {
+    "mtime": 1773149033.3343673,
+    "ast_hash": "2162b3e9e5d9ef1d1ad57d112205200c",
+    "semantic_hash": ""
+  },
+  "docs/mail-client-correction-ecarts.md": {
+    "mtime": 1773418717.6870506,
+    "ast_hash": "3f76c449506be85607d4860b1b2cd6ee",
+    "semantic_hash": ""
+  },
+  "docs/mail-client-correction-echeancier.md": {
+    "mtime": 1773090615.2138505,
+    "ast_hash": "6bda22c1be473cb17199e023b906406f",
+    "semantic_hash": ""
+  },
+  "docs/mail-client-correction-totaux-ttc.md": {
+    "mtime": 1773355982.014671,
+    "ast_hash": "5aaac719b695106c91d9767d52401711",
+    "semantic_hash": ""
+  },
+  "docs/mail-client-style-contrat-echeancier-maintenance.md": {
+    "mtime": 1778671928.748316,
+    "ast_hash": "20b95e80d5083635db40a8adda1c711e",
+    "semantic_hash": ""
+  },
+  "docs/rapport-client-ecarts-arrondis.md": {
+    "mtime": 1773418586.0827613,
+    "ast_hash": "09d66a7128e3885edccbfc72ae072727",
+    "semantic_hash": ""
+  },
+  "docs/rapport-client-echeanciers-mise-a-jour.md": {
+    "mtime": 1774102647.561075,
+    "ast_hash": "abe958227288419e7855899c0445eb1a",
+    "semantic_hash": ""
+  },
+  "docs/rapport-client-passage-maintenance.md": {
+    "mtime": 1778671928.748419,
+    "ast_hash": "557e36a1fe0da55ce8c5b2f81cabebaf",
+    "semantic_hash": ""
+  },
+  "docs/rapport-correction-echeancier.md": {
+    "mtime": 1773090635.1518865,
+    "ast_hash": "e71fb80ad3fbc03fd58c606ac3e3a77a",
+    "semantic_hash": ""
+  },
+  "docs/rapport-correction-totaux-ttc.md": {
+    "mtime": 1773355991.616741,
+    "ast_hash": "3c625c72c1d45465f695016eee66c84e",
+    "semantic_hash": ""
+  },
+  "docs/rapport-echeancier-rcd-analyse.md": {
+    "mtime": 1772791413.758648,
+    "ast_hash": "d8df2ca5988551285423043e248e56ae",
+    "semantic_hash": ""
+  },
+  "docs/rapport-tarificateur-rcd.md": {
+    "mtime": 1788781006.426116,
+    "ast_hash": "bb905ebc25d6e557e10835040a5a4738",
+    "semantic_hash": ""
+  },
+  "docs/recap-portefeuille-rcd-2026.md": {
+    "mtime": 1788787901.8881094,
+    "ast_hash": "33bdfb66761a2f6f5a23b40f9820e49e",
+    "semantic_hash": ""
+  },
+  "docs/recette-ux-bi-role.md": {
+    "mtime": 1788790856.0369332,
+    "ast_hash": "004dd04efd75c34c622917010c17ada7",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade-v2.1.schema-apporteur.md": {
+    "mtime": 1771496199.6586783,
+    "ast_hash": "a1f362745437cf68acdf802a3b7ff1a6",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade-v2.2.extraction-polices.md": {
+    "mtime": 1771496199.6587186,
+    "ast_hash": "572add6d96c9ef55ea6c00cfbfbb390c",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade-v2.3.extraction-quittances.md": {
+    "mtime": 1771496199.658809,
+    "ast_hash": "1164d50302446c4d49e787ed79b4ac89",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade-v2.4.generation-export-deux-csv.md": {
+    "mtime": 1771496199.7666514,
+    "ast_hash": "f4d826d968c76f1833d90bc5c2a17018",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade-v2.5.admin-ui-period-deux-previews.md": {
+    "mtime": 1771496199.658824,
+    "ast_hash": "2bc382b7ac64e5acb8630ea3401870d4",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade-v2.6.historique-audit.md": {
+    "mtime": 1771496199.6586323,
+    "ast_hash": "7e0ef2cf455d3bbfe56ee6cb8e68b9cc",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade.1.schema-data-model.md": {
+    "mtime": 1771496199.6586614,
+    "ast_hash": "02f08b0db157ef948ecea1c0f534114e",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade.2.extraction-transformation-service.md": {
+    "mtime": 1771496199.6587424,
+    "ast_hash": "f63915e19ac65b825c0b26aaeb3b1fdb",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade.3.csv-generation-export.md": {
+    "mtime": 1771496199.6587732,
+    "ast_hash": "18ce258e7a4d986787ce4c800c17e254",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade.4.admin-ui-filter-preview.md": {
+    "mtime": 1771496199.6587653,
+    "ast_hash": "aeb9d811b5542aca90f034fd4ba54384",
+    "semantic_hash": ""
+  },
+  "docs/stories/bordereau-fidelidade.5.history-audit-trail.md": {
+    "mtime": 1771496199.6588078,
+    "ast_hash": "c95095f1cb3b9a45e8014622336ac351",
+    "semantic_hash": ""
+  },
+  "docs/stories/contract-creation-on-approve-offer.md": {
+    "mtime": 1770147007.1136289,
+    "ast_hash": "dbeff6cf869ba01d7602e8cdd06c8ed1",
+    "semantic_hash": ""
+  },
+  "docs/stories/ecarts-montants.1.detection-correction-affichage.md": {
+    "mtime": 1774102647.561088,
+    "ast_hash": "1a365c92e0073b5b3a3fe1a22ba8e0eb",
+    "semantic_hash": ""
+  },
+  "docs/stories/ecarts-montants.2.refacto-echeancier-tests-migration.md": {
+    "mtime": 1774102647.561102,
+    "ast_hash": "587e9901ee81434ab2e3130656cc532a",
+    "semantic_hash": ""
+  },
+  "docs/stories/offer-pdf.1.corrections-esthetiques.md": {
+    "mtime": 1774547924.0780907,
+    "ast_hash": "588380e5f2d20568ca7e363367392412",
+    "semantic_hash": ""
+  },
+  "docs/stories/offer-pdf.2.corrections-contrat-fidelidade.md": {
+    "mtime": 1778673398.1801705,
+    "ast_hash": "67f0a6ac6e83b25e79807f376963a69c",
+    "semantic_hash": ""
+  },
+  "docs/stories/retours-encyclie.1.correctifs-contrat-actuel.md": {
+    "mtime": 1788793233.7077773,
+    "ast_hash": "563b9846f5080c0c2f0cbc0b9650fd95",
+    "semantic_hash": ""
+  },
+  "docs/stories/retours-encyclie.2.missions-nouveau-contrat.md": {
+    "mtime": 1788793677.3654933,
+    "ast_hash": "d96c3cc12a8df1ddad9a0fa3c6b32da4",
+    "semantic_hash": ""
+  },
+  "docs/stories/retours-encyclie.3.refonte-ux-globale.md": {
+    "mtime": 1788792276.2214413,
+    "ast_hash": "082c898abd866d0af8352def8b7767bc",
+    "semantic_hash": ""
+  },
+  "test-bord.txt": {
+    "mtime": 1780584019.2047122,
+    "ast_hash": "f1a08903921c4a477daa20685ca05535",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/analyst.txt": {
+    "mtime": 1757536215.6212153,
+    "ast_hash": "a794827d521137c9250b4d3acc3f9a98",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/architect.txt": {
+    "mtime": 1757536215.6217146,
+    "ast_hash": "ecd22459c3a76c89b32614a5a0724e8d",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/bmad-master.txt": {
+    "mtime": 1757536215.6220303,
+    "ast_hash": "f3fa682f3d20ded058698cf63f94860a",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/bmad-orchestrator.txt": {
+    "mtime": 1757536215.6214476,
+    "ast_hash": "bfa8cb0a5b5ee9d6653fa172f8f8fd0e",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/dev.txt": {
+    "mtime": 1757536215.6213784,
+    "ast_hash": "cff629cbd06b7c2ac2303a71738350c1",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/pm.txt": {
+    "mtime": 1757536215.6209402,
+    "ast_hash": "3bd017c0949ea8187c0277b69f016abb",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/po.txt": {
+    "mtime": 1757536215.621036,
+    "ast_hash": "2941ea212ad7d5cf4641e1b3dbe53a6e",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/qa.txt": {
+    "mtime": 1757536215.6208606,
+    "ast_hash": "7ac1354055bc536657d6c8dd2746a02f",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/sm.txt": {
+    "mtime": 1757536215.6204627,
+    "ast_hash": "90a126fb5357bbf3572d1e9556a703bd",
+    "semantic_hash": ""
+  },
+  "web-bundles/agents/ux-expert.txt": {
+    "mtime": 1757536215.6198952,
+    "ast_hash": "18f1f8584e3794da0d1f5cb897a70256",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-phaser-game-dev/agents/game-designer.txt": {
+    "mtime": 1757536215.626379,
+    "ast_hash": "a5d31a1b92ebc2b8ca359b4a6a372890",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-phaser-game-dev/agents/game-developer.txt": {
+    "mtime": 1757536215.6268976,
+    "ast_hash": "72c67011886001fbecb9dd070ffbada4",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-phaser-game-dev/agents/game-sm.txt": {
+    "mtime": 1757536215.6268795,
+    "ast_hash": "017a6a767bf081093c8e824b377d8412",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-phaser-game-dev/teams/phaser-2d-nodejs-game-team.txt": {
+    "mtime": 1757536215.6234267,
+    "ast_hash": "4dd8bb605adf0b89b0050e82ef1e7c31",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-unity-game-dev/agents/game-architect.txt": {
+    "mtime": 1757536215.6270843,
+    "ast_hash": "360f9021fb9a5da542da1ad28713c077",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-unity-game-dev/agents/game-designer.txt": {
+    "mtime": 1757536215.6264389,
+    "ast_hash": "17392155113bff8b986596dd6b31aa5e",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-unity-game-dev/agents/game-developer.txt": {
+    "mtime": 1757536215.6232915,
+    "ast_hash": "ddf9e8bc024daffd41d66a81881b0b04",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-unity-game-dev/agents/game-sm.txt": {
+    "mtime": 1757536215.6261952,
+    "ast_hash": "a1a51c15009d83b9ab9175482705c9a0",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-2d-unity-game-dev/teams/unity-2d-game-team.txt": {
+    "mtime": 1757536215.6239898,
+    "ast_hash": "e42c6c2ae9457e8e4296d9e2a540b460",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/beta-reader.txt": {
+    "mtime": 1757536215.6259346,
+    "ast_hash": "162c2265285f80ad7af9fac88e5ba0e4",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/book-critic.txt": {
+    "mtime": 1757536215.624808,
+    "ast_hash": "d7ab8fcf62171baa0ea4a0d63076f1e6",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/character-psychologist.txt": {
+    "mtime": 1757536215.624437,
+    "ast_hash": "c7130f77f07f97f9f998928865bab291",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/cover-designer.txt": {
+    "mtime": 1757536215.6246383,
+    "ast_hash": "e99e5007933776e5efde8f91ad0827ed",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/dialog-specialist.txt": {
+    "mtime": 1757536215.6258855,
+    "ast_hash": "280e1d876f47c88d2fe42bca076495b3",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/editor.txt": {
+    "mtime": 1757536215.6248345,
+    "ast_hash": "901a3769ba49a17e2cd62151ea1ba529",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/genre-specialist.txt": {
+    "mtime": 1757536215.625072,
+    "ast_hash": "b9bd6c0e4b2cd35a86eca53b8e2a88aa",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/narrative-designer.txt": {
+    "mtime": 1757536215.6249878,
+    "ast_hash": "af7fe2745fe172022780a1c31c9371f0",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/plot-architect.txt": {
+    "mtime": 1757536215.6268961,
+    "ast_hash": "0a29d032bceaf33cf52363205c711a4a",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/agents/world-builder.txt": {
+    "mtime": 1757536215.6228073,
+    "ast_hash": "065df21819181e2e8833718568c045c5",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-creative-writing/teams/agent-team.txt": {
+    "mtime": 1757536215.626431,
+    "ast_hash": "4c92d982ebf3a108435e83c34249d3da",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/bmad-orchestrator.txt": {
+    "mtime": 1757536215.6241972,
+    "ast_hash": "65ed015e8c37c6f9c308ffd2121aa6b0",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-analyst.txt": {
+    "mtime": 1757536215.6244884,
+    "ast_hash": "2236885bcecb177bec4fa585d5d14999",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-architect.txt": {
+    "mtime": 1757536215.6252217,
+    "ast_hash": "db522b9fdea0f8a877e4d50466d1b20b",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-designer.txt": {
+    "mtime": 1757536215.624244,
+    "ast_hash": "65dba4a2fc275a97193146dcf7375256",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-developer.txt": {
+    "mtime": 1757536215.6237555,
+    "ast_hash": "d7cb19ab3f2d19341b76460831e8a0ea",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-pm.txt": {
+    "mtime": 1757536215.624997,
+    "ast_hash": "87094b1aeffd3181c2af47d5b2115b12",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-po.txt": {
+    "mtime": 1757536215.623981,
+    "ast_hash": "d58f80d933a9eb8ff52905e9aecbbb76",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-qa.txt": {
+    "mtime": 1757536215.625245,
+    "ast_hash": "534abc1b39ee2b147cb41f99a11113b2",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-sm.txt": {
+    "mtime": 1757536215.6235025,
+    "ast_hash": "5ca7903e886e4373c98d99bd1a0f1b10",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/agents/game-ux-expert.txt": {
+    "mtime": 1757536215.6227672,
+    "ast_hash": "61af61a1913c68806ffa6f459e362b67",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-godot-game-dev/teams/godot-game-team.txt": {
+    "mtime": 1757536215.6242614,
+    "ast_hash": "537b876b5cf090dbe379f96684df0d6b",
+    "semantic_hash": ""
+  },
+  "web-bundles/expansion-packs/bmad-infrastructure-devops/agents/infra-devops-platform.txt": {
+    "mtime": 1757536215.623222,
+    "ast_hash": "074a8cdb1319843b35bb83142b4a26fd",
+    "semantic_hash": ""
+  },
+  "web-bundles/teams/team-all.txt": {
+    "mtime": 1757536215.6211646,
+    "ast_hash": "6c16b7f3aa7d1d2d27b90d580047f36e",
+    "semantic_hash": ""
+  },
+  "web-bundles/teams/team-fullstack.txt": {
+    "mtime": 1757536215.6206522,
+    "ast_hash": "d7fa9a3659ee75fca57872ba0919eb4e",
+    "semantic_hash": ""
+  },
+  "web-bundles/teams/team-ide-minimal.txt": {
+    "mtime": 1757536215.6214168,
+    "ast_hash": "6f71d6130b1aa416cb1763731f619dfa",
+    "semantic_hash": ""
+  },
+  "web-bundles/teams/team-no-ui.txt": {
+    "mtime": 1757536215.6204095,
+    "ast_hash": "c796c5e856016f0cf428c75415970c1e",
+    "semantic_hash": ""
+  },
+  "docs/contrat-maintenance-securite.pdf": {
+    "mtime": 1788433822.2899878,
+    "ast_hash": "4156e3de93951b2730989d6fc428ff91",
+    "semantic_hash": ""
+  },
+  "docs/devis-mission-millesime-2027.pdf": {
+    "mtime": 1788342249.3249433,
+    "ast_hash": "08068f8275af72e2cec66f3d973d5853",
+    "semantic_hash": ""
+  },
+  "docs/mail-client-correction-ecarts.pdf": {
+    "mtime": 1773418876.7803836,
+    "ast_hash": "2c23d27af4134f5e592789a5ec7016d8",
+    "semantic_hash": ""
+  },
+  "docs/mail-client-correction-echeancier.pdf": {
+    "mtime": 1773090898.270566,
+    "ast_hash": "992531a437b7651fade8f47accafbf53",
+    "semantic_hash": ""
+  },
+  "docs/mail-client-correction-totaux-ttc.pdf": {
+    "mtime": 1773356037.010072,
+    "ast_hash": "b9b0bf29d299b62ea548674058dc7709",
+    "semantic_hash": ""
+  },
+  "docs/rapport-client-ecarts-arrondis.pdf": {
+    "mtime": 1773418876.7832923,
+    "ast_hash": "7074b56ccbc3c9408f1f6ab66740a7b5",
+    "semantic_hash": ""
+  },
+  "docs/rapport-client-echeanciers-mise-a-jour.pdf": {
+    "mtime": 1773968488.2895272,
+    "ast_hash": "ce60fd6b2cceb780c87cac1ff45fd2ce",
+    "semantic_hash": ""
+  },
+  "docs/rapport-client-passage-maintenance.pdf": {
+    "mtime": 1777920645.857893,
+    "ast_hash": "dfce92ffadaa81dd9b7f1aca89a5b68d",
+    "semantic_hash": ""
+  },
+  "docs/rapport-correction-echeancier.pdf": {
+    "mtime": 1773090803.6605494,
+    "ast_hash": "39c51478d22908cf7fb8e3bd8463ff74",
+    "semantic_hash": ""
+  },
+  "docs/rapport-correction-totaux-ttc.pdf": {
+    "mtime": 1773356037.0278735,
+    "ast_hash": "26fcd664c6c4947f2657794a8e831889",
+    "semantic_hash": ""
+  },
+  "docs/rapport-echeancier-rcd-analyse.pdf": {
+    "mtime": 1772791438.3578386,
+    "ast_hash": "9a39ac962b33078205eabd2a0cb2ccb2",
+    "semantic_hash": ""
+  },
+  "docs/rapport-tarificateur-rcd.pdf": {
+    "mtime": 1775654421.6023521,
+    "ast_hash": "b68d174a7ed16be3fb19ee1c2bf1dad6",
+    "semantic_hash": ""
+  },
+  "docs/tarificateur-note-de-debit-exemple.png": {
+    "mtime": 1788788089.6172783,
+    "ast_hash": "db19e69d100977dc8b1912eaa3a1e07e",
+    "semantic_hash": ""
+  },
+  "public/couleur_1.png": {
+    "mtime": 1756929961.0506155,
+    "ast_hash": "067c9de2a1a50066b54f057f213a2c49",
+    "semantic_hash": ""
+  },
+  "public/file.svg": {
+    "mtime": 1756929961.050728,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": ""
+  },
+  "public/globe.svg": {
+    "mtime": 1756929961.050807,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": ""
+  },
+  "public/next.svg": {
+    "mtime": 1756929961.0508778,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": ""
+  },
+  "public/vercel.svg": {
+    "mtime": 1756929961.050946,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": ""
+  },
+  "public/window.svg": {
+    "mtime": 1756929961.0510097,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": ""
+  },
+  "src/app/admin/configuration-produits/page.tsx": {
+    "mtime": 1788791453.2507756,
+    "ast_hash": "985e86f7572501e59747c8bd218b9adc",
+    "semantic_hash": ""
+  },
+  "src/app/admin/ecarts-montants/page.tsx": {
+    "mtime": 1788791452.9010932,
+    "ast_hash": "08b0344f2792f94d1a5b67620732c7db",
+    "semantic_hash": ""
+  },
+  "src/lib/tarificateurs/__tests__/honoraires.test.ts": {
+    "mtime": 1788793044.9687912,
+    "ast_hash": "2dca37f66603b582f50260295b22001b",
+    "semantic_hash": ""
+  },
+  "src/lib/tarificateurs/honoraires.ts": {
+    "mtime": 1788792654.5264883,
+    "ast_hash": "a65814f7b9f573e2104ebf524547b60f",
+    "semantic_hash": ""
+  },
+  "prisma/migrations/20260907170000_quote_vintage_millesime/migration.sql": {
+    "mtime": 1788794360.7951622,
+    "ast_hash": "32ad590a9086ac4e8df3c1b81eb86c9f",
+    "semantic_hash": ""
+  },
+  "prisma/migrations/20260908120000_tariff_years/migration.sql": {
+    "mtime": 1788865509.4457197,
+    "ast_hash": "d14c9b1cb4494b25164215f242e597c4",
+    "semantic_hash": ""
+  },
+  "src/app/admin/exercices/page.tsx": {
+    "mtime": 1788865622.0986106,
+    "ast_hash": "cb6399014a8499d673eed4d8540c7e70",
+    "semantic_hash": ""
+  },
+  "src/app/api/admin/tariff-years/[year]/route.ts": {
+    "mtime": 1788865572.085157,
+    "ast_hash": "45b550cf8b11609fb684f2c0db3f1a36",
+    "semantic_hash": ""
+  },
+  "src/app/api/admin/tariff-years/route.ts": {
+    "mtime": 1788865569.314977,
+    "ast_hash": "ce8416bb19b80ce6dfdf5bd7993b8adb",
+    "semantic_hash": ""
+  },
+  "src/app/api/quotes/[id]/revision-2027/route.ts": {
+    "mtime": 1788865840.278516,
+    "ast_hash": "c94232ddc1ef7997a9f81ea0687b15fe",
+    "semantic_hash": ""
+  },
+  "src/app/quotes/components/DossierExerciseBar.tsx": {
+    "mtime": 1788865865.651621,
+    "ast_hash": "05e034b4bfb3c6847d13d5aadc3299d9",
+    "semantic_hash": ""
+  },
+  "src/app/quotes/tabs/Revision2027Tab.tsx": {
+    "mtime": 1788793964.4462547,
+    "ast_hash": "91cde564358738aeef738af77a48ccb2",
+    "semantic_hash": ""
+  },
+  "src/components/ui/ExerciseYearSelect.tsx": {
+    "mtime": 1788866460.3661532,
+    "ast_hash": "20cad74d3fda103557438619fe9dd6fe",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/__tests__/exercise-year-filter.test.ts": {
+    "mtime": 1788865960.4729362,
+    "ast_hash": "45d56d789c19467ef70f517c413da2f4",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/__tests__/revision-millesime.test.ts": {
+    "mtime": 1788865958.6578722,
+    "ast_hash": "5f7a667538e35a6deab72e214148afe9",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/exercise-year-filter.ts": {
+    "mtime": 1788865804.2145724,
+    "ast_hash": "d41818834d27fe64efaf595c6d5d55c9",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/payment-schedule-lookup.ts": {
+    "mtime": 1788794361.6130533,
+    "ast_hash": "1710542e952d8a1f9161934016f3cd4c",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/revision-millesime.ts": {
+    "mtime": 1788865804.2145746,
+    "ast_hash": "12bf18152bf7649af488d546c00cb1ff",
+    "semantic_hash": ""
+  },
+  "src/lib/stores/exercise-year-store.ts": {
+    "mtime": 1788865572.42176,
+    "ast_hash": "449acbb29dc166a453c879512380b78c",
+    "semantic_hash": ""
+  },
+  "src/lib/tarificateurs/__tests__/tariff-years.test.ts": {
+    "mtime": 1788865960.3821895,
+    "ast_hash": "ce0a71d9d3a430b097f011c87a119267",
+    "semantic_hash": ""
+  },
+  "src/lib/tarificateurs/tariff-registry.ts": {
+    "mtime": 1788865506.320655,
+    "ast_hash": "aeaa76877c58c670a160e3806371a23a",
+    "semantic_hash": ""
+  },
+  "src/lib/tarificateurs/tariff-year-service.ts": {
+    "mtime": 1788865564.9062245,
+    "ast_hash": "aba18d6d5d250ae012850f3b35abbf71",
+    "semantic_hash": ""
+  },
+  "prisma/migrations/20260908140000_debit_notes_overdue_mail/migration.sql": {
+    "mtime": 1788867337.8084266,
+    "ast_hash": "4bddc522bc281b62f53a8ec9e7f6bd34",
+    "semantic_hash": ""
+  },
+  "src/app/admin/portefeuille/page.tsx": {
+    "mtime": 1788867560.0062203,
+    "ast_hash": "974b3c830e4b6ad8fa302b98ecd41e70",
+    "semantic_hash": ""
+  },
+  "src/app/api/admin/portfolio-recap/export/route.ts": {
+    "mtime": 1788867429.8904057,
+    "ast_hash": "ec0d8384a33ee81ea7bbad1f56481f50",
+    "semantic_hash": ""
+  },
+  "src/app/api/admin/portfolio-recap/route.ts": {
+    "mtime": 1788867427.7959335,
+    "ast_hash": "482a0d1a00b5b673b380c5555db312f3",
+    "semantic_hash": ""
+  },
+  "src/app/api/cron/overdue-multi-reminder/route.ts": {
+    "mtime": 1788867429.8905716,
+    "ast_hash": "382fdeca463e990492e0d04b6ea2f9aa",
+    "semantic_hash": ""
+  },
+  "src/app/api/quotes/[id]/debit-notes/[noteId]/excel/route.ts": {
+    "mtime": 1788867412.8657384,
+    "ast_hash": "7bffd42f6343f943615fefa03e1bf89f",
+    "semantic_hash": ""
+  },
+  "src/app/api/quotes/[id]/debit-notes/[noteId]/pdf/route.ts": {
+    "mtime": 1788867407.8802032,
+    "ast_hash": "c9d6390ef915c306902d83b003302b9e",
+    "semantic_hash": ""
+  },
+  "src/app/api/quotes/[id]/debit-notes/route.ts": {
+    "mtime": 1788867403.534743,
+    "ast_hash": "fe42943aaf35f40e4166a57b175598ab",
+    "semantic_hash": ""
+  },
+  "src/app/cabinet/page.tsx": {
+    "mtime": 1788867458.4487302,
+    "ast_hash": "608f8851837c23217c684327a7a7246d",
+    "semantic_hash": ""
+  },
+  "src/app/quotes/tabs/DebitNoteTab.tsx": {
+    "mtime": 1788867455.072274,
+    "ast_hash": "0d5f2c1fea1ec294c26e56ecfc650d16",
+    "semantic_hash": ""
+  },
+  "src/components/pdf/DebitNotePDF.tsx": {
+    "mtime": 1788867385.5357869,
+    "ast_hash": "fd820559aba816decd8e3b8e195717d9",
+    "semantic_hash": ""
+  },
+  "src/components/ui/TerritoryClocks.tsx": {
+    "mtime": 1788867458.0784068,
+    "ast_hash": "b44b9129e742743fbc4e802cea15abbb",
+    "semantic_hash": ""
+  },
+  "src/lib/cabinet.ts": {
+    "mtime": 1788867094.7379289,
+    "ast_hash": "780abcadcab1ef2e13e142b39183c3e1",
+    "semantic_hash": ""
+  },
+  "src/lib/cron-auth.ts": {
+    "mtime": 1788867385.7563546,
+    "ast_hash": "564e18164ac5e031c06b008c27736d50",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/__tests__/debit-note.test.ts": {
+    "mtime": 1788867100.6321466,
+    "ast_hash": "1c0b43d825201f9439d707d1cebfef42",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/__tests__/portfolio-recap.test.ts": {
+    "mtime": 1788867362.7052658,
+    "ast_hash": "c0bb5622d50f4dd95099256f99982c8f",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/aggravation.ts": {
+    "mtime": 1788867096.3789442,
+    "ast_hash": "6bab4c7bb43c43147122509a50a53fa7",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/csv-export.ts": {
+    "mtime": 1788867340.274173,
+    "ast_hash": "3c03f544e105f9b95859abf7554b179b",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/debit-note-from-quote.ts": {
+    "mtime": 1788867399.2760608,
+    "ast_hash": "61736181280d2f6cb8cf5bee289037c9",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/debit-note.ts": {
+    "mtime": 1788867384.5225537,
+    "ast_hash": "7ddaa3b6cf2f9293beccc708bf630cec",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/overdue-threshold.ts": {
+    "mtime": 1788867357.8091328,
+    "ast_hash": "40d753e00e3af29a5e88e80b3ff4f6ed",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/portfolio-recap.ts": {
+    "mtime": 1788867368.2737718,
+    "ast_hash": "2ae82b1c1e45945630f4f1b0a3f214ac",
+    "semantic_hash": ""
+  },
+  "src/lib/quotes/territory.ts": {
+    "mtime": 1788867341.7067344,
+    "ast_hash": "d7bef95f2fd7c9e0a6d1552a08b92fce",
+    "semantic_hash": ""
+  },
+  "vercel.json": {
+    "mtime": 1788867429.8903053,
+    "ast_hash": "4f2c9e5da6a3ab79e2ff8cd025ad792b",
+    "semantic_hash": ""
   }
 }

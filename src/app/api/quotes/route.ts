@@ -13,6 +13,10 @@ import {
   buildWhereClause,
   generateReference,
 } from "@/lib/api-utils";
+import {
+  calendarYear,
+  quoteInExerciseYearWhere,
+} from "@/lib/quotes/exercise-year-filter";
 
 // GET /api/quotes - List quotes for authenticated user
 export async function GET(request: NextRequest) {
@@ -30,10 +34,34 @@ export async function GET(request: NextRequest) {
         brokerId: searchParams.get("brokerId") || undefined,
         dateFrom: searchParams.get("dateFrom") || undefined,
         dateTo: searchParams.get("dateTo") || undefined,
+        search: searchParams.get("search") || undefined,
       });
 
-      // Build where clause
-      const where = buildWhereClause(filters);
+      const { search, ...clauseFilters } = filters;
+      const where = buildWhereClause(clauseFilters);
+      const searchQuery = search?.trim();
+      if (searchQuery) {
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          {
+            OR: [
+              { reference: { contains: searchQuery, mode: "insensitive" } },
+              {
+                companyData: {
+                  path: ["companyName"],
+                  string_contains: searchQuery,
+                },
+              },
+              {
+                formData: {
+                  path: ["companyName"],
+                  string_contains: searchQuery,
+                },
+              },
+            ],
+          },
+        ];
+      }
 
       // Add role-based filtering
       if (userRole === "BROKER") {
@@ -50,7 +78,22 @@ export async function GET(request: NextRequest) {
       const hasPaymentSchedule =
         searchParams.get("hasPaymentSchedule") === "true";
       if (hasPaymentSchedule) {
-        where.paymentSchedule = { isNot: null };
+        where.paymentSchedule = { some: {} };
+      }
+
+      const exerciseYearRaw = searchParams.get("exerciseYear");
+      const exerciseYear = exerciseYearRaw ? Number(exerciseYearRaw) : NaN;
+      // Courtiers / année civile : même liste qu'aujourd'hui. Le filtre
+      // ne s'applique que si un admin choisit un autre exercice.
+      if (
+        userRole === "ADMIN" &&
+        Number.isInteger(exerciseYear) &&
+        exerciseYear !== calendarYear()
+      ) {
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          quoteInExerciseYearWhere(exerciseYear),
+        ];
       }
 
       const includeBase = {

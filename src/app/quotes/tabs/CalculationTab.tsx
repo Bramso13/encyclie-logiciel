@@ -1327,6 +1327,21 @@ export default function CalculationTab({
                         />
                       </span>
                     </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">
+                        Honoraires de gestion courtier
+                      </span>
+                      <span className="font-semibold text-gray-900">
+                        <ModifiableValue
+                          originalValue={
+                            originalCalculationResult?.honoraireGestion
+                          }
+                          currentValue={
+                            calculationResult.honoraireGestion ?? 0
+                          }
+                        />
+                      </span>
+                    </div>
                   </div>
                 </div>
 

@@ -79,13 +79,13 @@ async function main() {
   const whereClause = LAST_ONLY
     ? {
         paymentSchedule: {
-          is: { payments: { some: {} } },
+          some: { payments: { some: {} } },
         },
       }
     : {
         modifieAlaMain: false,
         paymentSchedule: {
-          is: { payments: { some: {} } },
+          some: { payments: { some: {} } },
         },
       };
 
@@ -126,7 +126,9 @@ async function main() {
 
   for (const quote of quotes) {
     console.log(`\n--- Devis ${quote.reference} (créé ${quote.createdAt.toISOString()}) ---`);
-    const schedule = quote.paymentSchedule;
+    const schedule = Array.isArray(quote.paymentSchedule)
+      ? quote.paymentSchedule[0]
+      : quote.paymentSchedule;
     if (!schedule?.payments?.length) continue;
 
     const formData = (quote.formData ?? {}) as FormDataQuote;

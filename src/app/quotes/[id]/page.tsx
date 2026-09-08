@@ -15,7 +15,6 @@ import CalculationTab from "../tabs/CalculationTab";
 import LetterTab from "../tabs/LetterTab";
 
 import SimpleParameterEditor from "../components/forms/SimpleParameterEditor";
-import { Calendar, MessageCircle } from "lucide-react";
 import ChatTab from "../tabs/ChatTab";
 
 import PaymentTrackingTab from "../tabs/PremiumCallTab";
@@ -25,9 +24,20 @@ import OffreTab from "../tabs/OffreTab";
 import AppelDePrimeTab from "../tabs/AppelDePrimeTab";
 import ContratTab from "../tabs/ContratTab";
 import AggravationTab from "../tabs/AggravationTab";
+import DebitNoteTab from "../tabs/DebitNoteTab";
 import BordereauTab from "../tabs/BordereauTab";
+import {
+  DossierExerciseBar,
+  dossierOriginalYear,
+} from "../components/DossierExerciseBar";
+import { calendarYear } from "@/lib/quotes/exercise-year-filter";
 import { calculateWithMapping } from "@/lib/utils";
 import { applyCalculationChange } from "@/lib/calculation-apply";
+import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
+import { Button, StatusBadge } from "@/components/ui/Controls";
+import { GroupedNav } from "@/components/ui/DataDisplay";
+import { LoadingState } from "@/components/ui/Feedback";
+import { notify } from "@/lib/ui/notify";
 
 export default function QuoteDetailPage() {
   const params = useParams();
@@ -52,6 +62,7 @@ export default function QuoteDetailPage() {
   // Déclencheur pour forcer le rechargement des échéances après sauvegarde
   const [installmentsRefreshTrigger, setInstallmentsRefreshTrigger] =
     useState(0);
+  const [dossierYear, setDossierYear] = useState<number | null>(null);
 
   // États pour l'édition
 
@@ -85,229 +96,49 @@ export default function QuoteDetailPage() {
   const userRole = session?.user?.role;
   const isAdmin = userRole === "ADMIN";
 
-  const tabs = [
+  const tabGroups = [
     {
-      id: "resume",
-      label: "Résumé",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
+      title: "Dossier",
+      items: [
+        { id: "resume", label: "Résumé" },
+        { id: "form-data", label: "Formulaire" },
+        { id: "chat", label: "Messages" },
+      ],
+    },
+    {
+      title: "Étude et offre",
+      items: [
+        { id: "calculation", label: "Calcul de prime" },
+        { id: "letter", label: "Lettre d'intention" },
+        { id: "piece-jointe", label: "Étude de dossier" },
+        { id: "offre", label: "Offre", adminOnly: true },
+      ],
+    },
+    {
+      title: "Contrat",
+      items: [
+        { id: "echeancier", label: "Échéancier" },
+        { id: "appel-prime", label: "Appel de prime" },
+        { id: "contrat", label: "Contrat" },
+        { id: "aggravation", label: "Aggravation" },
+      ],
+    },
+    {
+      title: "Production",
+      items: [
+        { id: "bordereau", label: "Bordereau", adminOnly: true },
+        { id: "debit-note", label: "Note de débit" },
+        { id: "broker-commissions", label: "Commissions" },
+      ],
+    },
+  ]
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (tab) => !("adminOnly" in tab && tab.adminOnly) || isAdmin,
       ),
-    },
-    {
-      id: "form-data",
-      label: "Formulaire",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "calculation",
-      label: "Calcul RCD",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "letter",
-      label: "Lettre d'intention",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-          />
-        </svg>
-      ),
-    },
-
-    {
-      id: "piece-jointe",
-      label: "Etude de dossier",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "offre",
-      label: "Offre",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "echeancier",
-      label: "Echeancier",
-      icon: <Calendar className="w-5 h-5" />,
-    },
-    {
-      id: "appel-prime",
-      label: "Appel de prime",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4 1.343 4 3-1.79 3-4 3m0-12V4m0 16v-2M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "contrat",
-      label: "Contrat",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "aggravation",
-      label: "Aggravation et réajustement",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "bordereau",
-      label: "Bordereau",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 10h18M3 14h18M3 6h18M3 18h18"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "chat",
-      label: "Chat",
-      icon: <MessageCircle />,
-    },
-    {
-      id: "broker-commissions",
-      label: "Commissions",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          {/* Icône Commission - Graphique en barres */}
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
-      ),
-    },
-  ];
+    }))
+    .filter((group) => group.items.length > 0);
 
   useEffect(() => {
     fetchActiveProducts();
@@ -466,9 +297,22 @@ export default function QuoteDetailPage() {
     hasLocalCalculationChanges,
   ]);
 
+  useEffect(() => {
+    if (activeTab === "revision-2027") setActiveTab("resume");
+  }, [activeTab]);
+
   // Fonction pour recalculer côté client (prend en compte les switches)
   const handleRecalculate = () => {
     if (!quote) return;
+    const originalYear = dossierOriginalYear(quote);
+    const viewingYear = dossierYear ?? originalYear;
+    if (viewingYear !== originalYear) {
+      notify(
+        "Le recalcul s'applique à l'exercice d'origine du dossier.",
+        "error",
+      );
+      return;
+    }
 
     setRecalculating(true);
     setCalculationError(null);
@@ -558,8 +402,19 @@ export default function QuoteDetailPage() {
   // Fonction pour sauvegarder le calcul actuel en DB (y compris l'échéancier dans paymentInstallments)
   const saveCalculationToDatabase = async () => {
     if (!calculationResult) {
-      alert("Aucun calcul à sauvegarder");
+      notify("Aucun calcul à enregistrer.", "error");
       return;
+    }
+    if (quote) {
+      const originalYear = dossierOriginalYear(quote);
+      const viewingYear = dossierYear ?? originalYear;
+      if (viewingYear !== originalYear) {
+        notify(
+          "L'enregistrement du calcul reste sur l'exercice d'origine du dossier.",
+          "error",
+        );
+        return;
+      }
     }
 
     setRecalculating(true);
@@ -622,10 +477,10 @@ export default function QuoteDetailPage() {
 
       setInstallmentsRefreshTrigger((t) => t + 1);
       setOriginalCalculationResult(null); // Réinitialiser les modifs après sauvegarde
-      alert("Calcul sauvegardé en base de données");
+      notify("Calcul enregistré.", "success");
     } catch (error) {
       console.error("Erreur sauvegarde:", error);
-      alert("Erreur lors de la sauvegarde");
+      notify("L'enregistrement du calcul a échoué.", "error");
     } finally {
       setRecalculating(false);
     }
@@ -633,165 +488,96 @@ export default function QuoteDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <span className="text-gray-600">Chargement...</span>
-        </div>
-      </div>
+      <AuthenticatedAppShell>
+        <LoadingState active label="Chargement du dossier" />
+      </AuthenticatedAppShell>
     );
   }
 
   if (!quote) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Devis introuvable
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Le devis demande n'existe pas ou a ete supprime.
+      <AuthenticatedAppShell>
+        <div className="py-16 text-center">
+          <h1 className="text-xl font-semibold text-ink">Dossier introuvable</h1>
+          <p className="mt-2 text-sm text-ink-muted">
+            Ce devis n'existe pas ou a été supprimé.
           </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Retour au tableau de bord
-          </button>
+          <Button className="mt-4" onClick={() => router.push("/dashboard")}>
+            Retourner au tableau de bord
+          </Button>
         </div>
-      </div>
+      </AuthenticatedAppShell>
     );
   }
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      DRAFT: "bg-gray-100 text-gray-800",
-      INCOMPLETE: "bg-yellow-100 text-yellow-800",
-      SUBMITTED: "bg-blue-100 text-blue-800",
-      IN_PROGRESS: "bg-blue-100 text-blue-800",
-      OFFER_READY: "bg-green-100 text-green-800",
-      ACCEPTED: "bg-green-100 text-green-800",
-      REJECTED: "bg-red-100 text-red-800",
-    };
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
-  };
+  const originalYear = dossierOriginalYear(quote);
+  const yearsOnDossier = [
+    originalYear,
+    ...(quote.vintages ?? []).map((item) => item.year),
+  ].filter((year, index, all) => all.indexOf(year) === index);
+  const selectedDossierYear = isAdmin
+    ? (dossierYear ?? originalYear)
+    : yearsOnDossier.includes(calendarYear())
+      ? calendarYear()
+      : originalYear;
+  const selectedVintage = quote.vintages?.find(
+    (item) => item.year === selectedDossierYear,
+  );
+  const displayedCalculation =
+    selectedDossierYear !== originalYear && selectedVintage?.calculatedPremium
+      ? selectedVintage.calculatedPremium
+      : calculationResult;
 
-  const getStatusText = (status: string) => {
-    const labels = {
-      DRAFT: "Brouillon",
-      INCOMPLETE: "Incomplet",
-      SUBMITTED: "Soumis",
-      IN_PROGRESS: "En cours",
-      OFFER_READY: "Offre prete",
-      ACCEPTED: "Accepte",
-      REJECTED: "Rejete",
-    };
-    return labels[status as keyof typeof labels] || status;
+  const reloadQuote = async () => {
+    const response = await fetch(`/api/quotes/${params.id}`);
+    if (!response.ok) return;
+    const dataA = await response.json();
+    if (dataA.data) setQuote(dataA.data);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* CSS pour les switches */}
-      <style jsx>{`
-        .toggle-checkbox:checked {
-          right: 0;
-          border-color: #48bb78;
-        }
-        .toggle-checkbox {
-          transition: all 0.3s ease;
-          top: 0;
-          left: 0;
-        }
-        .toggle-label {
-          transition: all 0.3s ease;
-        }
-      `}</style>
-
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="mr-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Devis {quote.reference}
-                  </h1>
-                  <div className="flex items-center space-x-4 mt-1">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        quote.status
-                      )}`}
-                    >
-                      {getStatusText(quote.status)}
-                    </span>
-
-                    <span className="text-sm text-gray-500">
-                      Cree le{" "}
-                      {new Date(quote.createdAt).toLocaleDateString("fr-FR")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <AuthenticatedAppShell>
+      <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+          Retourner au tableau de bord
+        </Button>
+        <div>
+          <h1 className="text-xl font-semibold text-ink">
+            Dossier {quote.reference}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-ink-muted">
+            <StatusBadge status={quote.status} />
+            <span>Créé le {new Date(quote.createdAt).toLocaleDateString("fr-FR")}</span>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            {tabs.map((tab) => {
-              return (
-                (!(tab.id === "offre") || session?.user?.role === "ADMIN") && (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? "border-indigo-500 text-indigo-600"
-                        : "border-transparent text-black hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <div
-                      className={`mr-2 transition-colors ${
-                        activeTab === tab.id
-                          ? "text-indigo-500"
-                          : "text-gray-400 group-hover:text-gray-500"
-                      }`}
-                    >
-                      {tab.icon}
-                    </div>
-                    {tab.label}
-                  </button>
-                )
-              );
-            })}
-          </nav>
-        </div>
-      </div>
+      <DossierExerciseBar
+        quote={quote}
+        isAdmin={isAdmin}
+        selectedYear={selectedDossierYear}
+        onSelectYear={setDossierYear}
+        onAdded={() => {
+          void reloadQuote();
+        }}
+      />
+      {selectedDossierYear !== originalYear ? (
+        <p className="text-sm text-ink-muted">
+          Exercice {selectedDossierYear} : le formulaire et la prime enregistrée
+          de l&apos;origine du dossier ne sont pas modifiés.
+        </p>
+      ) : null}
 
-      {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="grid items-start gap-4 lg:grid-cols-[14rem_minmax(0,1fr)]">
+      <GroupedNav
+        groups={tabGroups}
+        value={activeTab}
+        onChange={setActiveTab}
+        label="Sections du dossier"
+      />
+
+      <div className="min-w-0 rounded-lg border border-line bg-white p-4 sm:p-6">
         {activeTab === "resume" && quote && (
           <ResumeTab quote={quote} isAdmin={isAdmin} />
         )}
@@ -811,7 +597,7 @@ export default function QuoteDetailPage() {
         {activeTab === "calculation" && (
           <CalculationTab
             quote={quote}
-            calculationResult={calculationResult}
+            calculationResult={displayedCalculation}
             calculationError={calculationError}
             originalCalculationResult={originalCalculationResult}
             setCalculationResult={setCalculationResult}
@@ -849,6 +635,7 @@ export default function QuoteDetailPage() {
             quote={quote}
             calculationResult={calculationResult}
             session={session}
+            preferredYear={selectedDossierYear}
           />
         )}
 
@@ -864,6 +651,14 @@ export default function QuoteDetailPage() {
           <AggravationTab quote={quote} calculationResult={calculationResult} />
         )}
 
+        {activeTab === "debit-note" && (
+          <DebitNoteTab
+            quoteId={quote.id}
+            isAdmin={isAdmin}
+            preferredYear={selectedDossierYear}
+          />
+        )}
+
         {activeTab === "bordereau" && (
           <BordereauTab
             quote={quote}
@@ -874,12 +669,18 @@ export default function QuoteDetailPage() {
 
         {activeTab === "chat" && <ChatTab quote={quote} />}
         {activeTab === "piece-jointe" && <PieceJointeTab quote={quote} />}
-        {activeTab === "broker-commissions" && calculationResult && (
-          <BrokerCommissionsTab calculationResult={calculationResult} />
-        )}
+        {activeTab === "broker-commissions" &&
+          (calculationResult ? (
+            <BrokerCommissionsTab calculationResult={calculationResult} />
+          ) : (
+            <p className="text-sm text-ink-muted">
+              Les commissions apparaîtront une fois la prime calculée.
+            </p>
+          ))}
         {activeTab === "offre" && (
           <OffreTab quote={quote} calculationResult={calculationResult} />
         )}
+      </div>
       </div>
 
       {/* Notification Toast */}
@@ -1006,6 +807,7 @@ export default function QuoteDetailPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AuthenticatedAppShell>
   );
 }

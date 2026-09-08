@@ -10,6 +10,7 @@ import {
 import { Quote, FormData } from "@/lib/types";
 import { tableauTax } from "@/lib/tarificateurs/rcd";
 import { computePrimesTableAmounts } from "@/lib/quotes/primes-table-calculations";
+import { CABINET_DISTRIBUTOR_LINE } from "@/lib/cabinet";
 
 interface OfferLetterPDFProps {
   quote: Quote;
@@ -486,9 +487,7 @@ const OfferLetterPDF = ({
     <View style={styles.pageFooter}>
       <Text style={styles.pageFooterText}>Distribué et géré par :</Text>
       <Text style={styles.pageFooterText}>
-        ENCYCLIE CONSTRUCTION – 42 Rue Notre-Dame des Victoire, 75002 PARIS -
-        SAS au capital de 1 000 € - SIREN 897 796 785 – RCS ST NAZAIRE – N°
-        ORIAS : 21 004 564 –
+        {CABINET_DISTRIBUTOR_LINE}
       </Text>
       <Text style={styles.pageFooterText}>
         www.orias.fr – Sous le contrôle de l'ACPR, Autorité de Contrôle

@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
 import { Quote } from "@/lib/types";
 import { useState } from "react";
 import { Pencil, Check, X, Save, RefreshCw } from "lucide-react";
@@ -57,6 +58,7 @@ const FRENCH_LABELS: Record<string, string> = {
   directorName: "Nom du dirigeant",
   city: "Ville",
   postalCode: "Code postal",
+  code_naf: "Code NAF / APE",
 };
 
 function prettifyKeyFr(key: string): string {
@@ -147,13 +149,13 @@ export default function FormDataTab({
 
       if (response.ok) {
         setHasChanges(false);
-        alert("Devis mis à jour !");
+        notify("Devis mis à jour !");
       } else {
-        alert("Erreur lors de la sauvegarde");
+        notify("Erreur lors de la sauvegarde");
       }
     } catch (error) {
       console.error("Erreur:", error);
-      alert("Erreur réseau");
+      notify("Erreur réseau");
     } finally {
       setIsSaving(false);
     }
@@ -162,7 +164,7 @@ export default function FormDataTab({
   /** Recalcule l'échéancier via le tarificateur RCD et met à jour les PaymentInstallment. */
   const handleRecalculerEcheances = async () => {
     if (!quote?.id || !Object.keys(parameterMapping).length) {
-      alert(
+      notify(
         "Impossible de recalculer : mapping des paramètres du produit non disponible.",
       );
       return;
@@ -186,7 +188,7 @@ export default function FormDataTab({
       );
       const echeances = result?.echeancier?.echeances;
       if (!echeances?.length) {
-        alert(
+        notify(
           "Le calcul n'a pas produit d'échéances. Vérifiez les données du formulaire (date d'effet, périodicité, etc.).",
         );
         return;
@@ -249,11 +251,11 @@ export default function FormDataTab({
         console.warn("Échéancier enregistré mais échec de la mise à jour du calcul (calculatedPremium)");
       }
 
-      alert("Échéances recalculées et enregistrées.");
+      notify("Échéances recalculées et enregistrées.");
       onEcheancesRecalculated?.();
     } catch (error) {
       console.error("Recalcul échéances:", error);
-      alert(
+      notify(
         error instanceof Error ? error.message : "Erreur lors du recalcul des échéances",
       );
     } finally {
@@ -456,12 +458,17 @@ export default function FormDataTab({
         "address",
         "postalCode",
         "city",
+        "code_naf",
         "legalForm",
         "creationDate",
         "directorName",
       ];
 
       orderedKeys.forEach((k) => {
+        if (k === "code_naf") {
+          fields[k] = company.code_naf ?? company.codeNaf ?? "";
+          return;
+        }
         if (company[k] !== undefined) fields[k] = company[k];
       });
     }

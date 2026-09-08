@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { resetPassword } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import { AuthLayout } from "@/components/ui/AppShell";
+import { Button, FormField, inputClassName } from "@/components/ui/Controls";
+import { ErrorBanner } from "@/components/ui/Feedback";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -21,7 +23,9 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!token) {
-      setError("Token de réinitialisation manquant. Veuillez utiliser le lien reçu par email.");
+      setError(
+        "Ce lien de réinitialisation est incomplet ou a expiré. Demandez un nouveau lien.",
+      );
     }
   }, [token]);
 
@@ -30,21 +34,20 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
     setError("");
 
-    // Validation
     if (password.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caractères");
+      setError("Le mot de passe doit contenir au moins 8 caractères.");
       setIsLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas");
+      setError("Les deux saisies de mot de passe ne correspondent pas.");
       setIsLoading(false);
       return;
     }
 
     if (!token) {
-      setError("Token de réinitialisation manquant");
+      setError("Lien de réinitialisation invalide ou expiré.");
       setIsLoading(false);
       return;
     }
@@ -56,16 +59,17 @@ export default function ResetPasswordPage() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Une erreur est survenue lors de la réinitialisation");
+        setError(
+          "La réinitialisation a échoué. Le lien est peut-être expiré. Demandez-en un nouveau.",
+        );
       } else {
         setSuccess(true);
-        // Rediriger vers la page de connexion après 3 secondes
         setTimeout(() => {
           router.push("/login?message=password-reset");
         }, 3000);
       }
-    } catch (err) {
-      setError("Une erreur est survenue lors de la réinitialisation du mot de passe");
+    } catch {
+      setError("La réinitialisation a échoué. Réessayez dans un instant.");
     } finally {
       setIsLoading(false);
     }
@@ -73,173 +77,109 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="flex flex-col items-center">
-            <Image src="/couleur_1.png" alt="Logo" className="h-12" width={100} height={100} />
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Réinitialisation de mot de passe
-            </h2>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-              <span className="text-red-700 text-sm">{error || "Token de réinitialisation manquant"}</span>
-            </div>
-          </div>
-          <div className="text-center">
-            <Link
-              href="/forgot-password"
-              className="text-sm text-indigo-600 hover:text-indigo-500"
-            >
-              Demander un nouveau lien de réinitialisation
-            </Link>
-          </div>
-        </div>
-      </div>
+      <AuthLayout title="Lien invalide ou expiré">
+        <ErrorBanner>
+          {error || "Ce lien de réinitialisation n'est plus valable."}
+        </ErrorBanner>
+        <p className="mt-4 text-sm">
+          <Link
+            href="/forgot-password"
+            className="font-semibold underline decoration-brand underline-offset-4"
+          >
+            Demander un nouveau lien
+          </Link>
+        </p>
+      </AuthLayout>
     );
   }
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="flex flex-col items-center">
-            <Image src="/couleur_1.png" alt="Logo" className="h-12" width={100} height={100} />
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Mot de passe réinitialisé
-            </h2>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-              <div>
-                <h3 className="text-green-800 font-medium">Succès !</h3>
-                <p className="text-green-700 text-sm mt-1">
-                  Votre mot de passe a été réinitialisé avec succès. Vous allez être redirigé vers la page de connexion dans quelques instants.
-                </p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <Link
-                href="/login"
-                className="text-sm text-green-700 hover:text-green-800 font-medium"
-              >
-                Aller à la page de connexion →
-              </Link>
-            </div>
-          </div>
+      <AuthLayout title="Mot de passe mis à jour">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          Vous allez être redirigé vers la connexion.
         </div>
-      </div>
+        <p className="mt-4 text-sm">
+          <Link
+            href="/login"
+            className="font-semibold underline decoration-brand underline-offset-4"
+          >
+            Aller à la connexion
+          </Link>
+        </p>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="flex flex-col items-center">
-          <Image src="/couleur_1.png" alt="Logo" className="h-12" width={100} height={100} />
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Réinitialiser votre mot de passe
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Entrez votre nouveau mot de passe ci-dessous.
-          </p>
-        </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Nouveau mot de passe
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                  className="relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Nouveau mot de passe (min. 8 caractères)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label htmlFor="confirmPassword" className="sr-only">
-                Confirmer le mot de passe
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                  className="relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Confirmer le mot de passe"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                <span className="text-red-700 text-sm">{error}</span>
-              </div>
-            </div>
-          )}
-
-          <div>
+    <AuthLayout
+      title="Choisir un nouveau mot de passe"
+      subtitle="Au moins 8 caractères. Conservez-le en lieu sûr."
+    >
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {error ? <ErrorBanner>{error}</ErrorBanner> : null}
+        <FormField id="password" label="Nouveau mot de passe">
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              className={`${inputClassName} pr-10`}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              className="absolute inset-y-0 right-0 px-3 text-ink-muted"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Masquer" : "Afficher"}
             >
-              {isLoading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-
-          <div className="text-center">
-            <Link
-              href="/login"
-              className="text-sm text-indigo-600 hover:text-indigo-500"
+        </FormField>
+        <FormField id="confirmPassword" label="Confirmer le mot de passe">
+          <div className="relative">
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              className={`${inputClassName} pr-10`}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 px-3 text-ink-muted"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              aria-label={showConfirmPassword ? "Masquer" : "Afficher"}
             >
-              ← Retour à la connexion
-            </Link>
+              {showConfirmPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </FormField>
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Enregistrement…" : "Enregistrer le mot de passe"}
+        </Button>
+        <p className="text-center text-sm">
+          <Link
+            href="/login"
+            className="font-medium underline decoration-brand underline-offset-4"
+          >
+            Retourner à la connexion
+          </Link>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

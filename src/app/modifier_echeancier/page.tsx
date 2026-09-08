@@ -3,9 +3,10 @@
 import { useSession, authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import Image from "next/image";
 import { Copy, Trash2 } from "lucide-react";
 import type { PaymentInstallment, PaymentSchedule } from "@/lib/types";
+import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
+import { quoteStatusLabel, contractStatusLabel } from "@/lib/ui/labels";
 
 type QuoteWithSchedule = {
   id: string;
@@ -830,41 +831,16 @@ export default function ModifierEcheancierPage() {
 
   if (isPending || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <span className="text-gray-600">Chargement...</span>
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <span className="text-ink-muted">Chargement…</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-4">
-              <Image
-                src="/couleur_1.png"
-                alt="Logo"
-                className="h-10 w-auto"
-                width={100}
-                height={40}
-              />
-              <a
-                href="/dashboard"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                ← Retour tableau de bord
-              </a>
-            </div>
-            <div className="text-sm text-gray-600">
-              {session.user?.name} · Modifier un échéancier
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">
+    <AuthenticatedAppShell>
+      <div className="space-y-4">
+        <h1 className="text-xl font-semibold text-ink">
           Modifier un échéancier
         </h1>
 
@@ -1501,7 +1477,7 @@ export default function ModifierEcheancierPage() {
                       className="border border-gray-300 rounded px-3 py-2 text-sm w-48"
                     >
                       {QUOTE_STATUSES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                        <option key={s} value={s}>{quoteStatusLabel(s)}</option>
                       ))}
                     </select>
                   </div>
@@ -1547,7 +1523,7 @@ export default function ModifierEcheancierPage() {
                           className="border border-gray-300 rounded px-3 py-2 text-sm w-48"
                         >
                           {CONTRACT_STATUSES.map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s}>{contractStatusLabel(s)}</option>
                           ))}
                         </select>
                       </div>
@@ -1928,7 +1904,7 @@ export default function ModifierEcheancierPage() {
             )}
           </>
         )}
-      </main>
-    </div>
+      </div>
+    </AuthenticatedAppShell>
   );
 }

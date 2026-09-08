@@ -86,6 +86,11 @@ export async function PATCH(
         },
       });
 
+      await prisma.debitNoteLine.updateMany({
+        where: { installmentId: params.id },
+        data: { paymentDate: paidAtDate },
+      });
+
       const allPaid = allPayments.every((p) => p.status === "PAID");
 
       // Update schedule status if all payments are paid

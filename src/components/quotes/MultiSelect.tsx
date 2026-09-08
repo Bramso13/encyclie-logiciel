@@ -75,7 +75,7 @@ export default function MultiSelect({
         <div className="absolute w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10">
           <input
             type="text"
-            placeholder="rechercher / Créer des mots-clés"
+            placeholder="Rechercher"
             className="w-full px-3 py-2 border-b focus:outline-none focus:ring-indigo-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

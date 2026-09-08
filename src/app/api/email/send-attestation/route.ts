@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmailWithAttachment } from "@/lib/nodemailer";
+import { CABINET } from "@/lib/cabinet";
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,7 +149,7 @@ const getAttestationTemplate = (
       </div>
       <div class="footer">
         <p style="margin: 5px 0;"><strong>ENCYCLIE CONSTRUCTION</strong></p>
-        <p style="margin: 5px 0;">42 Rue Notre-Dame des Victoires, 75002 PARIS</p>
+        <p style="margin: 5px 0;">${CABINET.addressLine}, ${CABINET.postalCityCaps}</p>
         <p style="margin: 5px 0;">SAS au capital de 1 000 € - SIREN 897 796 785 - RCS ST NAZAIRE</p>
         <p style="margin: 5px 0;">N° ORIAS : 21 004 564 - www.orias.fr</p>
         <p style="margin: 10px 0 0 0; font-size: 11px; color: #999;">
@@ -180,7 +181,7 @@ const getAttestationTemplate = (
     L'équipe ENCYCLIE CONSTRUCTION
     
     ENCYCLIE CONSTRUCTION
-    42 Rue Notre-Dame des Victoires, 75002 PARIS
+    ${CABINET.addressLine}, ${CABINET.postalCityCaps}
     SAS au capital de 1 000 € - SIREN 897 796 785 - RCS ST NAZAIRE
     N° ORIAS : 21 004 564 - www.orias.fr
   `;

@@ -712,7 +712,7 @@ export default function BordereauTab({
     setLoading(true);
     try {
       const [schedRes, contractRes] = await Promise.all([
-        fetch(`/api/quotes/${quote.id}/payment-schedule`),
+        fetch(`/api/quotes/${quote.id}/payment-schedule?all=true`),
         fetch(`/api/quotes/${quote.id}/contract`),
       ]);
 

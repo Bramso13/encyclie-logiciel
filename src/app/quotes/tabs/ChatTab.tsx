@@ -4,6 +4,8 @@ import { Quote } from "@/lib/types";
 import { useSession } from "@/lib/auth-client";
 import useQuoteChatStore from "@/lib/stores/quote-chat-store";
 import { useEffect, useState, useRef } from "react";
+import { Button, inputClassName } from "@/components/ui/Controls";
+import { EmptyState, ErrorBanner, LoadingState } from "@/components/ui/Feedback";
 
 export default function ChatTab({ quote }: { quote: Quote }) {
   const { data: session } = useSession();
@@ -83,43 +85,37 @@ export default function ChatTab({ quote }: { quote: Quote }) {
 
   if (!session?.user) {
     return (
-      <div className="p-4 text-center text-gray-500">
-        Vous devez être connecté pour utiliser le chat.
-      </div>
+      <EmptyState
+        title="Connexion requise"
+        description="Connectez-vous pour échanger sur ce dossier."
+      />
     );
   }
 
   return (
-    <div className="flex flex-col h-[600px] bg-white border border-gray-200 rounded-lg">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <h3 className="font-semibold text-lg">
-          Chat - Devis {quote.reference}
-        </h3>
-        <p className="text-sm text-gray-600">
+    <div className="flex h-[600px] flex-col overflow-hidden rounded-lg border border-line bg-white">
+      <div className="border-b border-line px-4 py-3">
+        <h3 className="font-semibold text-ink">Messages du dossier {quote.reference}</h3>
+        <p className="text-sm text-ink-muted">
           Conversation avec {otherParticipant?.name} (
           {otherParticipant?.role === "ADMIN" ? "Administrateur" : "Courtier"})
         </p>
-        {unreadCount > 0 && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            {unreadCount} message{unreadCount > 1 ? "s" : ""} non lu
-            {unreadCount > 1 ? "s" : ""}
+        {unreadCount > 0 ? (
+          <span className="mt-1 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800">
+            {unreadCount} non lu{unreadCount > 1 ? "s" : ""}
           </span>
-        )}
+        ) : null}
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {loading && messages.length === 0 ? (
-          <div className="text-center text-gray-500">
-            Chargement des messages...
-          </div>
+          <LoadingState active label="Chargement des messages" />
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500">
-            Aucun message pour le moment. Commencez la conversation !
-          </div>
+          <EmptyState
+            title="Aucun message"
+            description="Écrivez le premier message pour démarrer l'échange."
+          />
         ) : (
-          messages &&
           messages.map((message) => {
             const isOwnMessage = message.senderId === session.user.id;
             const isUnread = !message.isRead && !isOwnMessage;
@@ -133,26 +129,26 @@ export default function ChatTab({ quote }: { quote: Quote }) {
                 onClick={() => isUnread && handleMarkAsRead(message.id)}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  className={`max-w-xs rounded-lg px-4 py-2 lg:max-w-md ${
                     isOwnMessage
-                      ? "bg-blue-500 text-white"
-                      : `bg-gray-100 text-gray-900 ${
-                          isUnread ? "ring-2 ring-blue-300" : ""
+                      ? "bg-ink text-white"
+                      : `border border-line bg-surface text-ink ${
+                          isUnread ? "ring-2 ring-brand/40" : ""
                         }`
                   }`}
                 >
                   <div className="text-sm">
-                    <div className="font-medium mb-1">
+                    <div className="mb-1 font-medium">
                       {isOwnMessage
                         ? "Vous"
                         : message.sender && message.sender.role === "ADMIN"
-                        ? "Administrateur"
-                        : message.sender && message.sender.name}
+                          ? "Administrateur"
+                          : message.sender && message.sender.name}
                     </div>
                     <div className="whitespace-pre-wrap">{message.content}</div>
                     <div
-                      className={`text-xs mt-2 ${
-                        isOwnMessage ? "text-blue-100" : "text-gray-500"
+                      className={`mt-2 text-xs ${
+                        isOwnMessage ? "text-white/70" : "text-ink-muted"
                       }`}
                     >
                       {new Date(message.createdAt).toLocaleString("fr-FR", {
@@ -161,11 +157,9 @@ export default function ChatTab({ quote }: { quote: Quote }) {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                      {isUnread && !isOwnMessage && (
-                        <span className="ml-2 text-blue-600 font-medium">
-                          Non lu
-                        </span>
-                      )}
+                      {isUnread && !isOwnMessage ? (
+                        <span className="ml-2 font-medium text-brand">Non lu</span>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -176,34 +170,26 @@ export default function ChatTab({ quote }: { quote: Quote }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Error display */}
-      {error && (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm">
-          {error}
+      {error ? (
+        <div className="px-4 py-2">
+          <ErrorBanner>{error}</ErrorBanner>
         </div>
-      )}
+      ) : null}
 
-      {/* Message input */}
-      <form
-        onSubmit={handleSendMessage}
-        className="p-4 border-t border-gray-200"
-      >
-        <div className="flex space-x-2">
+      <form onSubmit={handleSendMessage} className="border-t border-line p-4">
+        <div className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Tapez votre message..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Écrire un message"
+            className={inputClassName}
             disabled={sending}
+            aria-label="Nouveau message"
           />
-          <button
-            type="submit"
-            disabled={!newMessage.trim() || sending}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {sending ? "..." : "Envoyer"}
-          </button>
+          <Button type="submit" disabled={!newMessage.trim() || sending}>
+            {sending ? "Envoi…" : "Envoyer"}
+          </Button>
         </div>
       </form>
     </div>

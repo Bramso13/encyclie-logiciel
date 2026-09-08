@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { signIn } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
-import Image from "next/image";
+import { AuthLayout } from "@/components/ui/AppShell";
+import { Button, FormField, inputClassName } from "@/components/ui/Controls";
+import { ErrorBanner } from "@/components/ui/Feedback";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,11 +21,11 @@ export default function LoginPage() {
     const message = searchParams.get("message");
     if (message === "account-created") {
       setSuccessMessage(
-        "Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter."
+        "Votre compte a été créé. Vous pouvez maintenant vous connecter.",
       );
     } else if (message === "password-reset") {
       setSuccessMessage(
-        "Votre mot de passe a été réinitialisé avec succès ! Vous pouvez maintenant vous connecter avec votre nouveau mot de passe."
+        "Votre mot de passe a été réinitialisé. Connectez-vous avec le nouveau mot de passe.",
       );
     }
   }, [searchParams]);
@@ -40,114 +42,67 @@ export default function LoginPage() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Une erreur est survenue");
+        setError(
+          "Identifiants incorrects. Vérifiez l'adresse e-mail et le mot de passe.",
+        );
       } else {
-        router.push("/");
+        router.push("/dashboard");
       }
-    } catch (err) {
-      setError("Une erreur est survenue lors de la connexion");
+    } catch {
+      setError("La connexion a échoué. Réessayez dans un instant.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await signIn.social({
-        provider: "google",
-      });
-    } catch (err) {
-      setError("Erreur lors de la connexion avec Google");
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="flex flex-col items-center">
-          <Image src="/couleur_1.png" alt="Logo" className="h-12" width={100} height={100} />
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Connexion
-          </h2>
-          {/* <p className="mt-2 text-center text-sm text-gray-600">
-            Ou{" "}
-            <Link
-              href="/register"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              créez un nouveau compte
-            </Link>
-          </p> */}
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {successMessage && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <span className="text-green-700 text-sm">{successMessage}</span>
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Adresse email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Adresse email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Mot de passe
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Mot de passe"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+    <AuthLayout
+      title="Se connecter"
+      subtitle="Accédez à votre espace courtier ou administrateur."
+    >
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {successMessage ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            {successMessage}
           </div>
-
-          {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Connexion..." : "Se connecter"}
-            </button>
-          </div>
-
-          <div className="text-center">
-            <Link
-              href="/forgot-password"
-              className="text-sm text-indigo-600 hover:text-indigo-500"
-            >
-              Mot de passe oublié ?
-            </Link>
-          </div>
-        </form>
-      </div>
-    </div>
+        ) : null}
+        {error ? <ErrorBanner>{error}</ErrorBanner> : null}
+        <FormField id="email" label="Adresse e-mail">
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            className={inputClassName}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </FormField>
+        <FormField id="password" label="Mot de passe">
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            className={inputClassName}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </FormField>
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Connexion…" : "Se connecter"}
+        </Button>
+        <p className="text-center text-sm">
+          <Link
+            href="/forgot-password"
+            className="font-medium text-ink underline decoration-brand underline-offset-4"
+          >
+            Mot de passe oublié
+          </Link>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

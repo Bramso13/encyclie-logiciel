@@ -1,3 +1,4 @@
+import { notify } from "@/lib/ui/notify";
 import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
 import { CalculationResult, Quote } from "@/lib/types";
 import { pdf } from "@react-pdf/renderer";
@@ -78,7 +79,7 @@ export default function LetterTab({
   const handleGeneratePDF = async () => {
     try {
       if (!quote) {
-        alert("Aucun devis disponible");
+        notify("Aucun devis disponible");
         return;
       }
 
@@ -112,7 +113,7 @@ export default function LetterTab({
       document.body.removeChild(a);
     } catch (error) {
       console.error("Erreur génération PDF:", error);
-      alert("Erreur lors de la génération du PDF");
+      notify("Erreur lors de la génération du PDF");
     } finally {
       setGeneratingLetterPDF(false);
     }
@@ -121,7 +122,7 @@ export default function LetterTab({
   const handleSendEmail = async () => {
     try {
       if (!quote?.formData?.directorName) {
-        alert("Impossible d'envoyer l'email : nom du dirigeant manquant");
+        notify("Impossible d'envoyer l'email : nom du dirigeant manquant");
         return;
       }
 
@@ -129,20 +130,20 @@ export default function LetterTab({
       const clientEmail = session?.user?.email;
 
       if (!clientEmail) {
-        alert("Impossible d'envoyer l'email : email du broker manquant");
+        notify("Impossible d'envoyer l'email : email du broker manquant");
         return;
       }
 
       // Validation basique de l'email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(clientEmail)) {
-        alert("Veuillez saisir un email valide");
+        notify("Veuillez saisir un email valide");
         return;
       }
       const brokerInfo = await getBrokerInfo(session?.user?.id);
 
       if (!brokerInfo) {
-        alert("Impossible d'envoyer l'email : broker non trouvé");
+        notify("Impossible d'envoyer l'email : broker non trouvé");
         return;
       }
       console.log("brokerInfo", brokerInfo);
@@ -178,16 +179,16 @@ export default function LetterTab({
       });
 
       if (response.ok) {
-        alert(
+        notify(
           `Lettre d'intention envoyée par email à ${clientEmail} avec succès !`
         );
       } else {
         const errorData = await response.json();
-        alert(`Erreur lors de l'envoi : ${errorData.error}`);
+        notify(`Erreur lors de l'envoi : ${errorData.error}`);
       }
     } catch (error) {
       console.error("Erreur envoi email:", error);
-      alert("Erreur lors de l'envoi de l'email");
+      notify("Erreur lors de l'envoi de l'email");
     }
   };
   return (

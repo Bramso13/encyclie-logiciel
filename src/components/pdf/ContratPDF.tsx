@@ -10,6 +10,7 @@ import {
 import { Quote, FormData } from "@/lib/types";
 import { tableauTax } from "@/lib/tarificateurs/rcd";
 import { PrimesTableRows } from "@/components/pdf/primesTableRows";
+import { CABINET } from "@/lib/cabinet";
 
 const styles = StyleSheet.create({
   page: {
@@ -17,13 +18,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     padding: 40,
     paddingBottom: 52,
-    fontSize: 11,
-    lineHeight: 1.45,
+    fontSize: 10.5,
+    lineHeight: 1.55,
     /* Bordure page retirée : combine mal avec pagination Yoga sur gros flux (PDFKit unsupported number).
        Charte : bordures des tableaux / cases signature restent orange. */
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   logo: {
     width: 90,
@@ -39,15 +40,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "bold",
-    color: "#000000",
+    color: "#C36C0B",
     marginBottom: 10,
-    marginTop: 14,
+    marginTop: 16,
     textAlign: "left",
   },
   section: {
-    marginBottom: 16,
+    marginBottom: 14,
+  },
+  paragraph: {
+    marginBottom: 7,
+    textAlign: "justify",
+    lineHeight: 1.55,
   },
   box: {
     backgroundColor: "#f9fafb",
@@ -316,24 +322,31 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
         </View>
 
         {/* Encart d'identification */}
-        <View style={styles.box}>
-          <Text>
+        <View style={styles.box} wrap={false}>
+          <Text style={styles.paragraph}>
             <Text style={styles.strong}>CONTRAT N°</Text> :{" "}
             <Text style={styles.strong}>
               {quote?.reference || "20220XRCDWAK"}
             </Text>
           </Text>
-          <Text>
+          <Text style={styles.paragraph}>
             Type d'assurance : Responsabilité Civile Professionnelle et
             Décennale
           </Text>
-          <Text>Date d'effet : {dateEffet}</Text>
-          <Text>Édité le : {dateEdition}</Text>
-          <Text>Échéance annuelle : {echeanceAnnuelle}</Text>
-          <Text>
-            Nom du souscripteur : Numéro Client : {numeroClient} {nomComplet}
+          <Text style={styles.paragraph}>Date d'effet : {dateEffet}</Text>
+          <Text style={styles.paragraph}>Édité le : {dateEdition}</Text>
+          <Text style={styles.paragraph}>
+            Échéance annuelle : {echeanceAnnuelle}
           </Text>
-          <Text>Indice de référence : {indiceReference}</Text>
+          <Text style={styles.paragraph}>
+            Nom du souscripteur : {nomComplet}
+          </Text>
+          <Text style={styles.paragraph}>
+            Numéro Client : {numeroClient}
+          </Text>
+          <Text style={styles.paragraph}>
+            Indice de référence : {indiceReference}
+          </Text>
         </View>
 
         {/* Assureur / Distributeur */}
@@ -361,8 +374,8 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             <Text style={styles.strong}>
               DISTRIBUTEUR ET GESTIONNAIRE DES CONTRATS
             </Text>{" "}
-            : ENCYCLIE CONSTRUCTION – 42, rue Notre-Dame des Victoires 75002
-            Paris - SAS au capital de 1 000 € - SIREN 897 796 785 – RCS PARIS –
+            : {CABINET.name} – {CABINET.addressLine} {CABINET.postalCity}
+            - SAS au capital de 1 000 € - SIREN 897 796 785 – RCS PARIS –
             N° ORIAS : 21 004 564 – www.orias.fr
           </Text>
           <Text>
@@ -385,16 +398,28 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Parties */}
         <View style={styles.section}>
-          <Text style={styles.title}>le SOUSCRIPTEUR :</Text>
-          <Text>Nom de la société / Raison sociale : {raisonSociale}</Text>
-          <Text>Forme juridique : {formeJuridique}</Text>
-          <Text>Auto-entrepreneur : {autoEntrepreneur}</Text>
-          <Text>Nom & Prénom du ou des dirigeants : {dirigeants}</Text>
-          <Text>Rue du siège social : {adresseSiege}</Text>
-          <Text>CP Ville du siège social : {cpVilleSiege}</Text>
-          <Text>N°Immatriculation au répertoire des métiers : {siret}</Text>
-          <Text>Tél : {telephone}</Text>
-          <Text>Email : {email}</Text>
+          <Text style={styles.title} minPresenceAhead={48}>
+            le SOUSCRIPTEUR :
+          </Text>
+          <Text style={styles.paragraph}>
+            Nom de la société / Raison sociale : {raisonSociale}
+          </Text>
+          <Text style={styles.paragraph}>Forme juridique : {formeJuridique}</Text>
+          <Text style={styles.paragraph}>
+            Auto-entrepreneur : {autoEntrepreneur}
+          </Text>
+          <Text style={styles.paragraph}>
+            Nom & Prénom du ou des dirigeants : {dirigeants}
+          </Text>
+          <Text style={styles.paragraph}>Rue du siège social : {adresseSiege}</Text>
+          <Text style={styles.paragraph}>
+            CP Ville du siège social : {cpVilleSiege}
+          </Text>
+          <Text style={styles.paragraph}>
+            N°Immatriculation au répertoire des métiers : {siret}
+          </Text>
+          <Text style={styles.paragraph}>Tél : {telephone}</Text>
+          <Text style={styles.paragraph}>Email : {email}</Text>
           <Text style={{ marginTop: 8 }}>
             et l'<Text style={styles.strong}>ASSUREUR</Text> :{" "}
             <Text style={styles.strong}>FIDELIDADE</Text>, succursale française
@@ -421,7 +446,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 1 – Déclarations */}
         <View style={styles.section}>
-          <Text style={styles.title}>
+          <Text style={styles.title} minPresenceAhead={56}>
             CHAPITRE 1 – DÉCLARATIONS DU SOUSCRIPTEUR
           </Text>
           <Text style={styles.strong}>Votre déclaration :</Text>
@@ -623,7 +648,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 2 – Montants des garanties et franchises - TABLEAU COMPLET */}
         <View style={styles.section}>
-          <Text style={styles.title}>
+          <Text style={styles.title} minPresenceAhead={56}>
             CHAPITRE 2 – MONTANT DES GARANTIES ET DES FRANCHISES
           </Text>
           <View style={styles.table}>
@@ -858,7 +883,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 3 – Activités souscrites */}
         <View style={styles.section}>
-          <Text style={styles.title}>
+          <Text style={styles.title} minPresenceAhead={56}>
             CHAPITRE 3 – ACTIVITÉ(S) SOUSCRITE(S) PAR L'ASSURÉ AU TITRE DU
             PRÉSENT CONTRAT :
           </Text>
@@ -924,7 +949,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 4 – Clauses spéciales */}
         <View style={styles.section}>
-          <Text style={styles.title}>CHAPITRE 4 – CLAUSES SPÉCIALES</Text>
+          <Text style={styles.title} minPresenceAhead={48}>
+            CHAPITRE 4 – CLAUSES SPÉCIALES
+          </Text>
           <Text style={styles.strong}>
             - La garantie s'applique pour des marchés de travaux dont le montant
             n'excède pas 1 000 000 EUR et pour des opérations de construction
@@ -958,7 +985,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 5 – Étendue géographique */}
         <View style={styles.section}>
-          <Text style={styles.title}>CHAPITRE 5 – ÉTENDUE GÉOGRAPHIQUE</Text>
+          <Text style={styles.title} minPresenceAhead={48}>
+            CHAPITRE 5 – ÉTENDUE GÉOGRAPHIQUE
+          </Text>
           <Text style={styles.strong}>
             Les présentes conditions particulières couvrent les risques situés
             dans les départements, régions et collectivités d'outre mer
@@ -975,7 +1004,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 6 – Détails de la prime */}
         <View style={styles.section}>
-          <Text style={styles.title}>CHAPITRE 6 – DÉTAILS DE LA PRIME :</Text>
+          <Text style={styles.title} minPresenceAhead={56}>
+            CHAPITRE 6 – DÉTAILS DE LA PRIME :
+          </Text>
           <Text style={styles.strong}>Primes</Text>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
@@ -1061,7 +1092,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 7 – Durée du contrat */}
         <View style={styles.section}>
-          <Text style={styles.title}>CHAPITRE 7 – DURÉE DU CONTRAT :</Text>
+          <Text style={styles.title} minPresenceAhead={56}>
+            CHAPITRE 7 – DURÉE DU CONTRAT :
+          </Text>
           <Text style={styles.strong}>À effet du {dateEffet}.</Text>
           <Text style={styles.strong}>
             Contrat à tacite reconduction avec échéance principale le 1er
@@ -1131,7 +1164,7 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 8 – Déclaration de sinistres (aligné CG art. 9 et 10.1) */}
         <View style={styles.section}>
-          <Text style={styles.title}>
+          <Text style={styles.title} minPresenceAhead={48}>
             CHAPITRE 8 – DÉCLARATION DE SINISTRES :
           </Text>
           <Text>
@@ -1147,7 +1180,9 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
 
         {/* Chapitre 9 – Réclamations (aligné CG art. 10.1) */}
         <View style={styles.section}>
-          <Text style={styles.title}>CHAPITRE 9 – RÉCLAMATIONS :</Text>
+          <Text style={styles.title} minPresenceAhead={48}>
+            CHAPITRE 9 – RÉCLAMATIONS :
+          </Text>
           <Text>
             En cas de désaccord ou de non-réponse suite à votre première demande
             concernant la gestion de votre contrat, vous pouvez adresser une
@@ -1155,8 +1190,8 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
             mail :
           </Text>
           <Text style={styles.strong}>ENCYCLIE CONSTRUCTION – Service Client</Text>
-          <Text>42, rue Notre-Dame des Victoires</Text>
-          <Text>75002 Paris</Text>
+          <Text>{CABINET.addressLine}</Text>
+          <Text>{CABINET.postalCity}</Text>
           <Text>Ou par e-mail : reclamation@encyclie-construction.fr</Text>
           <Text style={{ marginTop: 8 }}>
             Si la réclamation porte sur un sinistre, vous pouvez adresser votre
@@ -1249,8 +1284,8 @@ const ContractRCDPDF: React.FC<ContractRCDPDFProps> = ({
           </Text>
           <Text>Pour ENCYCLIE CONSTRUCTION :</Text>
           <Text>
-            Par courrier : 42 Rue Notre-Dame des Victoires, 75002 Paris – ou par
-            courriel : contact@encyclie-construction.com
+            Par courrier : {CABINET.fullAddress} – ou par
+            courriel : {CABINET.email}
           </Text>
           <Text>Pour l'assureur (FIDELIDADE) :</Text>
           <Text>

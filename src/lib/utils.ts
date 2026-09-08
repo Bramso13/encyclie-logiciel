@@ -4,6 +4,7 @@ import {
   getTaxeByRegion,
   getTaxeProtectionJuridiqueByRegion,
 } from "./tarificateurs/rcd";
+import { resolveHonoraireGestion } from "./tarificateurs/honoraires";
 
 // Fonction de calcul dynamique basée sur le mapping
 export const calculateWithMapping = (
@@ -218,9 +219,27 @@ export const calculateWithMapping = (
       taxeProtectionJuridique: getTaxeProtectionJuridiqueByRegion(
         quoteData.formData.territory
       ),
+      honoraireGestion: 0,
       // Remplacer par les valeurs mappées
       ...mappedParams,
     };
+
+    finalParams.honoraireGestion = resolveHonoraireGestion(
+      quoteData.formData?.honoraireCourtier,
+      finalParams.honoraireGestion,
+    );
+
+    const tariffYear = new Date(
+      finalParams.dateEffet ?? Date.now(),
+    ).getFullYear();
+    finalParams.taxeAssurance = getTaxeByRegion(
+      quoteData.formData.territory,
+      tariffYear,
+    );
+    finalParams.taxeProtectionJuridique = getTaxeProtectionJuridiqueByRegion(
+      quoteData.formData.territory,
+      tariffYear,
+    );
 
     console.log("Paramètres finaux:", finalParams);
 

@@ -49,12 +49,12 @@ export async function POST(
         resiliationReason?: string;
       };
 
-      const schedule = await prisma.paymentSchedule.findUnique({
+      const schedules = await prisma.paymentSchedule.findMany({
         where: { quoteId: params.id },
         select: { id: true },
       });
 
-      if (!schedule)
+      if (!schedules.length)
         throw new ApiError(404, "Échéancier non trouvé pour ce devis");
 
       const isResiliate =
@@ -62,8 +62,8 @@ export async function POST(
 
       await prisma.$transaction(async (tx) => {
         // 1. Mise à jour de l'échéancier
-        await tx.paymentSchedule.update({
-          where: { id: schedule.id },
+        await tx.paymentSchedule.updateMany({
+          where: { quoteId: params.id },
           data: {
             resiliationDate: isResiliate ? new Date(resiliationDate!) : null,
             resiliationReason: isResiliate ? (resiliationReason ?? null) : null,
@@ -92,8 +92,9 @@ export async function POST(
       });
 
       // Retourner l'état mis à jour
-      const updatedSchedule = await prisma.paymentSchedule.findUnique({
-        where: { id: schedule.id },
+      const updatedSchedule = await prisma.paymentSchedule.findFirst({
+        where: { quoteId: params.id },
+        orderBy: { vintageYear: "desc" },
         select: {
           id: true,
           resiliationDate: true,

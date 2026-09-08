@@ -233,8 +233,19 @@ export type GeneratedEcheance = {
  * Convertit une date au format français DD/MM/YYYY en objet Date
  */
 export function parseDateFrancaise(dateFr: string): Date {
-  const [jour, mois, annee] = dateFr.split("/").map(Number);
-  return new Date(annee, mois - 1, jour);
+  const fr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateFr);
+  if (fr) {
+    return new Date(Number(fr[3]), Number(fr[2]) - 1, Number(fr[1]));
+  }
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateFr);
+  if (iso) {
+    return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+  const parsed = new Date(dateFr);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Date d'échéance invalide: ${dateFr}`);
+  }
+  return parsed;
 }
 
 /**

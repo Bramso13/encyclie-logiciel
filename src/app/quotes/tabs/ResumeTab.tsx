@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
 import { useState, useEffect } from "react";
 import AdminWorkflowManager from "@/components/workflow/AdminWorkflowManager";
 import BrokerWorkflowExecutor from "@/components/workflow/BrokerWorkflowExecutor";
@@ -79,7 +80,7 @@ export default function ResumeTab({
       }
 
       // Success notification
-      alert(
+      notify(
         data.message || "Courtier réassigné avec succès"
       );
 
@@ -89,7 +90,7 @@ export default function ResumeTab({
       window.location.reload();
     } catch (error) {
       console.error("Erreur lors de la réassignation du courtier:", error);
-      alert(
+      notify(
         error instanceof Error
           ? error.message
           : "Erreur lors de la réassignation du courtier"
@@ -179,13 +180,13 @@ export default function ResumeTab({
       }
 
       // Success notification
-      alert(data.message || "Statut mis à jour avec succès");
+      notify(data.message || "Statut mis à jour avec succès");
 
       // Reload the page to show updated status
       window.location.reload();
     } catch (error) {
       console.error("Erreur lors de la mise à jour du statut:", error);
-      alert(
+      notify(
         error instanceof Error
           ? error.message
           : "Erreur lors de la mise à jour du statut"
@@ -403,7 +404,7 @@ export default function ResumeTab({
               <button
                 onClick={() => {
                   if (quote.contract) {
-                    alert("Un contrat existe déjà pour ce devis.");
+                    notify("Un contrat existe déjà pour ce devis.");
                     return;
                   }
                   setShowApproveModal(true);

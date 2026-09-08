@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/lib/ui/notify";
 import React, { useState } from "react";
 import { Quote, CalculationResult } from "@/lib/types";
 import { recalculateWithParams } from "./recalculateUtils";
@@ -236,7 +237,7 @@ export default function ParameterEditor({
       setTempValue(null);
     } catch (error) {
       console.error("Erreur lors du recalcul:", error);
-      alert("Erreur lors du recalcul. Vérifiez les valeurs saisies.");
+      notify("Erreur lors du recalcul. Vérifiez les valeurs saisies.");
     } finally {
       setIsRecalculating(false);
     }

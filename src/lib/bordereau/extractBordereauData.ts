@@ -63,11 +63,13 @@ export async function getBordereauData(
       ...(productType ? { product: { code: productType } } : {}),
       quote: {
         paymentSchedule: {
-          payments: {
-            some: {
-              dueDate: {
-                gte: dateRange.startDate,
-                lte: dateRange.endDate,
+          some: {
+            payments: {
+              some: {
+                dueDate: {
+                  gte: dateRange.startDate,
+                  lte: dateRange.endDate,
+                },
               },
             },
           },
@@ -98,7 +100,13 @@ export async function getBordereauData(
   for (const contract of contracts) {
     const quote = contract.quote;
     const brokerProfile = contract.broker.brokerProfile;
-    const paymentSchedule = quote.paymentSchedule;
+    const paymentSchedule = Array.isArray(quote.paymentSchedule)
+      ? {
+          payments: quote.paymentSchedule.flatMap(
+            (schedule) => schedule.payments ?? [],
+          ),
+        }
+      : quote.paymentSchedule;
 
     if (!brokerProfile) {
       console.warn(`Contract ${contract.id} has no broker profile, skipping`);
@@ -211,7 +219,13 @@ export async function getBordereauData(
       }
       const companyData = quote.companyData as any;
       const formData = quote.formData as any;
-      const paymentSchedule = quote.paymentSchedule;
+      const paymentSchedule = Array.isArray(quote.paymentSchedule)
+        ? {
+            payments: quote.paymentSchedule.flatMap(
+              (schedule) => schedule.payments ?? [],
+            ),
+          }
+        : quote.paymentSchedule;
 
       const buildQuoteSourceData = (): SourceDataItem[] => {
         const items: SourceDataItem[] = [];
@@ -352,7 +366,7 @@ function transformQuoteToFidelidadeRow(
     EFFECTIF_ENTREPRISE: companyData.employeeCount
       ? String(companyData.employeeCount)
       : "",
-    CODE_NAF: formData.codeNaf ?? "",
+    CODE_NAF: formData.code_naf ?? formData.codeNaf ?? "",
     ...activityColumns,
   } as FidelidadeRow;
 }
@@ -432,7 +446,7 @@ function transformToFidelidadeRow(params: TransformParams): FidelidadeRow {
     EFFECTIF_ENTREPRISE: companyData.employeeCount
       ? String(companyData.employeeCount)
       : "",
-    CODE_NAF: formData.codeNaf || "",
+    CODE_NAF: formData.code_naf || formData.codeNaf || "",
 
     // Activities (spread the activity columns)
     ...activityColumns,

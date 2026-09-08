@@ -19,6 +19,8 @@ export interface ActivityShare {
 export interface FormData {
   // Informations de base
   honoraireCourtier: string;
+  /** Code NAF/APE canonique (bordereaux, Pappers). */
+  code_naf?: string;
   enCreation: boolean;
   city: string;
   postalCode: string;
@@ -71,12 +73,21 @@ export interface FormData {
   tempsSansActivite?: string;
 }
 
+export interface QuoteVintage {
+  id: string;
+  year: number;
+  chiffreAffaires: string;
+  activities: ActivityShare[];
+  calculatedPremium?: CalculationResult;
+}
+
 export interface Quote {
   id: string;
   reference: string;
   status: string;
   companyData: CompanyData;
   formData: FormData;
+  vintages?: QuoteVintage[];
   product: {
     name: string;
     code: string;
@@ -89,6 +100,9 @@ export interface Quote {
     name: string;
     email: string;
     role: string;
+    companyName?: string;
+    phone?: string;
+    address?: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -130,6 +144,7 @@ export interface PaymentInstallment {
 
 export interface PaymentSchedule {
   id: string;
+  vintageYear?: number;
   totalAmountHT: number;
   totalTaxAmount: number;
   totalAmountTTC: number;

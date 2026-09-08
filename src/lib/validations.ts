@@ -150,6 +150,7 @@ export const QuoteFiltersSchema = z.object({
   brokerId: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
+  search: z.string().optional(),
 });
 
 export const ContractFiltersSchema = z.object({

@@ -10,6 +10,12 @@ import {
   regenerateScheduleWithPaymentPreservation,
   adaptEcheancesForDatabase,
 } from "@/lib/payment-schedule-utils";
+import { yearFromFormData } from "@/lib/quotes/revision-millesime";
+import {
+  findScheduleForQuote,
+  flattenSchedulePayments,
+  listSchedulesForQuote,
+} from "@/lib/quotes/payment-schedule-lookup";
 
 // GET /api/quotes/[id]/payment-schedule - Get payment schedule for a quote
 export async function GET(
@@ -38,48 +44,39 @@ export async function GET(
         throw new ApiError(403, "Accès refusé à ce devis");
       }
 
-      // Récupérer l'échéancier avec toutes les échéances
-      const paymentSchedule = await prisma.paymentSchedule.findUnique({
-        where: { quoteId: params.id },
-        include: {
-          payments: {
-            include: {
-              validatedBy: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  role: true,
-                },
-              },
-              transactions: {
-                include: {
-                  validatedBy: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                      role: true,
-                    },
-                  },
-                },
-                orderBy: {
-                  createdAt: "desc",
-                },
-              },
-            },
-            orderBy: {
-              installmentNumber: "asc",
-            },
-          },
-        },
-      });
+      const yearParam = request.nextUrl.searchParams.get("year");
+      const all = request.nextUrl.searchParams.get("all") === "true";
+      const schedules = await listSchedulesForQuote(params.id);
+      const availableYears = schedules.map((schedule) => schedule.vintageYear);
+
+      if (!schedules.length) {
+        throw new ApiError(404, "Échéancier non trouvé");
+      }
+
+      if (all) {
+        return createApiResponse({
+          payments: flattenSchedulePayments(schedules),
+          schedules,
+          availableYears,
+          resiliationDate:
+            schedules.find((schedule) => schedule.resiliationDate)
+              ?.resiliationDate ?? null,
+          resiliationReason:
+            schedules.find((schedule) => schedule.resiliationReason)
+              ?.resiliationReason ?? null,
+        });
+      }
+
+      const vintageYear = yearParam ? Number(yearParam) : undefined;
+      const paymentSchedule = vintageYear
+        ? schedules.find((schedule) => schedule.vintageYear === vintageYear)
+        : schedules[0];
 
       if (!paymentSchedule) {
         throw new ApiError(404, "Échéancier non trouvé");
       }
 
-      return createApiResponse(paymentSchedule);
+      return createApiResponse({ ...paymentSchedule, availableYears });
     });
   } catch (error) {
     return handleApiError(error);
@@ -95,7 +92,9 @@ export async function POST(
   try {
     return await withAuth(async (userId, userRole) => {
       const body = await request.json();
-      const { calculationResult, createEmpty } = body;
+      const { calculationResult, createEmpty, vintageYear: vintageYearRaw } = body;
+      const requestedVintageYear =
+        typeof vintageYearRaw === "number" ? vintageYearRaw : undefined;
 
       // Vérifier que le devis existe et que l'utilisateur y a accès
       const quote = await prisma.quote.findUnique({
@@ -104,6 +103,7 @@ export async function POST(
           id: true,
           brokerId: true,
           status: true,
+          formData: true,
         },
       });
 
@@ -117,10 +117,10 @@ export async function POST(
       }
 
       if (createEmpty === true) {
-        const existingSchedule = await prisma.paymentSchedule.findUnique({
-          where: { quoteId: params.id },
-          include: { payments: { orderBy: { installmentNumber: "asc" } } },
-        });
+        const existingSchedule = await findScheduleForQuote(
+          params.id,
+          requestedVintageYear,
+        );
         if (existingSchedule) {
           return createApiResponse(existingSchedule, "Échéancier existant");
         }
@@ -128,6 +128,10 @@ export async function POST(
         const paymentSchedule = await prisma.paymentSchedule.create({
           data: {
             quoteId: params.id,
+            vintageYear:
+              requestedVintageYear ??
+              yearFromFormData(quote.formData) ??
+              2026,
             totalAmountHT: 0,
             totalTaxAmount: 0,
             totalAmountTTC: 0,
@@ -145,17 +149,23 @@ export async function POST(
       }
 
       const echeances = calculationResult.echeancier.echeances;
+      const firstDue = echeances[0]?.debutPeriode || echeances[0]?.date;
+      const inferredYear =
+        requestedVintageYear ??
+        (typeof firstDue === "string" && firstDue.includes("/")
+          ? Number(firstDue.split("/")[2])
+          : new Date(firstDue).getFullYear());
 
       // Calculer les totaux
       const totalAmountHT = calculationResult.primeTotal || 0;
       const totalTaxAmount = calculationResult.autres?.taxeAssurance || 0;
       const totalAmountTTC = calculationResult.totalTTC || 0;
 
-      // Vérifier si un échéancier existe déjà (pour conservation des paiements)
-      const existingSchedule = await prisma.paymentSchedule.findUnique({
-        where: { quoteId: params.id },
-        include: { payments: true },
-      });
+      // Vérifier si un échéancier existe déjà pour ce millésime
+      const existingSchedule = await findScheduleForQuote(
+        params.id,
+        inferredYear,
+      );
 
       let paymentSchedule;
 
@@ -208,6 +218,7 @@ export async function POST(
         paymentSchedule = await prisma.paymentSchedule.create({
           data: {
             quoteId: params.id,
+            vintageYear: inferredYear,
             totalAmountHT,
             totalTaxAmount,
             totalAmountTTC,
@@ -279,17 +290,9 @@ export async function PATCH(
         throw new ApiError(403, "Accès refusé à ce devis");
       }
 
-      const existing = await prisma.paymentSchedule.findUnique({
-        where: { quoteId: params.id },
-        include: { payments: { orderBy: { installmentNumber: "asc" } } },
-      });
-
-      if (!existing) {
-        throw new ApiError(404, "Échéancier non trouvé");
-      }
-
       const body = await request.json();
-      const { payments } = body as {
+      const { payments, vintageYear: vintageYearRaw } = body as {
+        vintageYear?: number;
         payments?: Array<{
           id?: string;
           dueDate?: string;
@@ -308,9 +311,23 @@ export async function PATCH(
         }>;
       };
 
+      const existing = await findScheduleForQuote(
+        params.id,
+        typeof vintageYearRaw === "number" ? vintageYearRaw : undefined,
+      );
+
+      if (!existing) {
+        throw new ApiError(404, "Échéancier non trouvé");
+      }
+
       if (!Array.isArray(payments)) {
         throw new ApiError(400, "Tableau 'payments' requis");
       }
+
+      const allSchedules = await listSchedulesForQuote(params.id);
+      const allPayments = allSchedules.flatMap(
+        (schedule) => schedule.payments ?? [],
+      );
 
       const isNewPayment = (id: string | undefined) =>
         !id || id.startsWith("new-");
@@ -345,7 +362,9 @@ export async function PATCH(
 
       for (let i = 0; i < payments.length; i++) {
         const p = payments[i];
-        const inst = !isNewPayment(p.id) ? existing.payments.find((x) => x.id === p.id) : null;
+        const inst = !isNewPayment(p.id)
+          ? allPayments.find((x) => x.id === p.id)
+          : null;
         const dueDate = p.dueDate ? new Date(p.dueDate) : inst?.dueDate ?? defaultDate;
         const periodStart = p.periodStart ? new Date(p.periodStart) : inst?.periodStart ?? defaultDate;
         const periodEnd = p.periodEnd ? new Date(p.periodEnd) : inst?.periodEnd ?? defaultDate;
@@ -378,8 +397,10 @@ export async function PATCH(
         }
 
         const data = {
-          scheduleId: existing.id,
-          installmentNumber: i + 1,
+          scheduleId: inst?.scheduleId ?? existing.id,
+          installmentNumber: inst?.scheduleId && inst.scheduleId !== existing.id
+            ? inst.installmentNumber
+            : i + 1,
           dueDate,
           amountHT,
           taxAmount,

@@ -342,7 +342,7 @@ export async function findQuoteForCsvRow(
 export async function findQuoteBySiret(prisma: PrismaClient, siret: string) {
   const quotes = await prisma.quote.findMany({
     where: {
-      paymentSchedule: { isNot: null },
+      paymentSchedule: { some: {} },
     },
     include: {
       paymentSchedule: { include: { payments: true } },
@@ -362,12 +362,15 @@ export async function findQuoteBySiret(prisma: PrismaClient, siret: string) {
   return matching[0];
 }
 
+type QuoteWithSchedules = NonNullable<
+  Awaited<ReturnType<typeof findQuoteForCsvRow>>
+>;
+type QuoteSchedule = QuoteWithSchedules["paymentSchedule"][number];
+
 type InstallmentMatch = {
-  quote: NonNullable<Awaited<ReturnType<typeof findQuoteForCsvRow>>>;
-  schedule: NonNullable<
-    NonNullable<Awaited<ReturnType<typeof findQuoteForCsvRow>>>["paymentSchedule"]
-  >;
-  installment: InstallmentMatch["schedule"]["payments"][number];
+  quote: QuoteWithSchedules;
+  schedule: QuoteSchedule;
+  installment: QuoteSchedule["payments"][number];
   matchMethod: string;
   warnings: string[];
 };
@@ -379,15 +382,21 @@ export async function findInstallmentForCsvRow(
   const warnings: string[] = [];
   const quote = await findQuoteForCsvRow(prisma, csvRow);
 
-  if (!quote?.paymentSchedule) return null;
+  if (!quote?.paymentSchedule?.length) return null;
 
-  const schedule = quote.paymentSchedule;
   const periodStart = csvRow.dateDebutPeriode!;
   const periodEnd = csvRow.dateFinPeriode!;
-
-  const matchingPayments = schedule.payments.filter((p) =>
-    periodMatches(p.periodStart, p.periodEnd, periodStart, periodEnd),
+  const matchingPairs = quote.paymentSchedule.flatMap((schedule) =>
+    schedule.payments
+      .filter((p) =>
+        periodMatches(p.periodStart, p.periodEnd, periodStart, periodEnd),
+      )
+      .map((installment) => ({ schedule, installment })),
   );
+
+  if (matchingPairs.length === 0) return null;
+
+  const matchingPayments = matchingPairs.map((pair) => pair.installment);
 
   if (matchingPayments.length === 0) return null;
 
@@ -408,6 +417,9 @@ export async function findInstallmentForCsvRow(
   const installment =
     unpaid.sort((a, b) => a.installmentNumber - b.installmentNumber)[0] ??
     matchingPayments.sort((a, b) => a.installmentNumber - b.installmentNumber)[0];
+  const schedule =
+    matchingPairs.find((pair) => pair.installment.id === installment.id)
+      ?.schedule ?? matchingPairs[0].schedule;
 
   return {
     quote,
@@ -462,15 +474,20 @@ export async function createMissingInstallment(
   installmentId: string;
   alreadyExisted: boolean;
 }> {
-  let schedule = await tx.paymentSchedule.findUnique({
-    where: { quoteId },
+  const vintageYear = csvRow.dateDebutPeriode
+    ? csvRow.dateDebutPeriode.getFullYear()
+    : new Date().getFullYear();
+  let schedule = await tx.paymentSchedule.findFirst({
+    where: { quoteId, vintageYear },
     include: { payments: true },
+    orderBy: { createdAt: "asc" },
   });
 
   if (!schedule) {
     schedule = await tx.paymentSchedule.create({
       data: {
         quoteId,
+        vintageYear,
         totalAmountHT: csvRow.primeReglee,
         totalTaxAmount: 0,
         totalAmountTTC: csvRow.primeReglee,

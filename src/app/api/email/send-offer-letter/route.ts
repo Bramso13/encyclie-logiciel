@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmailWithAttachment } from "@/lib/nodemailer";
+import { CABINET } from "@/lib/cabinet";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
         
         <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
         <p style="font-size: 12px; color: #666;">
-          ENCYCLIE CONSTRUCTION - 42 Rue Notre-Dame des Victoires, 75002 PARIS<br>
+          ${CABINET.name} - ${CABINET.addressLine}, ${CABINET.postalCityCaps}<br>
           SAS au capital de 1 000 € - SIREN 897 796 785 - RCS ST NAZAIRE<br>
           N° ORIAS : 21 004 564 - www.orias.fr
         </p>

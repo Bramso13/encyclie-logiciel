@@ -61,6 +61,7 @@ describe("getPolicesV2", () => {
     it("retourne un tableau d’objets FidelidadePolicesRow", async () => {
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(Array.isArray(result)).toBe(true);
@@ -110,6 +111,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result).toHaveLength(1);
@@ -144,6 +146,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].IDENTIFIANT_POLICE).toBe("REF-POL-123");
@@ -175,6 +178,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].DATE_SOUSCRIPTION).toBe("15/01/2025");
@@ -205,6 +209,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].NUMERO_AVENANT).toBe("");
@@ -244,6 +249,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       const row = result[0];
@@ -280,6 +286,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       const row = result[0];
@@ -317,9 +324,42 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].CODE_NAF).toBe("");
+    });
+
+    it("utilise formData.code_naf comme clé canonique", async () => {
+      const mockInst = {
+        id: "pi1",
+        scheduleId: "ps1",
+        installmentNumber: 1,
+        periodEnd: new Date("2025-03-31"),
+        schedule: {
+          quote: {
+            reference: "Q5b",
+            submittedAt: new Date("2024-12-01"),
+            codeNAF: null,
+            status: QuoteStatus.ACCEPTED,
+            updatedAt: new Date("2025-01-10"),
+            acceptedAt: null,
+            product: null,
+            companyData: {},
+            formData: {
+              dateDeffet: new Date("2025-01-01"),
+              code_naf: "4120A",
+            },
+            contract: null,
+          },
+        },
+      };
+      const mockPrisma = {
+        paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
+      } as unknown as PrismaClient;
+      const result = await getPolicesV2(baseFilters, mockPrisma);
+      expect(result[0].CODE_NAF).toBe("4120A");
     });
 
     it("utilise quote.codeNAF si présent", async () => {
@@ -345,6 +385,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       expect(result[0].CODE_NAF).toBe("6201Z");
@@ -375,6 +416,7 @@ describe("getPolicesV2", () => {
       };
       const mockPrisma = {
         paymentInstallment: { findMany: vi.fn().mockResolvedValue([mockInst]) },
+        paymentSchedule: { findMany: vi.fn().mockResolvedValue([]) },
       } as unknown as PrismaClient;
       const result = await getPolicesV2(baseFilters, mockPrisma);
       const row = result[0];

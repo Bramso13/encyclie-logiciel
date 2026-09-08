@@ -2,14 +2,10 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  Eye,
-  EyeOff,
-  CheckCircle,
-  XCircle,
-  User,
-  Building2,
-} from "lucide-react";
+import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import { AuthLayout } from "@/components/ui/AppShell";
+import { Button, FormField, inputClassName } from "@/components/ui/Controls";
+import { ErrorBanner, LoadingState } from "@/components/ui/Feedback";
 
 interface BrokerInvitation {
   id: string;
@@ -37,7 +33,6 @@ function SetupAccountContent() {
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [invitation, setInvitation] = useState<BrokerInvitation | null>(null);
 
-  // Validation du mot de passe
   const passwordValidation = {
     length: password.length >= 8,
     uppercase: /[A-Z]/.test(password),
@@ -51,33 +46,29 @@ function SetupAccountContent() {
 
   useEffect(() => {
     if (!token) {
-      setError("Token manquant dans l'URL");
+      setError("Le lien d'invitation est incomplet.");
+      setTokenValid(false);
       return;
     }
 
-    // Vérifier la validité du token
     const verifyToken = async () => {
       try {
         const response = await fetch("/api/auth/verify-invitation-token", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
         });
-
         const result = await response.json();
-
         if (result.success) {
           setTokenValid(true);
           setInvitation(result.invitation);
         } else {
           setTokenValid(false);
-          setError(result.error || "Token invalide ou expiré");
+          setError(result.error || "Cette invitation n'est plus valable.");
         }
-      } catch (err) {
+      } catch {
         setTokenValid(false);
-        setError("Erreur lors de la vérification du token");
+        setError("Impossible de vérifier l'invitation pour le moment.");
       }
     };
 
@@ -86,14 +77,12 @@ function SetupAccountContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!isPasswordValid) {
-      setError("Le mot de passe ne respecte pas les critères requis");
+      setError("Le mot de passe ne respecte pas les critères indiqués.");
       return;
     }
-
     if (!passwordsMatch) {
-      setError("Les mots de passe ne correspondent pas");
+      setError("Les deux saisies de mot de passe ne correspondent pas.");
       return;
     }
 
@@ -103,27 +92,20 @@ function SetupAccountContent() {
     try {
       const response = await fetch("/api/auth/complete-broker-setup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
       });
-
       const result = await response.json();
-
       if (result.success) {
         setSuccess(true);
         setTimeout(() => {
           router.push("/login?message=account-created");
         }, 3000);
       } else {
-        setError(result.error || "Erreur lors de la création du compte");
+        setError(result.error || "La création du compte a échoué.");
       }
-    } catch (err) {
-      setError("Erreur lors de la création du compte");
+    } catch {
+      setError("La création du compte a échoué. Réessayez dans un instant.");
     } finally {
       setLoading(false);
     }
@@ -131,267 +113,144 @@ function SetupAccountContent() {
 
   if (tokenValid === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Vérification de l'invitation...</p>
-        </div>
-      </div>
+      <AuthLayout title="Vérification de l'invitation">
+        <LoadingState active label="Vérification de votre invitation" />
+      </AuthLayout>
     );
   }
 
   if (tokenValid === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full space-y-8 p-8">
-          <div className="text-center">
-            <XCircle className="mx-auto h-16 w-16 text-red-500" />
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Invitation invalide
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              {error || "Cette invitation est invalide ou a expiré."}
-            </p>
-            <button
-              onClick={() => router.push("/login")}
-              className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Retour à la connexion
-            </button>
-          </div>
+      <AuthLayout title="Invitation invalide ou expirée">
+        <ErrorBanner>
+          {error || "Demandez un nouvel e-mail d'invitation à Encyclie."}
+        </ErrorBanner>
+        <div className="mt-4">
+          <Button onClick={() => router.push("/login")}>
+            Aller à la connexion
+          </Button>
         </div>
-      </div>
+      </AuthLayout>
     );
   }
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full space-y-8 p-8">
-          <div className="text-center">
-            <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Compte créé avec succès !
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Votre compte courtier a été créé. Vous allez être redirigé vers la
-              page de connexion.
-            </p>
-            <div className="mt-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-            </div>
-          </div>
+      <AuthLayout title="Compte créé">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          Votre espace courtier est prêt. Redirection vers la connexion…
         </div>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
-            <User className="h-6 w-6 text-indigo-600" />
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Créer votre espace chez Encyclie Construction
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Bienvenue dans la plateforme Encyclie Construction !
-            <br />
-            Configurez votre compte pour commencer.
-          </p>
-        </div>
-
-        {/* Informations d'invitation */}
-        {invitation && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center mb-4">
-              <Building2 className="h-5 w-5 text-indigo-600 mr-2" />
-              <h3 className="text-lg font-medium text-gray-900">
-                Vos informations
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium text-gray-700">Nom :</span>
-                <span className="ml-2 text-gray-900">{invitation.name}</span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Email :</span>
-                <span className="ml-2 text-gray-900">{invitation.email}</span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Entreprise :</span>
-                <span className="ml-2 text-gray-900">
-                  {invitation.companyName}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">
-                  Code courtier :
-                </span>
-                <span className="ml-2 font-mono bg-gray-100 px-2 py-1 rounded text-gray-900">
-                  {invitation.brokerCode}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <form
-          className="mt-8 space-y-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-          onSubmit={handleSubmit}
-        >
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Définir votre mot de passe
-          </h3>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {/* Nouveau mot de passe */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Mot de passe
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Choisissez un mot de passe sécurisé"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Confirmation mot de passe */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Confirmer le mot de passe
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Confirmez votre mot de passe"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Critères de validation */}
-          {password && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
-                Critères du mot de passe :
-              </h4>
-              <div className="space-y-1">
-                {Object.entries({
-                  "Au moins 8 caractères": passwordValidation.length,
-                  "Une majuscule": passwordValidation.uppercase,
-                  "Une minuscule": passwordValidation.lowercase,
-                  "Un chiffre": passwordValidation.number,
-                  "Un caractère spécial": passwordValidation.special,
-                }).map(([criterion, isValid]) => (
-                  <div key={criterion} className="flex items-center text-sm">
-                    {isValid ? (
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-gray-400 mr-2" />
-                    )}
-                    <span
-                      className={isValid ? "text-green-700" : "text-gray-600"}
-                    >
-                      {criterion}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Vérification correspondance */}
-          {confirmPassword && (
-            <div className="flex items-center text-sm">
-              {passwordsMatch ? (
-                <>
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                  <span className="text-green-700">
-                    Les mots de passe correspondent
-                  </span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-4 w-4 text-red-500 mr-2" />
-                  <span className="text-red-700">
-                    Les mots de passe ne correspondent pas
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-
+    <AuthLayout
+      title="Activer votre espace courtier"
+      subtitle="Choisissez un mot de passe pour finaliser l'invitation Encyclie."
+    >
+      {invitation ? (
+        <dl className="mb-6 grid grid-cols-1 gap-2 rounded-lg border border-line bg-white p-4 text-sm sm:grid-cols-2">
           <div>
+            <dt className="text-ink-muted">Nom</dt>
+            <dd className="font-medium">{invitation.name}</dd>
+          </div>
+          <div>
+            <dt className="text-ink-muted">E-mail</dt>
+            <dd className="font-medium">{invitation.email}</dd>
+          </div>
+          <div>
+            <dt className="text-ink-muted">Cabinet</dt>
+            <dd className="font-medium">{invitation.companyName}</dd>
+          </div>
+          <div>
+            <dt className="text-ink-muted">Code courtier</dt>
+            <dd className="font-mono font-medium">{invitation.brokerCode}</dd>
+          </div>
+        </dl>
+      ) : null}
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {error ? <ErrorBanner>{error}</ErrorBanner> : null}
+        <FormField id="password" label="Mot de passe">
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`${inputClassName} pr-10`}
+            />
             <button
-              type="submit"
-              disabled={loading || !isPasswordValid || !passwordsMatch}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              className="absolute inset-y-0 right-0 px-3 text-ink-muted"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Masquer" : "Afficher"}
             >
-              {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Création du compte...
-                </div>
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </FormField>
+        <FormField id="confirmPassword" label="Confirmer le mot de passe">
+          <div className="relative">
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={`${inputClassName} pr-10`}
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 px-3 text-ink-muted"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              aria-label={showConfirmPassword ? "Masquer" : "Afficher"}
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="h-4 w-4" />
               ) : (
-                "Créer mon compte"
+                <Eye className="h-4 w-4" />
               )}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </FormField>
+
+        {password ? (
+          <ul className="space-y-1 text-sm">
+            {Object.entries({
+              "Au moins 8 caractères": passwordValidation.length,
+              "Une majuscule": passwordValidation.uppercase,
+              "Une minuscule": passwordValidation.lowercase,
+              "Un chiffre": passwordValidation.number,
+              "Un caractère spécial": passwordValidation.special,
+            }).map(([criterion, isValid]) => (
+              <li key={criterion} className="flex items-center gap-2">
+                {isValid ? (
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-zinc-400" />
+                )}
+                <span className={isValid ? "text-emerald-800" : "text-ink-muted"}>
+                  {criterion}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={loading || !isPasswordValid || !passwordsMatch}
+        >
+          {loading ? "Création du compte…" : "Activer mon compte"}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }
 
@@ -399,14 +258,12 @@ export default function SetupAccountPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
+        <AuthLayout title="Activation du compte">
+          <LoadingState active label="Chargement" />
+        </AuthLayout>
       }
     >
       <SetupAccountContent />
     </Suspense>
   );
 }
-
-
