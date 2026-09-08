@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL_NEW")
+  url      = env("DATABASE_URL")
 }
 
 // BetterAuth tables
