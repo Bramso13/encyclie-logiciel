@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   createApiResponse,
   handleApiError,
-  withAuthAndRole,
+  withPermission,
   ApiError,
 } from "@/lib/api-utils";
 
@@ -46,7 +46,7 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    return await withAuthAndRole(["ADMIN"], async (userId) => {
+    return await withPermission("QUOTES_VALIDATION", async (userId) => {
       const body = await request.json();
       const { startDate: startDateStr } = body as { startDate?: string };
 

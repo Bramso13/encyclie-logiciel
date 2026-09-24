@@ -3,11 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useExerciseYearStore } from "@/lib/stores/exercise-year-store";
+import { usePermissions } from "@/lib/stores/permissions-store";
 import { notify } from "@/lib/ui/notify";
 
 export function ExerciseYearSelect() {
   const { exerciseYear, years, setExerciseYear, hydrate, loaded } =
     useExerciseYearStore();
+  const { hasPermission, loaded: permissionsLoaded } = usePermissions();
+  const canManageTariffs =
+    permissionsLoaded && hasPermission("PRODUCTS_TARIFFS");
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -124,6 +128,8 @@ export function ExerciseYearSelect() {
               </button>
             );
           })}
+          {canManageTariffs ? (
+          <>
           <div className="my-1 border-t border-line" />
           {adding ? (
             <div className="space-y-2 px-3 py-2">
@@ -178,6 +184,8 @@ export function ExerciseYearSelect() {
           >
             Modifier les barèmes
           </Link>
+          </>
+          ) : null}
         </div>
       ) : null}
     </div>

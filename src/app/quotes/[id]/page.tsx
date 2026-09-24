@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { usePermissions } from "@/lib/stores/permissions-store";
+import type { AdminPermission } from "@/lib/permissions";
 
 import useProductsStore, {
   InsuranceProduct,
@@ -30,7 +32,11 @@ import {
   DossierExerciseBar,
   dossierOriginalYear,
 } from "../components/DossierExerciseBar";
-import { calendarYear } from "@/lib/quotes/exercise-year-filter";
+import {
+  formDataForExerciseRecalculation,
+  resolveDisplayedCalculation,
+  resolveSelectedDossierYear,
+} from "@/lib/quotes/dossier-exercise";
 import { calculateWithMapping } from "@/lib/utils";
 import { applyCalculationChange } from "@/lib/calculation-apply";
 import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
@@ -63,6 +69,10 @@ export default function QuoteDetailPage() {
   const [installmentsRefreshTrigger, setInstallmentsRefreshTrigger] =
     useState(0);
   const [dossierYear, setDossierYear] = useState<number | null>(null);
+  const [vintageDrafts, setVintageDrafts] = useState<
+    Record<number, CalculationResult>
+  >({});
+  const syncedExerciseKey = useRef<string>("");
 
   // États pour l'édition
 
@@ -95,6 +105,15 @@ export default function QuoteDetailPage() {
   // Détection des rôles utilisateur
   const userRole = session?.user?.role;
   const isAdmin = userRole === "ADMIN";
+  const { hasPermission, loaded: permissionsLoaded } = usePermissions();
+
+  const adminTabPermission: Record<string, AdminPermission> = {
+    offre: "QUOTES_VALIDATION",
+    bordereau: "PRODUCTION",
+    "debit-note": "PRODUCTION",
+    "broker-commissions": "COMMISSIONS",
+    chat: "MESSAGING",
+  };
 
   const tabGroups = [
     {
@@ -134,9 +153,14 @@ export default function QuoteDetailPage() {
   ]
     .map((group) => ({
       ...group,
-      items: group.items.filter(
-        (tab) => !("adminOnly" in tab && tab.adminOnly) || isAdmin,
-      ),
+      items: group.items.filter((tab) => {
+        if (!isAdmin) {
+          return !("adminOnly" in tab && tab.adminOnly);
+        }
+        const required = adminTabPermission[tab.id];
+        if (!required) return true;
+        return permissionsLoaded && hasPermission(required);
+      }),
     }))
     .filter((group) => group.items.length > 0);
 
@@ -301,37 +325,108 @@ export default function QuoteDetailPage() {
     if (activeTab === "revision-2027") setActiveTab("resume");
   }, [activeTab]);
 
+  const yearsOnDossierOf = (current: Quote) => {
+    const originalYear = dossierOriginalYear(current);
+    return [
+      originalYear,
+      ...(current.vintages ?? []).map((item) => item.year),
+    ].filter((year, index, all) => all.indexOf(year) === index);
+  };
+
+  const selectedYearOf = (current: Quote) =>
+    resolveSelectedDossierYear({
+      isAdmin,
+      dossierYear,
+      originalYear: dossierOriginalYear(current),
+      yearsOnDossier: yearsOnDossierOf(current),
+    });
+
+  const displayedCalculationOf = (
+    current: Quote,
+    origin: CalculationResult | null,
+  ) => {
+    const originalYear = dossierOriginalYear(current);
+    const selectedYear = selectedYearOf(current);
+    const vintage = current.vintages?.find((item) => item.year === selectedYear);
+    return resolveDisplayedCalculation({
+      selectedYear,
+      originalYear,
+      originCalculation: origin,
+      vintagePremium: vintage?.calculatedPremium ?? null,
+      localDraft: vintageDrafts[selectedYear] ?? null,
+    });
+  };
+
+  const commitDisplayedCalculation = (result: CalculationResult) => {
+    if (!quote) {
+      setCalculationResult(result);
+      return;
+    }
+    const originalYear = dossierOriginalYear(quote);
+    const year = selectedYearOf(quote);
+    if (year === originalYear) {
+      setCalculationResult(result);
+      return;
+    }
+    setVintageDrafts((prev) => ({ ...prev, [year]: result }));
+  };
+
+  useEffect(() => {
+    if (!quote) return;
+    const year = selectedYearOf(quote);
+    const calc = displayedCalculationOf(quote, calculationResult);
+    const key = `${year}:${calc ? "ready" : "empty"}`;
+    if (syncedExerciseKey.current === key) return;
+    syncedExerciseKey.current = key;
+    setOriginalCalculationResult(null);
+    if (!calc) {
+      setNonFournitureBilanEnabled(false);
+      setReprisePasseEnabled(false);
+      return;
+    }
+    setNonFournitureBilanEnabled(
+      calc.majorations?.nonFournitureBilanN_1 === 0.5,
+    );
+    setReprisePasseEnabled(!!calc.reprisePasseResult);
+  }, [quote, dossierYear, isAdmin, calculationResult, vintageDrafts]);
+
+  const quoteForDisplayedExercise = (
+    current: Quote,
+    switches: { nonFournitureBilanEnabled: boolean; reprisePasseEnabled: boolean },
+  ) => {
+    const originalYear = dossierOriginalYear(current);
+    const year = selectedYearOf(current);
+    const vintage = current.vintages?.find((item) => item.year === year);
+    return {
+      ...current,
+      formData: formDataForExerciseRecalculation(
+        current.formData,
+        vintage,
+        year,
+        originalYear,
+        switches,
+      ),
+    };
+  };
+
   // Fonction pour recalculer côté client (prend en compte les switches)
   const handleRecalculate = () => {
     if (!quote) return;
-    const originalYear = dossierOriginalYear(quote);
-    const viewingYear = dossierYear ?? originalYear;
-    if (viewingYear !== originalYear) {
-      notify(
-        "Le recalcul s'applique à l'exercice d'origine du dossier.",
-        "error",
-      );
-      return;
-    }
 
     setRecalculating(true);
     setCalculationError(null);
 
     try {
-      const modifiedQuote = {
-        ...quote,
-        formData: {
-          ...quote.formData,
-          nonFournitureBilanN_1: nonFournitureBilanEnabled,
-          reprisePasse: reprisePasseEnabled,
-        },
-      };
+      const modifiedQuote = quoteForDisplayedExercise(quote, {
+        nonFournitureBilanEnabled,
+        reprisePasseEnabled,
+      });
       const result = calculateWithMapping(
         modifiedQuote,
         parameterMapping,
         formFields
       );
-      setCalculationResult(result);
+      commitDisplayedCalculation(result);
     } catch (error) {
       console.error("Erreur recalcul:", error);
       setCalculationError(
@@ -353,39 +448,44 @@ export default function QuoteDetailPage() {
       setNonFournitureBilanEnabled(value === 0.5);
     }
 
-    const base = baseResult ?? calculationResult;
+    const base =
+      baseResult ??
+      (quote ? displayedCalculationOf(quote, calculationResult) : calculationResult);
     if (!base || !quote) return;
-    setOriginalCalculationResult(calculationResult ?? null);
+    setOriginalCalculationResult(base);
+    const onOriginal = selectedYearOf(quote) === dossierOriginalYear(quote);
     const newResult = applyCalculationChange(
       base,
-      quote,
+      onOriginal
+        ? quote
+        : quoteForDisplayedExercise(quote, {
+            nonFournitureBilanEnabled,
+            reprisePasseEnabled,
+          }),
       sectionKey,
       fieldKey,
       value
     );
-    setCalculationResult(newResult);
+    commitDisplayedCalculation(newResult);
     return newResult;
   };
 
   const handleReprisePasseChange = (enabled: boolean) => {
     setReprisePasseEnabled(enabled);
     if (!quote || !Object.keys(parameterMapping).length) return;
-    setOriginalCalculationResult(calculationResult ?? null);
-    const modifiedQuote = {
-      ...quote,
-      formData: {
-        ...quote.formData,
-        nonFournitureBilanN_1: nonFournitureBilanEnabled,
-        reprisePasse: enabled,
-      },
-    };
+    const current = displayedCalculationOf(quote, calculationResult);
+    setOriginalCalculationResult(current);
+    const modifiedQuote = quoteForDisplayedExercise(quote, {
+      nonFournitureBilanEnabled,
+      reprisePasseEnabled: enabled,
+    });
     try {
       const result = calculateWithMapping(
         modifiedQuote,
         parameterMapping,
         formFields
       );
-      setCalculationResult(result);
+      commitDisplayedCalculation(result);
     } catch (error) {
       console.error("Erreur recalcul reprise passe:", error);
     }
@@ -399,88 +499,126 @@ export default function QuoteDetailPage() {
     );
   };
 
-  // Fonction pour sauvegarder le calcul actuel en DB (y compris l'échéancier dans paymentInstallments)
+  // Fonction pour sauvegarder le calcul affiché (origine ou millésime)
   const saveCalculationToDatabase = async () => {
-    if (!calculationResult) {
+    if (!quote) return;
+    const toSave = displayedCalculationOf(quote, calculationResult);
+    if (!toSave) {
       notify("Aucun calcul à enregistrer.", "error");
       return;
     }
-    if (quote) {
-      const originalYear = dossierOriginalYear(quote);
-      const viewingYear = dossierYear ?? originalYear;
-      if (viewingYear !== originalYear) {
-        notify(
-          "L'enregistrement du calcul reste sur l'exercice d'origine du dossier.",
-          "error",
-        );
-        return;
-      }
-    }
+    const originalYear = dossierOriginalYear(quote);
+    const viewingYear = selectedYearOf(quote);
+    const onOriginal = viewingYear === originalYear;
 
     setRecalculating(true);
     try {
-      // 1. Sauvegarder le calcul (calculatedPremium)
-      await fetch(`/api/quotes/${params.id}/calculated-premium`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ calculatedPremium: calculationResult }),
-      });
-
-      // 2. Mettre à jour l'échéancier dans paymentInstallments si présent
-      const echeances =
-        calculationResult?.echeancier?.echeances;
-      if (echeances && Array.isArray(echeances) && echeances.length > 0) {
-        const scheduleRes = await fetch(
-          `/api/quotes/${params.id}/payment-schedule`
-        );
-        const scheduleData = scheduleRes.ok
-          ? await scheduleRes.json()
-          : null;
-        const existingSchedule = scheduleData?.data;
-
-        if (existingSchedule?.payments?.length > 0) {
-          // PATCH : mettre à jour les échéances existantes
-          const payments = echeances.map((echeance: any, index: number) => {
-            const existingPayment = existingSchedule.payments.find(
-              (p: any) => p.installmentNumber === index + 1
-            );
-            return {
-              id: existingPayment?.id,
-              installmentNumber: index + 1,
-              dueDate: echeance.date,
-              amountHT: echeance.totalHT ?? 0,
-              taxAmount: echeance.taxe ?? 0,
-              amountTTC: echeance.totalTTC ?? 0,
-              rcdAmount: echeance.rcd ?? 0,
-              pjAmount: echeance.pj ?? 0,
-              feesAmount: echeance.frais ?? 0,
-              resumeAmount: echeance.reprise ?? 0,
-              periodStart: echeance.debutPeriode,
-              periodEnd: echeance.finPeriode,
-            };
-          });
-
-          await fetch(`/api/quotes/${params.id}/payment-schedule`, {
+      if (!onOriginal) {
+        const response = await fetch(
+          `/api/quotes/${params.id}/revision-2027`,
+          {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ payments }),
-          });
-        } else {
-          // POST : créer l'échéancier
-          await fetch(`/api/quotes/${params.id}/payment-schedule`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ calculationResult }),
-          });
+            body: JSON.stringify({
+              year: viewingYear,
+              calculatedPremium: toSave,
+            }),
+          },
+        );
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(
+            payload?.error || "L'enregistrement du millésime a échoué.",
+          );
+        }
+        const savedPremium = payload?.data?.revision?.calculatedPremium;
+        setQuote((current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            vintages: (current.vintages ?? []).map((item) =>
+              item.year === viewingYear
+                ? {
+                    ...item,
+                    calculatedPremium: savedPremium ?? toSave,
+                  }
+                : item,
+            ),
+          };
+        });
+        setVintageDrafts((prev) => {
+          const next = { ...prev };
+          delete next[viewingYear];
+          return next;
+        });
+      } else {
+        await fetch(`/api/quotes/${params.id}/calculated-premium`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ calculatedPremium: toSave }),
+        });
+
+        const echeances = toSave?.echeancier?.echeances;
+        if (echeances && Array.isArray(echeances) && echeances.length > 0) {
+          const scheduleRes = await fetch(
+            `/api/quotes/${params.id}/payment-schedule?year=${viewingYear}`,
+          );
+          const scheduleData = scheduleRes.ok ? await scheduleRes.json() : null;
+          const existingSchedule = scheduleData?.data;
+
+          if (existingSchedule?.payments?.length > 0) {
+            const payments = echeances.map((echeance: any, index: number) => {
+              const existingPayment = existingSchedule.payments.find(
+                (p: any) => p.installmentNumber === index + 1,
+              );
+              return {
+                id: existingPayment?.id,
+                installmentNumber: index + 1,
+                dueDate: echeance.date,
+                amountHT: echeance.totalHT ?? 0,
+                taxAmount: echeance.taxe ?? 0,
+                amountTTC: echeance.totalTTC ?? 0,
+                rcdAmount: echeance.rcd ?? 0,
+                pjAmount: echeance.pj ?? 0,
+                feesAmount: echeance.frais ?? 0,
+                resumeAmount: echeance.reprise ?? 0,
+                periodStart: echeance.debutPeriode,
+                periodEnd: echeance.finPeriode,
+              };
+            });
+
+            await fetch(`/api/quotes/${params.id}/payment-schedule`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                payments,
+                vintageYear: viewingYear,
+              }),
+            });
+          } else {
+            await fetch(`/api/quotes/${params.id}/payment-schedule`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                calculationResult: toSave,
+                vintageYear: viewingYear,
+              }),
+            });
+          }
         }
       }
 
       setInstallmentsRefreshTrigger((t) => t + 1);
-      setOriginalCalculationResult(null); // Réinitialiser les modifs après sauvegarde
+      setOriginalCalculationResult(null);
       notify("Calcul enregistré.", "success");
     } catch (error) {
       console.error("Erreur sauvegarde:", error);
-      notify("L'enregistrement du calcul a échoué.", "error");
+      notify(
+        error instanceof Error
+          ? error.message
+          : "L'enregistrement du calcul a échoué.",
+        "error",
+      );
     } finally {
       setRecalculating(false);
     }
@@ -511,22 +649,15 @@ export default function QuoteDetailPage() {
   }
 
   const originalYear = dossierOriginalYear(quote);
-  const yearsOnDossier = [
-    originalYear,
-    ...(quote.vintages ?? []).map((item) => item.year),
-  ].filter((year, index, all) => all.indexOf(year) === index);
-  const selectedDossierYear = isAdmin
-    ? (dossierYear ?? originalYear)
-    : yearsOnDossier.includes(calendarYear())
-      ? calendarYear()
-      : originalYear;
-  const selectedVintage = quote.vintages?.find(
-    (item) => item.year === selectedDossierYear,
-  );
-  const displayedCalculation =
-    selectedDossierYear !== originalYear && selectedVintage?.calculatedPremium
-      ? selectedVintage.calculatedPremium
-      : calculationResult;
+  const yearsOnDossier = yearsOnDossierOf(quote);
+  const selectedDossierYear = selectedYearOf(quote);
+  const isOriginalYear = selectedDossierYear === originalYear;
+  const displayedCalculation = displayedCalculationOf(quote, calculationResult);
+  const exercise = {
+    selectedYear: selectedDossierYear,
+    isOriginalYear,
+    calculation: displayedCalculation,
+  };
 
   const reloadQuote = async () => {
     const response = await fetch(`/api/quotes/${params.id}`);
@@ -565,7 +696,8 @@ export default function QuoteDetailPage() {
       {selectedDossierYear !== originalYear ? (
         <p className="text-sm text-ink-muted">
           Exercice {selectedDossierYear} : le formulaire et la prime enregistrée
-          de l&apos;origine du dossier ne sont pas modifiés.
+          de l&apos;origine du dossier ne sont pas modifiés. Le calcul de ce
+          millésime est éditable et s&apos;enregistre séparément.
         </p>
       ) : null}
 
@@ -597,10 +729,10 @@ export default function QuoteDetailPage() {
         {activeTab === "calculation" && (
           <CalculationTab
             quote={quote}
-            calculationResult={displayedCalculation}
+            calculationResult={exercise.calculation}
             calculationError={calculationError}
             originalCalculationResult={originalCalculationResult}
-            setCalculationResult={setCalculationResult}
+            setCalculationResult={commitDisplayedCalculation}
             setOriginalCalculationResult={setOriginalCalculationResult}
             reprisePasseEnabled={reprisePasseEnabled}
             handleReprisePasseChange={handleReprisePasseChange}
@@ -612,30 +744,39 @@ export default function QuoteDetailPage() {
             session={session}
             onOpenParameterEditor={() => setShowParameterEditor(true)}
             installmentsRefreshTrigger={installmentsRefreshTrigger}
+            selectedYear={exercise.selectedYear}
+            isOriginalYear={exercise.isOriginalYear}
           />
         )}
 
         {activeTab === "letter" && (
           <LetterTab
             quote={quote}
-            calculationResult={calculationResult}
+            calculationResult={exercise.calculation}
             session={session}
+            selectedYear={exercise.selectedYear}
           />
         )}
 
         {activeTab === "echeancier" && (
           <PaymentTrackingTab
             quote={quote}
-            calculationResult={calculationResult}
+            calculationResult={exercise.calculation}
+            selectedYear={exercise.selectedYear}
+            isOriginalYear={exercise.isOriginalYear}
+            refreshTrigger={installmentsRefreshTrigger}
           />
         )}
 
         {activeTab === "appel-prime" && (
           <AppelDePrimeTab
             quote={quote}
-            calculationResult={calculationResult}
+            calculationResult={exercise.calculation}
+            originCalculation={calculationResult}
+            originalYear={originalYear}
             session={session}
-            preferredYear={selectedDossierYear}
+            preferredYear={exercise.selectedYear}
+            dossierYears={yearsOnDossier}
           />
         )}
 
@@ -643,42 +784,58 @@ export default function QuoteDetailPage() {
           <ContratTab
             quote={quote}
             session={session}
-            calculationResult={calculationResult}
+            calculationResult={exercise.calculation}
+            selectedYear={exercise.selectedYear}
           />
         )}
 
         {activeTab === "aggravation" && (
-          <AggravationTab quote={quote} calculationResult={calculationResult} />
+          <AggravationTab
+            quote={quote}
+            calculationResult={exercise.calculation}
+            selectedYear={exercise.selectedYear}
+          />
         )}
 
         {activeTab === "debit-note" && (
           <DebitNoteTab
             quoteId={quote.id}
             isAdmin={isAdmin}
-            preferredYear={selectedDossierYear}
+            preferredYear={exercise.selectedYear}
+            dossierYears={yearsOnDossier}
           />
         )}
 
         {activeTab === "bordereau" && (
           <BordereauTab
             quote={quote}
-            calculationResult={calculationResult}
+            calculationResult={exercise.calculation}
             session={session}
+            selectedYear={exercise.selectedYear}
+            isOriginalYear={exercise.isOriginalYear}
           />
         )}
 
         {activeTab === "chat" && <ChatTab quote={quote} />}
-        {activeTab === "piece-jointe" && <PieceJointeTab quote={quote} />}
-        {activeTab === "broker-commissions" &&
-          (calculationResult ? (
-            <BrokerCommissionsTab calculationResult={calculationResult} />
-          ) : (
-            <p className="text-sm text-ink-muted">
-              Les commissions apparaîtront une fois la prime calculée.
-            </p>
-          ))}
+        {activeTab === "piece-jointe" && (
+          <PieceJointeTab
+            quote={quote}
+            selectedYear={exercise.selectedYear}
+            calculationResult={exercise.calculation}
+          />
+        )}
+        {activeTab === "broker-commissions" && (
+          <BrokerCommissionsTab
+            calculationResult={exercise.calculation}
+            selectedYear={exercise.selectedYear}
+          />
+        )}
         {activeTab === "offre" && (
-          <OffreTab quote={quote} calculationResult={calculationResult} />
+          <OffreTab
+            quote={quote}
+            calculationResult={exercise.calculation}
+            selectedYear={exercise.selectedYear}
+          />
         )}
       </div>
       </div>
@@ -793,15 +950,22 @@ export default function QuoteDetailPage() {
       )}
 
       {/* Popup d'édition des paramètres */}
-      {showParameterEditor && quote && calculationResult && (
+      {showParameterEditor && quote && displayedCalculation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full h-[90vh] flex flex-col overflow-hidden shadow-2xl">
             <SimpleParameterEditor
-              quote={quote}
-              calculationResult={calculationResult}
+              quote={
+                isOriginalYear
+                  ? quote
+                  : quoteForDisplayedExercise(quote, {
+                      nonFournitureBilanEnabled,
+                      reprisePasseEnabled,
+                    })
+              }
+              calculationResult={displayedCalculation}
               originalCalculationResult={originalCalculationResult}
               onApplyChange={handleApplyChange}
-              onUpdate={setCalculationResult}
+              onUpdate={commitDisplayedCalculation}
               onClose={() => setShowParameterEditor(false)}
             />
           </div>

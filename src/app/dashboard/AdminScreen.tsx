@@ -16,6 +16,8 @@ import { AdminVersionsPanel } from "@/components/admin/AdminVersionsPanel";
 import { KpiCard, PageHeader } from "@/components/ui/Feedback";
 import { ScrollTabs } from "@/components/ui/DataDisplay";
 import { Button } from "@/components/ui/Controls";
+import { usePermissions } from "@/lib/stores/permissions-store";
+import type { AdminPermission } from "@/lib/permissions";
 
 interface AdminScreenProps {
   user: {
@@ -42,6 +44,9 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   } = useUsersStore();
   const { unreadCount, fetchReceivedMessages, fetchUnreadCount } =
     useMessagesStore();
+  const { hasPermission, loaded: permissionsLoaded } = usePermissions();
+  const can = (permission: AdminPermission) =>
+    permissionsLoaded && hasPermission(permission);
 
   useEffect(() => {
     setPagination({ page: 1 });
@@ -49,21 +54,30 @@ export default function AdminScreen({ user }: AdminScreenProps) {
   }, [fetchQuotes, setPagination, exerciseYear]);
 
   useEffect(() => {
-    fetchBrokers();
-    fetchUnderwriters();
-    fetchReceivedMessages();
-    fetchUnreadCount();
-    fetch("/api/payment-installments/overdue")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setOverdueCount(data.data.total || 0);
-      })
-      .catch(() => undefined);
+    if (!permissionsLoaded) return;
+    if (can("USERS_ROLES")) {
+      fetchBrokers();
+      fetchUnderwriters();
+    }
+    if (can("MESSAGING")) {
+      fetchReceivedMessages();
+      fetchUnreadCount();
+    }
+    if (can("PRODUCTION")) {
+      fetch("/api/payment-installments/overdue")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setOverdueCount(data.data.total || 0);
+        })
+        .catch(() => undefined);
+    }
   }, [
+    permissionsLoaded,
     fetchBrokers,
     fetchUnderwriters,
     fetchReceivedMessages,
     fetchUnreadCount,
+    hasPermission,
   ]);
 
   if (showSuccessPage && createdQuote) {
@@ -106,12 +120,26 @@ export default function AdminScreen({ user }: AdminScreenProps) {
 
   const tabs = [
     { id: "quotes", label: "Dossiers", badge: quotesPagination.total || undefined },
-    { id: "brokers", label: "Courtiers", badge: usersPagination.total || undefined },
-    { id: "overduePayments", label: "Paiements en retard", badge: overdueCount || undefined },
-    { id: "messages", label: "Messages", badge: unreadCount || undefined },
-    { id: "correspondance", label: "Correspondance" },
+    can("USERS_ROLES")
+      ? { id: "brokers", label: "Courtiers", badge: usersPagination.total || undefined }
+      : null,
+    can("PRODUCTION")
+      ? {
+          id: "overduePayments",
+          label: "Paiements en retard",
+          badge: overdueCount || undefined,
+        }
+      : null,
+    can("MESSAGING")
+      ? { id: "messages", label: "Messages", badge: unreadCount || undefined }
+      : null,
+    can("MESSAGING") ? { id: "correspondance", label: "Correspondance" } : null,
     { id: "versions", label: "Historique des versions" },
-  ];
+  ].filter((tab): tab is { id: string; label: string; badge?: number } => tab !== null);
+
+  const visibleTab = tabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : tabs[0]?.id ?? "quotes";
 
   return (
     <div className="space-y-6">
@@ -126,19 +154,25 @@ export default function AdminScreen({ user }: AdminScreenProps) {
           value={quotesPagination.total}
           hint="Total réel, toutes pages"
         />
-        <KpiCard
-          label="Courtiers"
-          value={usersPagination.total}
-          hint="Total API"
-        />
-        <KpiCard label="Paiements en retard" value={overdueCount} />
-        <KpiCard label="Messages non lus" value={unreadCount} />
+        {can("USERS_ROLES") ? (
+          <KpiCard
+            label="Courtiers"
+            value={usersPagination.total}
+            hint="Total API"
+          />
+        ) : null}
+        {can("PRODUCTION") ? (
+          <KpiCard label="Paiements en retard" value={overdueCount} />
+        ) : null}
+        {can("MESSAGING") ? (
+          <KpiCard label="Messages non lus" value={unreadCount} />
+        ) : null}
       </div>
 
       <div className="overflow-hidden rounded-lg border border-line bg-white">
-        <ScrollTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+        <ScrollTabs tabs={tabs} value={visibleTab} onChange={setActiveTab} />
         <div className="p-4 sm:p-6">
-          {activeTab === "quotes" && (
+          {visibleTab === "quotes" && (
             <AdminQuotesPanel
               onCreateQuote={() => setShowQuoteForm(true)}
               onQuoteCreated={(quote) => {
@@ -147,11 +181,11 @@ export default function AdminScreen({ user }: AdminScreenProps) {
               }}
             />
           )}
-          {activeTab === "brokers" && <AdminBrokersPanel />}
-          {activeTab === "messages" && <AdminMessagesPanel />}
-          {activeTab === "overduePayments" && <AdminOverduePaymentsPanel />}
-          {activeTab === "versions" && <AdminVersionsPanel />}
-          {activeTab === "correspondance" && <CorrespondanceTab />}
+          {visibleTab === "brokers" && <AdminBrokersPanel />}
+          {visibleTab === "messages" && <AdminMessagesPanel />}
+          {visibleTab === "overduePayments" && <AdminOverduePaymentsPanel />}
+          {visibleTab === "versions" && <AdminVersionsPanel />}
+          {visibleTab === "correspondance" && <CorrespondanceTab />}
         </div>
       </div>
     </div>

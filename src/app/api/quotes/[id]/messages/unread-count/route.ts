@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { PrismaClient } from "@prisma/client";
+import { denyWithoutPermission } from "@/lib/api-utils";
 
 const prisma = new PrismaClient();
 
@@ -36,6 +37,15 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     // Seuls le broker propriétaire et les admins peuvent voir le compteur
+    if (session.user.role === "ADMIN") {
+      const denied = await denyWithoutPermission(
+        session.user.id,
+        session.user.role,
+        "MESSAGING",
+      );
+      if (denied) return denied;
+    }
+
     if (session.user.role !== "ADMIN" && quote.brokerId !== session.user.id) {
       return NextResponse.json(
         { success: false, error: "Accès refusé" },

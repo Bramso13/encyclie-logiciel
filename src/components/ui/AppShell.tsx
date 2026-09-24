@@ -5,25 +5,60 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { roleLabel } from "@/lib/ui/labels";
+import type { AdminPermission } from "@/lib/permissions";
+import { usePermissions } from "@/lib/stores/permissions-store";
 import { Button } from "./Controls";
 import { ExerciseYearSelect } from "./ExerciseYearSelect";
 import { TerritoryClocks } from "./TerritoryClocks";
 
-const ADMIN_LINKS = [
+const ADMIN_LINKS: Array<{
+  href: string;
+  label: string;
+  permission?: AdminPermission;
+}> = [
   { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/admin/bordereaux", label: "Bordereaux" },
-  { href: "/admin/portefeuille", label: "Portefeuille" },
+  { href: "/admin/bordereaux", label: "Bordereaux", permission: "PRODUCTION" },
+  { href: "/admin/portefeuille", label: "Portefeuille", permission: "PRODUCTION" },
+  {
+    href: "/admin/utilisateurs",
+    label: "Utilisateurs et rôles",
+    permission: "USERS_ROLES",
+  },
   { href: "/cabinet", label: "Cabinet" },
 ];
 
 const SHARED_LINKS = [{ href: "/cabinet", label: "Cabinet" }];
 
-const DEV_TOOLS = [
-  { href: "/admin/exercices", label: "Exercices et barèmes" },
-  { href: "/admin/import-payments", label: "Import des paiements" },
-  { href: "/admin/ecarts-montants", label: "Écarts de montants" },
-  { href: "/admin/configuration-produits", label: "Configuration produits" },
-  { href: "/modifier_echeancier", label: "Modifier un échéancier" },
+const DEV_TOOLS: Array<{
+  href: string;
+  label: string;
+  permission: AdminPermission;
+}> = [
+  {
+    href: "/admin/exercices",
+    label: "Exercices et barèmes",
+    permission: "PRODUCTS_TARIFFS",
+  },
+  {
+    href: "/admin/import-payments",
+    label: "Import des paiements",
+    permission: "PRODUCTION",
+  },
+  {
+    href: "/admin/ecarts-montants",
+    label: "Écarts de montants",
+    permission: "PRODUCTION",
+  },
+  {
+    href: "/admin/configuration-produits",
+    label: "Configuration produits",
+    permission: "PRODUCTS_TARIFFS",
+  },
+  {
+    href: "/modifier_echeancier",
+    label: "Modifier un échéancier",
+    permission: "PRODUCTION",
+  },
 ];
 
 function isLinkActive(pathname: string, href: string) {
@@ -65,7 +100,11 @@ export function BrandLogo({
 function AdminToolsMenu({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const toolActive = DEV_TOOLS.some((tool) => isLinkActive(pathname, tool.href));
+  const { hasPermission, loaded } = usePermissions();
+  const tools = DEV_TOOLS.filter(
+    (tool) => loaded && hasPermission(tool.permission),
+  );
+  const toolActive = tools.some((tool) => isLinkActive(pathname, tool.href));
 
   useEffect(() => {
     setOpen(false);
@@ -90,6 +129,8 @@ function AdminToolsMenu({ pathname }: { pathname: string }) {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  if (tools.length === 0) return null;
 
   return (
     <div ref={rootRef} className="relative">
@@ -118,7 +159,7 @@ function AdminToolsMenu({ pathname }: { pathname: string }) {
           <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
             Outils développeur
           </p>
-          {DEV_TOOLS.map((tool) => {
+          {tools.map((tool) => {
             const active = isLinkActive(pathname, tool.href);
             return (
               <Link
@@ -154,6 +195,10 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const isAdmin = userRole === "ADMIN";
+  const { hasPermission, loaded } = usePermissions();
+  const adminLinks = ADMIN_LINKS.filter(
+    (link) => !link.permission || (loaded && hasPermission(link.permission)),
+  );
 
   return (
     <div className="min-h-screen bg-surface">
@@ -164,7 +209,7 @@ export function AppShell({
             {isAdmin ? (
               <div className="flex min-w-0 items-center gap-1">
                 <nav className="hidden items-center gap-1 overflow-x-auto md:flex" aria-label="Navigation administrateur">
-                  {ADMIN_LINKS.map((link) => {
+                  {adminLinks.map((link) => {
                     const active = isLinkActive(pathname, link.href);
                     return (
                       <Link

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ApiError, handleApiError, withPermission } from "@/lib/api-utils";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
+    return await withPermission("MESSAGING", async () => {
     const emails = await prisma.emailLog.findMany({
       orderBy: {
         createdAt: "desc",
@@ -11,7 +13,9 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, emails }, { status: 200 });
+    });
   } catch (error) {
+    if (error instanceof ApiError) return handleApiError(error);
     console.error("Erreur lors de la récupération des emails:", error);
     return NextResponse.json(
       { success: false, error: "Erreur lors de la récupération des emails" },

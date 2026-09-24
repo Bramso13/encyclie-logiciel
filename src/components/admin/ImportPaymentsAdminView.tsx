@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
+import { AdminPermissionGate } from "@/components/admin/AdminPermissionGate";
 
 type ImportAction =
   | "UPDATED"
@@ -723,6 +724,9 @@ export function ImportPaymentsAdminView({
     </div>
   );
 
-  if (embedded) return body;
-  return <AuthenticatedAppShell>{body}</AuthenticatedAppShell>;
+  const gated = (
+    <AdminPermissionGate permission="PRODUCTION">{body}</AdminPermissionGate>
+  );
+  if (embedded) return gated;
+  return <AuthenticatedAppShell>{gated}</AuthenticatedAppShell>;
 }

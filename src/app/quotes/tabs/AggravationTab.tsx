@@ -5,15 +5,18 @@ import { aggravationAmount } from "@/lib/quotes/aggravation";
 import { getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import { CalculationResult, Quote } from "@/lib/types";
 import { Button } from "@/components/ui/Controls";
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
 import { EmptyState } from "@/components/ui/Feedback";
 import { formatEur } from "@/lib/ui/labels";
 
 export default function AggravationTab({
   quote,
   calculationResult,
+  selectedYear,
 }: {
   quote: Quote;
   calculationResult: CalculationResult | null;
+  selectedYear?: number;
 }) {
   const [percentage, setPercentage] = useState<string>("");
   const [calculatedAmount, setCalculatedAmount] = useState<number>(0);
@@ -42,6 +45,9 @@ export default function AggravationTab({
   }, [calculationResult, percentage, primeHT, fraisRate, taxRate]);
 
   if (!calculationResult) {
+    if (selectedYear != null) {
+      return <ExerciseEmptyState year={selectedYear} />;
+    }
     return (
       <EmptyState
         title="Aucun calcul de prime"

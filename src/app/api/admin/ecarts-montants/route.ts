@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  withAuthAndRole,
+  withPermission,
   handleApiError,
 } from "@/lib/api-utils";
 
@@ -12,7 +12,7 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTION", async () => {
       const search = request.nextUrl.searchParams.get("search")?.trim() ?? "";
 
       const schedules = await prisma.paymentSchedule.findMany({

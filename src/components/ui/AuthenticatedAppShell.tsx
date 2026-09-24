@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient, signOut } from "@/lib/auth-client";
+import usePermissionsStore from "@/lib/stores/permissions-store";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AppShell } from "./AppShell";
@@ -33,6 +34,7 @@ export function AuthenticatedAppShell({
       userName={session.user.name || session.user.email || "Utilisateur"}
       userRole={session.user.role}
       onSignOut={async () => {
+        usePermissionsStore.getState().reset();
         await signOut();
         router.push("/login");
       }}

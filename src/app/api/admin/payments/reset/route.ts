@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuthAndRole, ApiError } from "@/lib/api-utils";
+import { withPermission, ApiError } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTION", async () => {
       const body = await request.json();
       const { startDate, endDate } = body;
 

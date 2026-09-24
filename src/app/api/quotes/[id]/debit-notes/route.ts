@@ -5,6 +5,7 @@ import {
   createApiResponse,
   handleApiError,
   withAuth,
+  ensurePermission,
 } from "@/lib/api-utils";
 import {
   computeDebitNoteLines,
@@ -52,6 +53,9 @@ export async function GET(
       const quote = await loadQuote(id);
       if (!quote) throw new ApiError(404, "Dossier introuvable");
       assertAccess(quote, userId, userRole);
+      if (userRole === "ADMIN") {
+        await ensurePermission(userId, userRole, "PRODUCTION");
+      }
 
       const notes = await prisma.debitNote.findMany({
         where: { quoteId: id },
@@ -77,6 +81,7 @@ export async function POST(
       if (userRole !== "ADMIN") {
         throw new ApiError(403, "Seul un administrateur peut générer une note de débit");
       }
+      await ensurePermission(userId, userRole, "PRODUCTION");
       const body = (await request.json().catch(() => ({}))) as { year?: number };
       const year = Number(body.year) || calendarYear();
       const { start, end } = yearPeriod(year);

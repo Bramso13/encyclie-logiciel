@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { PrismaClient } from "@prisma/client";
+import { denyWithoutPermission } from "@/lib/api-utils";
 
 const prisma = new PrismaClient();
 
@@ -44,6 +45,15 @@ export async function GET(
         { success: false, error: "Accès refusé" },
         { status: 403 }
       );
+    }
+
+    if (session.user.role === "ADMIN") {
+      const denied = await denyWithoutPermission(
+        session.user.id,
+        session.user.role,
+        "MESSAGING",
+      );
+      if (denied) return denied;
     }
 
     // Récupérer tous les messages du devis
@@ -131,6 +141,15 @@ export async function POST(
         { success: false, error: "Accès refusé" },
         { status: 403 }
       );
+    }
+
+    if (session.user.role === "ADMIN") {
+      const denied = await denyWithoutPermission(
+        session.user.id,
+        session.user.role,
+        "MESSAGING",
+      );
+      if (denied) return denied;
     }
 
     if (receiverId === "admin") {

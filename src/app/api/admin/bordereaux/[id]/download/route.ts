@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import archiver from "archiver";
-import { withAuthAndRole } from "@/lib/api-utils";
+import { withPermission } from "@/lib/api-utils";
 import {
   generatePolicesCSV,
   generateQuittancesCSV,
@@ -24,7 +24,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  return withAuthAndRole(["ADMIN"], async () => {
+  return withPermission("PRODUCTION", async () => {
     try {
       const { id } = await params;
       const bordereau = await prisma.bordereau.findUnique({

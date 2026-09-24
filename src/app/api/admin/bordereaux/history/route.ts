@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { withAuthAndRole } from "@/lib/api-utils";
+import { withPermission } from "@/lib/api-utils";
 
 const prisma = new PrismaClient();
 
@@ -13,7 +13,7 @@ const DEFAULT_LIMIT = 20;
  * Query: page (défaut 1), limit (défaut 20, max 100).
  */
 export async function GET(request: NextRequest) {
-  return withAuthAndRole(["ADMIN"], async () => {
+  return withPermission("PRODUCTION", async () => {
     try {
       const { searchParams } = new URL(request.url);
       const limitParam = searchParams.get("limit");

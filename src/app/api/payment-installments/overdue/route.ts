@@ -3,14 +3,14 @@ import { prisma } from "@/lib/prisma";
 import {
   createApiResponse,
   handleApiError,
-  withAuthAndRole,
+  withPermission,
 } from "@/lib/api-utils";
 
 const DEFAULT_LIMIT = 25;
 
 export async function GET(request: NextRequest) {
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTION", async () => {
       const now = new Date();
       const page = Math.max(
         1,

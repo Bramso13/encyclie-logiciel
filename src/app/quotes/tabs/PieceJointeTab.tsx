@@ -4,6 +4,7 @@ import { notify } from "@/lib/ui/notify";
 import { useState, useEffect } from "react";
 import {
   Quote,
+  CalculationResult,
   QuoteDocument,
   DocumentUploadResponse,
   DocumentRequest,
@@ -12,6 +13,9 @@ import { useSession } from "@/lib/auth-client";
 
 interface PieceJointeTabProps {
   quote: Quote;
+  /** Contexte exercice : l'étude documentaire reste transverse (pas de montants). */
+  selectedYear?: number;
+  calculationResult?: CalculationResult | null;
 }
 
 const DOCUMENT_TYPES = [

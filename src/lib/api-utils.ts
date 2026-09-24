@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { ZodError } from "zod";
 import { auth } from "./auth";
 import { ApiResponse } from "./validations";
+import type { AdminPermission } from "./permissions";
+import { decideAccess } from "./permission-service";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -103,6 +105,46 @@ export async function withAuthAndRole<T>(
   }
 
   return handler(session.user.id, userRole);
+}
+
+export async function ensurePermission(
+  userId: string,
+  userRole: string,
+  permission: AdminPermission,
+): Promise<void> {
+  const decision = await decideAccess(userId, userRole, permission);
+  if (!decision.ok) {
+    throw new ApiError(decision.status, decision.message);
+  }
+}
+
+export async function withPermission<T>(
+  permission: AdminPermission,
+  handler: (userId: string, userRole: string) => Promise<T>,
+): Promise<T> {
+  return withAuth(async (userId, userRole) => {
+    await ensurePermission(userId, userRole, permission);
+    return handler(userId, userRole);
+  });
+}
+
+export async function denyWithoutPermission(
+  userId: string,
+  userRole: string,
+  permission: AdminPermission,
+): Promise<NextResponse | null> {
+  try {
+    await ensurePermission(userId, userRole, permission);
+    return null;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status },
+      );
+    }
+    throw error;
+  }
 }
 
 export function validatePagination(searchParams: URLSearchParams) {

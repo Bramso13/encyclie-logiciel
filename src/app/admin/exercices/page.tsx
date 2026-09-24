@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useExerciseYearStore } from "@/lib/stores/exercise-year-store";
 import { Button, inputClassName } from "@/components/ui/Controls";
+import { AdminPermissionGate } from "@/components/admin/AdminPermissionGate";
 import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
 import { notify } from "@/lib/ui/notify";
 
@@ -86,6 +87,7 @@ export default function AdminExercicesPage() {
 
   return (
     <AuthenticatedAppShell>
+      <AdminPermissionGate permission="PRODUCTS_TARIFFS">
       <h1 className="text-xl font-semibold text-ink">Exercices et barèmes</h1>
       <p className="mt-1 max-w-3xl text-sm text-ink-muted">
         2025 et 2026 restent ceux du moteur de calcul actuel. Une nouvelle année
@@ -176,6 +178,7 @@ export default function AdminExercicesPage() {
           </div>
         ) : null}
       </section>
+      </AdminPermissionGate>
     </AuthenticatedAppShell>
   );
 }

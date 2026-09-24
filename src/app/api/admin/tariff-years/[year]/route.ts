@@ -5,7 +5,7 @@ import {
   ApiError,
   createApiResponse,
   handleApiError,
-  withAuthAndRole,
+  withPermission,
 } from "@/lib/api-utils";
 import { hydrateTariffOverlaysFromDb } from "@/lib/tarificateurs/tariff-year-service";
 
@@ -40,7 +40,7 @@ export async function PATCH(
 ) {
   const params = await props.params;
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTS_TARIFFS", async () => {
       const year = Number(params.year);
       if (!Number.isInteger(year) || year < 2027) {
         throw new ApiError(400, "Les exercices 2025/2026 sont figés (code production)");

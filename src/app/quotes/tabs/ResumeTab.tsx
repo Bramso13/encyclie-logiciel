@@ -2,6 +2,7 @@
 
 import { notify } from "@/lib/ui/notify";
 import { useState, useEffect } from "react";
+import { usePermissions } from "@/lib/stores/permissions-store";
 import AdminWorkflowManager from "@/components/workflow/AdminWorkflowManager";
 import BrokerWorkflowExecutor from "@/components/workflow/BrokerWorkflowExecutor";
 import ApproveOfferModal from "@/components/modals/ApproveOfferModal";
@@ -28,13 +29,18 @@ export default function ResumeTab({
   const [loadingBrokers, setLoadingBrokers] = useState(false);
   const [showBrokerConfirmModal, setShowBrokerConfirmModal] = useState(false);
   const [selectedBrokerId, setSelectedBrokerId] = useState<string>("");
+  const { hasPermission, loaded: permissionsLoaded } = usePermissions();
+  const canValidate =
+    isAdmin && permissionsLoaded && hasPermission("QUOTES_VALIDATION");
+  const canManageUsers =
+    isAdmin && permissionsLoaded && hasPermission("USERS_ROLES");
 
-  // Charger la liste des courtiers au montage (uniquement pour les admins)
+  // Charger la liste des courtiers au montage (uniquement pour les admins habilités)
   useEffect(() => {
-    if (isAdmin) {
+    if (canManageUsers) {
       loadBrokers();
     }
-  }, [isAdmin]);
+  }, [canManageUsers]);
 
   const loadBrokers = async () => {
     setLoadingBrokers(true);
@@ -257,6 +263,7 @@ export default function ResumeTab({
                 </p>
               </div>
             </div>
+            {canValidate ? (
             <div className="flex items-center space-x-3">
               <span className="text-sm font-medium text-gray-700">
                 Changer le statut :
@@ -283,6 +290,7 @@ export default function ResumeTab({
                 <option value="REJECTED">Dossier refusé</option>
               </select>
             </div>
+            ) : null}
 
             {/* Courtier assigné et réassignation */}
             <div className="mt-4 pt-4 border-t border-gray-200">
@@ -315,6 +323,7 @@ export default function ResumeTab({
                 </div>
               </div>
 
+              {canManageUsers ? (
               <div className="flex items-center space-x-3">
                 <span className="text-sm font-medium text-gray-700">
                   Réassigner à :
@@ -337,13 +346,13 @@ export default function ResumeTab({
                   ))}
                 </select>
               </div>
+              ) : null}
             </div>
           </div>
 
-          {/* Gestionnaire de workflow */}
-          <AdminWorkflowManager quoteId={quote.id} />
+          {canValidate ? <AdminWorkflowManager quoteId={quote.id} /> : null}
 
-          {/* Administrative Actions Panel */}
+          {canValidate ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Actions administratives
@@ -462,6 +471,7 @@ export default function ResumeTab({
               </button>
             </div>
           </div>
+          ) : null}
         </>
       ) : (
         // DASHBOARD BROKER

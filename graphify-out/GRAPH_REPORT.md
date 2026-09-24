@@ -1,16 +1,16 @@
-# Graph Report - encyclie-logiciel  (2026-09-08)
+# Graph Report - encyclie-logiciel  (2026-09-24)
 
 ## Corpus Check
-- 433 files · ~1,231,945 words
+- 455 files · ~1,246,407 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3260 nodes · 4930 edges · 228 communities (200 shown, 28 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 34 edges (avg confidence: 0.8)
+- 3395 nodes · 5355 edges · 228 communities (201 shown, 27 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `42075797`
+- Built from commit: `ee991913`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -64,7 +64,6 @@
 - [[_COMMUNITY_Community 46|Community 46]]
 - [[_COMMUNITY_Community 47|Community 47]]
 - [[_COMMUNITY_Community 48|Community 48]]
-- [[_COMMUNITY_Community 49|Community 49]]
 - [[_COMMUNITY_Community 50|Community 50]]
 - [[_COMMUNITY_Community 51|Community 51]]
 - [[_COMMUNITY_Community 52|Community 52]]
@@ -86,7 +85,6 @@
 - [[_COMMUNITY_Community 70|Community 70]]
 - [[_COMMUNITY_Community 71|Community 71]]
 - [[_COMMUNITY_Community 72|Community 72]]
-- [[_COMMUNITY_Community 73|Community 73]]
 - [[_COMMUNITY_Community 74|Community 74]]
 - [[_COMMUNITY_Community 75|Community 75]]
 - [[_COMMUNITY_Community 76|Community 76]]
@@ -175,7 +173,6 @@
 - [[_COMMUNITY_Community 159|Community 159]]
 - [[_COMMUNITY_Community 160|Community 160]]
 - [[_COMMUNITY_Community 161|Community 161]]
-- [[_COMMUNITY_Community 162|Community 162]]
 - [[_COMMUNITY_Community 163|Community 163]]
 - [[_COMMUNITY_Community 164|Community 164]]
 - [[_COMMUNITY_Community 165|Community 165]]
@@ -240,41 +237,41 @@
 - [[_COMMUNITY_Community 227|Community 227]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `handleApiError()` - 110 edges
-2. `withAuth()` - 86 edges
-3. `withAuthAndRole()` - 54 edges
-4. `ApiError` - 38 edges
-5. `createApiResponse()` - 38 edges
-6. `Quote` - 34 edges
-7. `Button()` - 30 edges
-8. `getTaxeByRegion()` - 28 edges
-9. `notify()` - 24 edges
-10. `CalculationResult` - 23 edges
+1. `handleApiError()` - 129 edges
+2. `withAuth()` - 89 edges
+3. `withPermission()` - 66 edges
+4. `withAuthAndRole()` - 54 edges
+5. `ApiError` - 44 edges
+6. `createApiResponse()` - 38 edges
+7. `Quote` - 33 edges
+8. `Button()` - 30 edges
+9. `getTaxeByRegion()` - 28 edges
+10. `CalculationResult` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `main()` --calls--> `getPolicesV2()`  [EXTRACTED]
   scripts/compare-bordereau-jan.ts → src/lib/bordereau/extractPolicesV2.ts
-- `GET()` --calls--> `withAuthAndRole()`  [INFERRED]
-  src/app/api/admin/bordereaux/[id]/download/route.ts → src/lib/api-utils.ts
-- `ConfigurationProduitsPage()` --calls--> `useProductsStore`  [EXTRACTED]
-  src/app/admin/configuration-produits/page.tsx → src/lib/stores/products-store.ts
-- `AdminExercicesPage()` --calls--> `useExerciseYearStore`  [EXTRACTED]
-  src/app/admin/exercices/page.tsx → src/lib/stores/exercise-year-store.ts
-- `POST()` --calls--> `withAuthAndRole()`  [EXTRACTED]
-  src/app/api/admin/bordereaux/export-v2/route.ts → src/lib/api-utils.ts
+- `POST()` --calls--> `handleApiError()`  [INFERRED]
+  src/app/api/admin/bordereaux/export/route.ts → src/lib/api-utils.ts
+- `POST()` --calls--> `withPermission()`  [INFERRED]
+  src/app/api/admin/bordereaux/export/route.ts → src/lib/api-utils.ts
+- `GET()` --calls--> `withPermission()`  [INFERRED]
+  src/app/api/admin/brokers/route.ts → src/lib/api-utils.ts
+- `GET()` --calls--> `handleApiError()`  [INFERRED]
+  src/app/api/admin/portfolio-recap/export/route.ts → src/lib/api-utils.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (228 total, 28 thin omitted)
+## Communities (228 total, 27 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.09
-Nodes (39): PATCH(), GET(), GET(), POST(), GET(), GET(), PATCH(), POST() (+31 more)
+Cohesion: 0.08
+Nodes (31): PATCH(), GET(), GET(), POST(), GET(), GET(), POST(), GET() (+23 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.10
-Nodes (24): assureursDefaillants, calculateMajorations(), calculDeg(), CalculParamsAnnuels, calculPrimeRCD(), calculReprisePasseRCD(), Echeance, EcheancierParams (+16 more)
+Cohesion: 0.06
+Nodes (49): ContractRCDPDF(), assureursDefaillants, BUILTIN_TERRITORY_PJ_TAXES, BUILTIN_TERRITORY_TAXES, calculateMajorations(), calculDeg(), calculerMontantsEcheance(), CalculParamsAnnuels (+41 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.14
@@ -282,39 +279,39 @@ Nodes (30): workflowApi, useWorkflowStore, WorkflowStore, CreateStepMessageData,
 
 ### Community 3 - "Community 3"
 Cohesion: 0.09
-Nodes (24): POST(), GET(), GET(), prisma, POST(), buildWhereClause(), createErrorResponse(), generateReference() (+16 more)
+Nodes (31): computeEndDate(), getContractDurationYears(), POST(), POST(), GET(), GET(), POST(), GET() (+23 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.11
 Nodes (31): buildBaseResult(), createMissingInstallment(), CsvRow, csvRowKey(), detectPaymentMethod(), extractSiren(), findInstallmentBySiretAndPeriod(), findInstallmentForCsvRow() (+23 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.08
-Nodes (28): AdminVersionsPanel(), VersionRow, Row, useDelayedFlag(), MessageComposerProps, AddBrokerModalProps, BrokerFormData, EMPTY_FORM (+20 more)
+Cohesion: 0.11
+Nodes (12): useDelayedFlag(), AddBrokerModalProps, BrokerFormData, EMPTY_FORM, BrokerInvitation, QuoteChatState, QuoteMessage, useQuoteChatStore (+4 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.09
-Nodes (8): { GET, POST }, auth, Session, CreateInsuranceProductSchema, prisma, prisma, config, prisma
+Cohesion: 0.11
+Nodes (17): { GET, POST }, PATCH(), denyWithoutPermission(), ensurePermission(), auth, Session, CreateInsuranceProductSchema, GET() (+9 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.14
-Nodes (23): csvToBlob(), csvToUtf8Buffer(), downloadCSV(), escapeCsvValue(), generateCSV(), generateCSVFromHeaders(), generateFileName(), generatePolicesCSV() (+15 more)
+Cohesion: 0.18
+Nodes (24): csvToBlob(), csvToUtf8Buffer(), downloadCSV(), escapeCsvValue(), generateCSV(), generateCSVFromHeaders(), generateFileName(), generatePolicesCSV() (+16 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.06
-Nodes (32): ApiResponse, ApiResponseSchema, ContractFilters, ContractFiltersSchema, CreateCommission, CreateCommissionSchema, CreateContract, CreateContractSchema (+24 more)
+Cohesion: 0.05
+Nodes (37): GET(), PATCH(), POST(), buildWhereClause(), generateReference(), validatePagination(), ApiResponse, ApiResponseSchema (+29 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.14
-Nodes (17): adaptEcheancesForDatabase(), GeneratedEcheance, PaymentInfo, prisma, regenerateScheduleWithPaymentPreservation(), restorePaymentInfoAfterRegeneration(), savePaymentInfoBeforeRegeneration(), CalculatedPremium (+9 more)
+Cohesion: 0.10
+Nodes (24): computeTauxTaxe(), ModificationForm, applyCalculationChange(), CalculatedPremium, eq(), FormDataQuote, getDateDeffet(), getPeriodicite() (+16 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.10
 Nodes (23): activiteMap, BordereauTab(), computePolicesRows(), computeQuittancesRows(), CONTRACT_STATUS, ContractData, EditType, fmtDate() (+15 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.06
-Nodes (46): POST(), CABINET, assertCronSecret(), createEmailTransporter(), EmailType, getBrokerInvitationTemplate(), getDocumentUploadedTemplate(), getDocumentValidatedTemplate() (+38 more)
+Cohesion: 0.12
+Nodes (22): POST(), assertCronSecret(), createEmailTransporter(), EmailType, getBrokerInvitationTemplate(), getDocumentUploadedTemplate(), getDocumentValidatedTemplate(), getPasswordResetTemplate() (+14 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.09
@@ -325,52 +322,52 @@ Cohesion: 0.20
 Nodes (8): geistMono, geistSans, metadata, ToastDetail, ToastTone, ToastHost(), ToastItem, TONE_CLASS
 
 ### Community 14 - "Community 14"
-Cohesion: 0.21
-Nodes (14): activiteCodeToTitle, buildActivityColumnsFromFormData(), buildEtatPoliceByQuote(), getActiviteTitleByCode(), getFormDataFieldsForPolices(), getPolicesV2(), mapInstallmentToPolicesRow(), toStr() (+6 more)
+Cohesion: 0.16
+Nodes (17): getApporteur(), activiteCodeToTitle, BordereauInclusionOptions, buildActivityColumnsFromFormData(), buildEtatPoliceByQuote(), getActiviteTitleByCode(), getFormDataFieldsForPolices(), getPolicesV2() (+9 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.13
-Nodes (28): getApporteur(), getBordereauData(), TransformParams, TransformQuoteParams, transformQuoteToFidelidadeRow(), transformToFidelidadeRow(), BordereauInclusionOptions, getQuittancesV2() (+20 more)
+Cohesion: 0.17
+Nodes (18): getBordereauData(), TransformParams, TransformQuoteParams, transformQuoteToFidelidadeRow(), transformToFidelidadeRow(), ActivityData, BordereauDataResult, BordereauFilters (+10 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.10
 Nodes (19): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+11 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.08
-Nodes (42): AdminBrokersPanel(), AdminMessagesPanel(), AdminOverduePaymentsPanel(), OverduePayment, AdminQuotesPanel(), EXAMPLE_QUOTE_JSON, CorrespondanceTab(), EmailLog (+34 more)
+Cohesion: 0.16
+Nodes (16): OverduePayment, EXAMPLE_QUOTE_JSON, CorrespondanceTab(), EmailLog, STATUS_LABELS, TYPE_LABELS, ActivityBreakdownFieldProps, QuotesListProps (+8 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.22
-Nodes (7): AttestationRCDPDF(), AttestationRCDPDFProps, formatDate(), styles, LetterOfIntentPDFProps, styles, tableauTax
+Cohesion: 0.14
+Nodes (19): AdminVersionsPanel(), VersionRow, Row, QuoteSuccessPageProps, BUTTON_STYLES, ButtonVariant, StatusBadge(), CONTRACT_STATUS_LABELS (+11 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.20
-Nodes (16): appendResiliationMonthEvents(), BORDEREAU_ACTIVE_QUOTE_STATUSES, BordereauMonthEvent, BordereauMonthEventType, endOfResiliationMonth(), EVENT_TYPE_SORT_ORDER, expandMonthEvents(), filterPostResiliation() (+8 more)
+Cohesion: 0.18
+Nodes (18): appendResiliationMonthEvents(), BORDEREAU_ACTIVE_QUOTE_STATUSES, BordereauMonthEvent, BordereauMonthEventType, endOfResiliationMonth(), EVENT_TYPE_SORT_ORDER, expandMonthEvents(), filterPostResiliation() (+10 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.15
-Nodes (13): PortefeuillePage(), formatRatio(), QuoteSuccessPage(), QuoteSuccessPageProps, AggravationTab(), CONTRACT_STATUS_LABELS, contractStatusLabel(), formatEur() (+5 more)
+Cohesion: 0.09
+Nodes (19): GET(), DELETE(), GET(), PUT(), createErrorResponse(), handleApiError(), UpdateQuoteSchema, GET() (+11 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.13
-Nodes (12): BordereauxAdminView(), EditableTableProps, getDateRangeForMonthYear(), getYears(), GroupedPolicesTableProps, HistoryItem, MOIS, now (+4 more)
+Cohesion: 0.15
+Nodes (10): BordereauxAdminView(), EditableTableProps, getYears(), GroupedPolicesTableProps, HistoryItem, MOIS, now, TabId (+2 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.17
-Nodes (16): DossierExerciseBar(), dossierOriginalYear(), QuoteDetailPage(), calendarYear(), quoteInExerciseYearWhere(), ExerciseYearState, TariffYearListItem, useExerciseYearStore (+8 more)
+Cohesion: 0.12
+Nodes (23): DossierExerciseBar(), dossierOriginalYear(), AdminExercicesPage(), QuoteDetailPage(), PortefeuillePage(), calendarYear(), quoteInExerciseYearWhere(), QuotesList() (+15 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.14
-Nodes (25): getBordereauMonthEvents(), getBordereauDateRangeForMonthYear(), getBordereauDateRangeFromArgs(), loadScriptEnv(), InstallmentAmountFields, isPremierPaiementAnnee(), ScheduleSibling, countVerificationErrors() (+17 more)
+Cohesion: 0.05
+Nodes (73): getDateRangeForMonthYear(), getBordereauDateRangeForMonthYear(), getBordereauDateRangeFromArgs(), loadScriptEnv(), calendarDaysInclusive(), detectEch1Prorata(), expectedFullPeriodDays(), isPremiereEcheanceProrata() (+65 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.06
-Nodes (39): PARAMETER_CATEGORIES, ParameterEditorProps, recalculateWithParams(), EDITABLE_SECTIONS, SimpleParameterEditorProps, ActivityShare, CalculationResult, CompanyData (+31 more)
+Cohesion: 0.09
+Nodes (30): ExerciseEmptyState(), PARAMETER_CATEGORIES, ParameterEditorProps, EDITABLE_SECTIONS, SimpleParameterEditorProps, CalculationResult, CompanyData, DocumentRequest (+22 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.09
-Nodes (28): GET(), POST(), GET(), GET(), dateFr(), DebitNotePDF(), money(), styles (+20 more)
+Cohesion: 0.06
+Nodes (55): dateFr(), DebitNotePDF(), money(), styles, formatNumber(), PremiumCallPDF(), PremiumCallPDFProps, styles (+47 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.04
@@ -381,8 +378,8 @@ Cohesion: 0.15
 Nodes (9): ACTION_LABELS, getYears(), ImportAction, ImportPaymentsAdminView(), ImportResponse, ImportResult, ImportStats, MOIS (+1 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.12
-Nodes (18): computeTauxTaxe(), applyCalculationChange(), ContractRCDPDF(), ContractRCDPDFProps, styles, financial(), formatAmount(), PrimesTableRows() (+10 more)
+Cohesion: 0.09
+Nodes (21): CABINET, FormData, AttestationRCDPDF(), AttestationRCDPDFProps, formatDate(), styles, ContractRCDPDFProps, styles (+13 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.04
@@ -397,12 +394,12 @@ Cohesion: 0.15
 Nodes (13): devDependencies, eslint, eslint-config-next, @eslint/eslintrc, tailwindcss, @tailwindcss/postcss, tsx, @types/archiver (+5 more)
 
 ### Community 32 - "Community 32"
-Cohesion: 0.18
-Nodes (14): BUILTIN_TERRITORY_PJ_TAXES, BUILTIN_TERRITORY_TAXES, getBuiltinActivityRates(), getBuiltinDegressivity(), getTableauTaxByYear(), ActivityRate, BUILTIN_TARIFF_YEARS, DegressivityRow (+6 more)
+Cohesion: 0.13
+Nodes (19): ActivityShare, DatedInstallment, formDataForExerciseRecalculation(), installmentMatchesExerciseYear(), installmentVintageYear(), resolveDisplayedCalculation(), resolveSelectedDossierYear(), VintagePremiumSource (+11 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.15
-Nodes (15): calculateWithMapping(), getBrokerCode(), CalculationResult, CONTRACT_STATUSES, createPaymentScheduleFromCalculation(), LOG, main(), parseDate() (+7 more)
+Cohesion: 0.18
+Nodes (16): AdminBrokersPanel(), AdminMessagesPanel(), AdminOverduePaymentsPanel(), AdminScreen(), AdminScreenProps, MessageComposer(), MessageComposerProps, BrokerRow (+8 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.04
@@ -417,12 +414,12 @@ Cohesion: 0.15
 Nodes (13): scripts, build, db:seed, dev, import-payments, lint, recalcul-echeancier, recalcul-echeancier:last (+5 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.17
-Nodes (8): FieldDraft, FormField, ProductConfigTabProps, SortableFieldProps, StepConfig, StepWithSortableFieldsProps, LossHistoryField(), LossHistoryFieldProps
+Cohesion: 0.11
+Nodes (19): AdminQuotesPanel(), FieldDraft, FormField, ProductConfigTabProps, SortableFieldProps, StepConfig, StepWithSortableFieldsProps, fetchCompanyBySiret() (+11 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.22
-Nodes (7): getBrokerInfo(), AppelDePrimeTab(), fmtDate(), LocalInstallment, PAYMENT_METHOD_LABELS, QUOTE_STATUS_LABELS, STATUS_LABELS
+Cohesion: 0.11
+Nodes (17): Acceptance Criteria, Agent Model Used, Change Log, Completion Notes List, Contexte métier, Contraintes, Debug Log References, Dev Agent Record (+9 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.06
@@ -434,15 +431,15 @@ Nodes (5): formatDate(), main(), prisma, Reason, REFERENCES_A_VERIFIER
 
 ### Community 41 - "Community 41"
 Cohesion: 0.08
-Nodes (19): ConfigurationProduitsPage(), ClientScreen(), ClientScreenProps, Message, Project, AdminExercicesPage(), authClient, CONTRACT_STATUSES (+11 more)
+Nodes (23): AdminPermissionGate(), AdminUsersRolesPanel(), AuditRow, ListedUser, ClientScreen(), ClientScreenProps, Message, Project (+15 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.16
-Nodes (11): GET(), PATCH(), POST(), DbClient, findScheduleForQuote(), flattenSchedulePayments(), listSchedulesForQuote(), ActivitySchema (+3 more)
+Cohesion: 0.11
+Nodes (19): adaptEcheancesForDatabase(), GeneratedEcheance, PaymentInfo, prisma, regenerateScheduleWithPaymentPreservation(), restorePaymentInfoAfterRegeneration(), savePaymentInfoBeforeRegeneration(), GET() (+11 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.17
-Nodes (12): FormData, OfferLetterPDFProps, styles, OfferLetterPreviewProps, activitiesShareSum(), assertFormDataUnchanged(), buildRevision2027FormData(), parseLocalDate() (+4 more)
+Cohesion: 0.11
+Nodes (17): Acceptance Criteria, Agent Model Used, Change Log, Completion Notes List, Contexte métier, Contraintes, Debug Log References, Dev Agent Record (+9 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.40
@@ -464,10 +461,6 @@ Nodes (4): formatDate(), main(), prisma, REFS_A_METTRE_ACCEPTED
 Cohesion: 0.07
 Nodes (26): 0. Fail-safe for Missing Inputs, 1. Elicit Scope, 2. Check for Thresholds, 3. Quick Assessment, 4. Generate Outputs, All 8 Quality Characteristics, Appendix: ISO 25010 Reference, Assessment Criteria (+18 more)
 
-### Community 49 - "Community 49"
-Cohesion: 0.11
-Nodes (4): computeEndDate(), getContractDurationYears(), POST(), globalForPrisma
-
 ### Community 51 - "Community 51"
 Cohesion: 0.08
 Nodes (25): 0. Fail-safe for Missing Inputs, 1. Elicit Scope, 2. Check for Thresholds, 3. Quick Assessment, 4. Generate Outputs, All 8 Quality Characteristics, Appendix: ISO 25010 Reference, Assessment Criteria (+17 more)
@@ -477,16 +470,20 @@ Cohesion: 0.50
 Nodes (3): name, private, version
 
 ### Community 53 - "Community 53"
-Cohesion: 0.15
-Nodes (6): ADMIN_LINKS, DEV_TOOLS, SHARED_LINKS, ExerciseYearSelect(), TerritoryClocks(), ZONES
+Cohesion: 0.10
+Nodes (26): applyPermissionChange(), decideAccess(), listPermissionAudit(), loadPermissionNames(), PermissionChangeInput, PermissionChangeResult, PermissionStore, AccessDecision (+18 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.43
-Nodes (5): GET(), assertNear(), mkParams(), runEcheancierUnitTests(), UnitTestResult
+Cohesion: 0.10
+Nodes (19): Acceptance Criteria, Agent Model Used, Cause racine du « taux de règlement à plat » (diagnostic PO), Change Log, Completion Notes List, Contexte métier, Contraintes, Debug Log References (+11 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.08
 Nodes (24): 0. Documentation Context, 1.1 Identify Story Source, 1.2 Gather Essential Context, 1. Story Identification and Context Gathering, 2.1 From Document-Project Output, 2.2 From Brownfield PRD, 2.3 From User Documentation, 2. Extract Technical Context from Available Sources (+16 more)
+
+### Community 56 - "Community 56"
+Cohesion: 0.10
+Nodes (17): recalculateWithParams(), calculateWithMapping(), getBrokerCode(), CalculationResult, CONTRACT_STATUSES, createPaymentScheduleFromCalculation(), LOG, main() (+9 more)
 
 ### Community 60 - "Community 60"
 Cohesion: 0.08
@@ -511,10 +508,6 @@ Nodes (21): 0. Load Core Configuration and Inputs, 10. Generate Validation Repor
 ### Community 72 - "Community 72"
 Cohesion: 0.09
 Nodes (21): Acceptance Criteria, Agent Model Used, Appelants à mettre à jour, Arbre source pertinent, Architecture cible de `genererEcheancier`, Change Log, Completion Notes List, Construction des params pour le script de recalcul (+13 more)
-
-### Community 73 - "Community 73"
-Cohesion: 0.15
-Nodes (18): amountsFromExportRow(), BordereauQuittanceAmounts, commissionFromPrimeHT(), computeExportAmountsForInstallment(), CsvExportIssue, detectProrataForEch1(), diffAmounts(), formatAmounts() (+10 more)
 
 ### Community 74 - "Community 74"
 Cohesion: 0.10
@@ -868,10 +861,6 @@ Nodes (6): 1. Pourquoi cet accompagnement est indispensable, 2. Ce qui est inclu
 Cohesion: 0.29
 Nodes (6): 1. Contexte, 2. Diagnostic, 3. Actions réalisées, 4. Impact, 5. Conclusion, Rapport – Correction des écarts d’affichage
 
-### Community 162 - "Community 162"
-Cohesion: 0.29
-Nodes (15): amountsFromSavedInstallment(), computeBordereauQuittanceAmounts(), computeDeductedPremierEcheanceAmounts(), computeNormalEcheanceAmounts(), findReferenceNormalInstallment(), findSecondInstallment(), hasAmountBreakdown(), hasAnnualSupplements() (+7 more)
-
 ### Community 163 - "Community 163"
 Cohesion: 0.33
 Nodes (6): 7.1 Coding Standards & Practices, 7.2 Testing Strategy, 7.3 Frontend Testing [[FRONTEND ONLY]], 7.4 Development Environment, 7.5 Technical Documentation, 7. IMPLEMENTATION GUIDANCE
@@ -1030,43 +1019,43 @@ Nodes (4): Environment-Specific Usage, Performance Optimization, Quality Assuran
 
 ### Community 222 - "Community 222"
 Cohesion: 0.17
-Nodes (10): ModificationForm, EcheanceAvecOrigIndex, EcheanceTarifRow, getFieldLabel(), UnitTestResult, Echeance, EcheancierParams, near() (+2 more)
+Nodes (9): GET(), POST(), GET(), GET(), DebitNoteHeader, DebitNoteLineComputed, headerFromQuote(), record() (+1 more)
 
 ### Community 223 - "Community 223"
-Cohesion: 0.32
-Nodes (10): bordereauAmountsFromCalculationTabRow(), buildGetEcheanceRowValues(), computeBordereauEch1FromCalculationTabRow(), computeRowValuesDefault(), computeRowValuesModifieAlaMain(), EcheanceRowValues, getCalculationTabRowForEcheance1(), PaymentInstallmentForEcheanceRow (+2 more)
+Cohesion: 0.21
+Nodes (11): ApproveOfferModal(), ApproveOfferModalProps, getQuoteDateEffet(), QuoteForModal, QuoteValidationPage(), QuoteValidationPageProps, getStatusLabel(), Broker (+3 more)
 
 ### Community 224 - "Community 224"
 Cohesion: 0.22
-Nodes (6): CreateSchema, GET(), POST(), hydrateTariffOverlaysFromDb(), PATCH(), PatchSchema
+Nodes (8): 1. Contexte, 2. Périmètre de la prestation, 3. Détail des lots, 4. Livrables, 5. Hors périmètre, 6. Conditions financières, 7. Validité et acceptation, Devis n° DEV-2026-09-003
 
 ### Community 225 - "Community 225"
-Cohesion: 0.71
-Nodes (5): calendarDaysInclusive(), detectEch1Prorata(), expectedFullPeriodDays(), isPremiereEcheanceProrata(), parsePeriodiciteFromFormData()
+Cohesion: 0.25
+Nodes (6): AppelDePrimeTab(), fmtDate(), LocalInstallment, PAYMENT_METHOD_LABELS, QUOTE_STATUS_LABELS, STATUS_LABELS
 
 ### Community 226 - "Community 226"
-Cohesion: 0.47
-Nodes (4): QuoteChatState, QuoteMessage, useQuoteChatStore, ChatTab()
+Cohesion: 0.29
+Nodes (4): CreateSchema, GET(), hydrateTariffOverlaysFromDb(), PatchSchema
 
 ## Knowledge Gaps
-- **1809 isolated node(s):** `__filename`, `__dirname`, `compat`, `eslintConfig`, `nextConfig` (+1804 more)
+- **1873 isolated node(s):** `__filename`, `__dirname`, `compat`, `eslintConfig`, `nextConfig` (+1868 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `handleApiError()` connect `Community 0` to `Community 224`, `Community 3`, `Community 8`, `Community 42`, `Community 49`, `Community 25`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `getTaxeByRegion()` connect `Community 28` to `Community 32`, `Community 33`, `Community 1`, `Community 37`, `Community 9`, `Community 10`, `Community 43`, `Community 15`, `Community 18`, `Community 20`, `Community 23`, `Community 222`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **Why does `withAuthAndRole()` connect `Community 3` to `Community 0`, `Community 224`, `Community 7`, `Community 8`, `Community 42`, `Community 15`, `Community 49`, `Community 54`, `Community 25`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
-- **Are the 14 inferred relationships involving `handleApiError()` (e.g. with `GET()` and `PUT()`) actually correct?**
-  _`handleApiError()` has 14 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 11 inferred relationships involving `withAuth()` (e.g. with `PUT()` and `DELETE()`) actually correct?**
-  _`withAuth()` has 11 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `handleApiError()` connect `Community 20` to `Community 0`, `Community 226`, `Community 3`, `Community 6`, `Community 7`, `Community 8`, `Community 42`, `Community 25`, `Community 222`?**
+  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Why does `getTaxeByRegion()` connect `Community 9` to `Community 1`, `Community 37`, `Community 10`, `Community 14`, `Community 22`, `Community 23`, `Community 56`, `Community 28`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Why does `withPermission()` connect `Community 3` to `Community 0`, `Community 226`, `Community 6`, `Community 7`, `Community 42`, `Community 20`, `Community 25`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Are the 20 inferred relationships involving `handleApiError()` (e.g. with `GET()` and `GET()`) actually correct?**
+  _`handleApiError()` has 20 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 12 inferred relationships involving `withAuth()` (e.g. with `GET()` and `PUT()`) actually correct?**
+  _`withAuth()` has 12 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 10 inferred relationships involving `withPermission()` (e.g. with `GET()` and `POST()`) actually correct?**
+  _`withPermission()` has 10 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 5 inferred relationships involving `withAuthAndRole()` (e.g. with `POST()` and `GET()`) actually correct?**
   _`withAuthAndRole()` has 5 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `__filename`, `__dirname`, `compat` to the rest of the system?**
-  _1809 weakly-connected nodes found - possible documentation gaps or missing edges._

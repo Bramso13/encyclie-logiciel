@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withAuthAndRole } from "@/lib/api-utils";
+import { withPermission } from "@/lib/api-utils";
 import { generateReference } from "@/lib/api-utils";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
-  return withAuthAndRole(["ADMIN"], async (userId, userRole) => {
+  return withPermission("USERS_ROLES", async (userId, userRole) => {
     try {
       const body = await request.json();
       const {

@@ -6,7 +6,7 @@ import {
   createApiResponse,
   handleApiError,
   withAuth,
-  withAuthAndRole,
+  withPermission,
 } from "@/lib/api-utils";
 import { BUILTIN_TARIFF_YEARS } from "@/lib/tarificateurs/tariff-registry";
 import {
@@ -62,7 +62,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTS_TARIFFS", async () => {
       const body = CreateSchema.parse(await request.json());
       const overlays = await hydrateTariffOverlaysFromDb();
       if (overlays.some((row) => row.year === body.year)) {

@@ -1,5 +1,7 @@
 import { Quote, CalculationResult, PaymentInstallment } from "@/lib/types";
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
 import { useState, useEffect, useMemo } from "react";
+import { usePermissions } from "@/lib/stores/permissions-store";
 import { buildGetEcheanceRowValues } from "@/lib/quotes/echeance-row-values";
 import { genererEcheancier, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import {
@@ -37,6 +39,9 @@ function TestRecalculButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [loadingTests, setLoadingTests] = useState(false);
+  const { hasPermission, loaded: permissionsLoaded } = usePermissions();
+  const canRunTariffTests =
+    permissionsLoaded && hasPermission("PRODUCTS_TARIFFS");
   const [validationResults, setValidationResults] = useState<
     TestResult[] | null
   >(null);
@@ -213,6 +218,7 @@ function TestRecalculButton({
         >
           {loading ? "Recalcul..." : "Tester recalcul"}
         </button>
+        {canRunTariffTests ? (
         <button
           type="button"
           onClick={handleRunUnitTests}
@@ -221,6 +227,7 @@ function TestRecalculButton({
         >
           {loadingTests ? "Tests..." : "Lancer tests unitaires"}
         </button>
+        ) : null}
         {hasResults && (
           <button
             type="button"
@@ -419,6 +426,8 @@ export default function CalculationTab({
   session,
   onOpenParameterEditor,
   installmentsRefreshTrigger = 0,
+  selectedYear,
+  isOriginalYear = true,
 }: {
   quote: Quote;
   calculationResult: any;
@@ -436,6 +445,8 @@ export default function CalculationTab({
   session: any;
   onOpenParameterEditor: () => void;
   installmentsRefreshTrigger?: number;
+  selectedYear?: number;
+  isOriginalYear?: boolean;
 }) {
   const [paymentInstallments, setPaymentInstallments] = useState<
     PaymentInstallment[]
@@ -455,7 +466,17 @@ export default function CalculationTab({
         );
         if (res.ok) {
           const data = await res.json();
-          const installments = (data.data?.installments ?? []).map(
+          const installments = (data.data?.installments ?? [])
+            .filter(
+              (p: { schedule?: { vintageYear?: number | null }; dueDate?: string }) =>
+                selectedYear == null ||
+                (p.schedule?.vintageYear != null
+                  ? p.schedule.vintageYear === selectedYear
+                  : p.dueDate
+                    ? new Date(p.dueDate).getFullYear() === selectedYear
+                    : false),
+            )
+            .map(
             (p: any) => ({
               id: p.id,
               installmentNumber: p.installmentNumber,
@@ -483,7 +504,7 @@ export default function CalculationTab({
       }
     };
     fetchInstallments();
-  }, [quote?.id, installmentsRefreshTrigger]);
+  }, [quote?.id, installmentsRefreshTrigger, selectedYear]);
 
   /**
    * Valeurs par échéance alignées sur le résultat du tarificateur (`calculationResult.echeancier`).
@@ -776,7 +797,14 @@ export default function CalculationTab({
         </div>
       )}
 
-      {!calculationResult && !calculationError && (
+      {!calculationResult && !calculationError && selectedYear != null && (
+        <ExerciseEmptyState
+          year={selectedYear}
+          adminHint={!isOriginalYear}
+        />
+      )}
+
+      {!calculationResult && !calculationError && selectedYear == null && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex">
             <svg

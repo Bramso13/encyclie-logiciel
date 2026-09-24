@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { withAuthAndRole } from "@/lib/api-utils";
+import { withPermission } from "@/lib/api-utils";
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
  * Nécessite le rôle ADMIN.
  */
 export async function POST() {
-  return withAuthAndRole(["ADMIN"], async () => {
+  return withPermission("PRODUCTION", async () => {
     try {
       // Prisma ne permet pas where amountTTC < amountHT (deux colonnes), on charge tout puis filtre.
       const all = await prisma.paymentInstallment.findMany({

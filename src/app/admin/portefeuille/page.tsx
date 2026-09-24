@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useExerciseYearStore } from "@/lib/stores/exercise-year-store";
+import { AdminPermissionGate } from "@/components/admin/AdminPermissionGate";
 import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
 import { Button } from "@/components/ui/Controls";
 import { KpiCard, LoadingState, PageHeader } from "@/components/ui/Feedback";
@@ -107,6 +108,7 @@ export default function PortefeuillePage() {
 
   return (
     <AuthenticatedAppShell>
+      <AdminPermissionGate permission="PRODUCTION">
       <PageHeader
         title={`Portefeuille RC Décennale ${year}`}
         description={
@@ -125,10 +127,18 @@ export default function PortefeuillePage() {
             <Button
               variant="secondary"
               onClick={() => {
-                window.location.href = `/api/admin/portfolio-recap/export?year=${year}`;
+                window.location.href = `/api/admin/portfolio-recap/export?year=${year}&variant=interne`;
               }}
             >
-              Export Excel (CSV)
+              Export interne (CSV)
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                window.location.href = `/api/admin/portfolio-recap/export?year=${year}&variant=partenaires`;
+              }}
+            >
+              Export partenaires (CSV)
             </Button>
           </div>
         }
@@ -138,11 +148,15 @@ export default function PortefeuillePage() {
         <LoadingState active label="Agrégation du portefeuille" />
       ) : recap ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
             <KpiCard label="Affaires actives" value={recap.activeCount} />
             <KpiCard
               label="Prime annuelle cumulée"
               value={formatEur(recap.annualPremium)}
+            />
+            <KpiCard
+              label="Prime annuelle hors frais de gestion"
+              value={formatEur(recap.annualPremiumExcludingFees)}
             />
             <KpiCard
               label="Prime réglée (échu)"
@@ -215,16 +229,21 @@ export default function PortefeuillePage() {
             <h2 className="mb-3 text-sm font-semibold text-ink">
               3. Taux de règlement mensuel
             </h2>
-            <div className="flex h-32 items-end gap-1">
+            <div className="flex items-end gap-1">
               {recap.months.map((row) => (
-                <div key={row.month} className="flex flex-1 flex-col items-center gap-1">
-                  <div
-                    className="w-full rounded-t bg-emerald-700/80"
-                    style={{
-                      height: `${row.ratio ?? 0}%`,
-                      minHeight: row.elapsed ? 2 : 0,
-                    }}
-                  />
+                <div key={row.month} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                  <span className="min-h-4 text-[10px] tabular-nums text-ink">
+                    {row.elapsed ? formatRatio(row.ratio) : ""}
+                  </span>
+                  <div className="relative h-32 w-full shrink-0">
+                    <div
+                      className="absolute bottom-0 left-1/2 w-2/3 -translate-x-1/2 rounded-t bg-emerald-700/80"
+                      style={{
+                        height: row.elapsed ? `${row.ratio ?? 0}%` : "0%",
+                      }}
+                      title={row.elapsed ? formatRatio(row.ratio) : undefined}
+                    />
+                  </div>
                   <span className="text-[10px] text-ink-muted">
                     {row.label.slice(0, 3)}
                   </span>
@@ -311,6 +330,7 @@ export default function PortefeuillePage() {
           </section>
         </div>
       ) : null}
+      </AdminPermissionGate>
     </AuthenticatedAppShell>
   );
 }

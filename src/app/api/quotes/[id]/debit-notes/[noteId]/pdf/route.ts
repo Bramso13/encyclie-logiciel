@@ -6,6 +6,7 @@ import {
   ApiError,
   handleApiError,
   withAuth,
+  ensurePermission,
 } from "@/lib/api-utils";
 import DebitNotePDF from "@/components/pdf/DebitNotePDF";
 import type { DebitNoteHeader, DebitNoteLineComputed } from "@/lib/quotes/debit-note";
@@ -27,6 +28,9 @@ export async function GET(
       if (!note) throw new ApiError(404, "Note de débit introuvable");
       if (userRole !== "ADMIN" && note.quote.brokerId !== userId) {
         throw new ApiError(403, "Accès refusé");
+      }
+      if (userRole === "ADMIN") {
+        await ensurePermission(userId, userRole, "PRODUCTION");
       }
 
       const header: DebitNoteHeader = {

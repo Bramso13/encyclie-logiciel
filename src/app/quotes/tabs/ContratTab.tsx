@@ -1,5 +1,6 @@
 "use client";
 
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
 import { notify } from "@/lib/ui/notify";
 import { Quote, CalculationResult } from "@/lib/types";
 import { pdf } from "@react-pdf/renderer";
@@ -11,10 +12,12 @@ export default function ContratTab({
   quote,
   session,
   calculationResult,
+  selectedYear,
 }: {
   quote: Quote;
   session: any;
   calculationResult?: CalculationResult | null;
+  selectedYear?: number;
 }) {
   const [loading, setLoading] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -26,7 +29,7 @@ export default function ContratTab({
     let isMounted = true;
 
     const loadPDF = async () => {
-      if (!quote) {
+      if (!quote || !calculationResult) {
         if (isMounted) setLoadingPdf(false);
         return;
       }
@@ -149,6 +152,12 @@ export default function ContratTab({
       notify("Erreur lors de l'envoi de l'email");
     }
   };
+
+  if (!calculationResult) {
+    return (
+      <ExerciseEmptyState year={selectedYear ?? new Date().getFullYear()} />
+    );
+  }
 
   return (
     <div className="space-y-6">

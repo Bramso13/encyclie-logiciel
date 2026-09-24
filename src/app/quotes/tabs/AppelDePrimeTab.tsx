@@ -133,13 +133,19 @@ const TAB_ID_ALL = "all";
 export default function AppelDePrimeTab({
   quote,
   calculationResult,
+  originCalculation,
+  originalYear,
   session,
   preferredYear,
+  dossierYears,
 }: {
   quote: Quote;
   calculationResult: CalculationResult | null;
+  originCalculation?: CalculationResult | null;
+  originalYear?: number;
   session: any;
   preferredYear?: number;
+  dossierYears?: number[];
 }) {
   const [installments, setInstallments] = useState<LocalInstallment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -173,17 +179,30 @@ export default function AppelDePrimeTab({
   const [paymentMethod, setPaymentMethod] = useState<string>("BANK_TRANSFER");
   const [paying, setPaying] = useState(false);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number | "all">("all");
+  const [selectedYear, setSelectedYear] = useState<number | "all">(
+    preferredYear ?? "all",
+  );
 
   const resolveCalcForYear = useCallback(
     (year?: number) => {
+      if (year != null && originalYear != null && year === originalYear) {
+        return originCalculation ?? null;
+      }
       if (year != null) {
         const vintage = quote.vintages?.find((item) => item.year === year);
         if (vintage?.calculatedPremium) return vintage.calculatedPremium;
+        if (year === preferredYear) return calculationResult;
+        return null;
       }
       return calculationResult;
     },
-    [calculationResult, quote.vintages],
+    [
+      calculationResult,
+      originCalculation,
+      originalYear,
+      preferredYear,
+      quote.vintages,
+    ],
   );
 
   // ── Fetch schedule ──────────────────────────────────────────────────────
@@ -237,21 +256,18 @@ export default function AppelDePrimeTab({
     fetchInstallments();
   }, [fetchInstallments]);
 
+  const dossierYearsKey = (dossierYears ?? []).join(",");
   useEffect(() => {
-    if (availableYears.length <= 1) {
-      setSelectedYear("all");
+    if (preferredYear == null) return;
+    const allowed = dossierYearsKey
+      ? dossierYearsKey.split(",").map(Number)
+      : [];
+    if (allowed.length > 0 && !allowed.includes(preferredYear)) {
+      setSelectedYear(allowed[0]);
       return;
     }
-    const isBroker = session?.user?.role === "BROKER";
-    if (isBroker) {
-      const cal = new Date().getFullYear();
-      setSelectedYear(availableYears.includes(cal) ? cal : "all");
-      return;
-    }
-    if (preferredYear && availableYears.includes(preferredYear)) {
-      setSelectedYear(preferredYear);
-    }
-  }, [availableYears, session, preferredYear]);
+    setSelectedYear(preferredYear);
+  }, [preferredYear, dossierYearsKey]);
 
   // ── Génération PDF par installment ──────────────────────────────────────
   const loadPdfForInstallment = useCallback(
@@ -556,12 +572,18 @@ export default function AppelDePrimeTab({
   const yearOf = (inst: LocalInstallment) =>
     inst.vintageYear ??
     (inst.dueDate ? new Date(inst.dueDate).getFullYear() : 0);
+  const yearChoices = (dossierYears?.length ? dossierYears : availableYears).filter(
+    (year, index, all) => all.indexOf(year) === index,
+  );
   const filteredInstallments =
     selectedYear === "all"
-      ? installments
+      ? installments.filter((inst) =>
+          yearChoices.length === 0
+            ? true
+            : yearChoices.includes(yearOf(inst)),
+        )
       : installments.filter((inst) => yearOf(inst) === selectedYear);
-  const visibleInstallments =
-    filteredInstallments.length > 0 ? filteredInstallments : installments;
+  const visibleInstallments = filteredInstallments;
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -660,47 +682,42 @@ export default function AppelDePrimeTab({
         </div>
       )}
 
+      {yearChoices.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {yearChoices.map((year) => (
+            <button
+              key={year}
+              type="button"
+              onClick={() => setSelectedYear(year)}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                selectedYear === year
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {year}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Pas d'échéancier ────────────────────────────────────────────── */}
-      {installments.length === 0 ? (
+      {installments.length === 0 || visibleInstallments.length === 0 ? (
         <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
           <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">Aucun échéancier</p>
+          <p className="text-gray-500 font-medium">
+            {typeof selectedYear === "number"
+              ? `Aucune donnée pour l'exercice ${selectedYear}`
+              : "Aucun échéancier"}
+          </p>
           <p className="text-sm text-gray-400 mt-1">
-            Créez un échéancier dans l'onglet Bordereau pour gérer les appels de
-            prime.
+            {session?.user?.role === "ADMIN"
+              ? "La retarification se fait via « Ajouter un exercice » ou le recalcul du millésime."
+              : "Créez un échéancier dans l'onglet Bordereau pour gérer les appels de prime."}
           </p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {availableYears.length > 1 && (
-            <div className="flex flex-wrap gap-2 border-b border-gray-100 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setSelectedYear("all")}
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  selectedYear === "all"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                Tous les exercices
-              </button>
-              {availableYears.map((year) => (
-                <button
-                  key={year}
-                  type="button"
-                  onClick={() => setSelectedYear(year)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    selectedYear === year
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {year}
-                </button>
-              ))}
-            </div>
-          )}
           {/* ── Onglets par échéance ─────────────────────────────────────── */}
           <div className="flex border-b border-gray-200 overflow-x-auto">
             {/* Onglet "Toutes les échéances" */}

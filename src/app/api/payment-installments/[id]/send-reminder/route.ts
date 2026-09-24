@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   createApiResponse,
   handleApiError,
-  withAuthAndRole,
+  withPermission,
   ApiError,
 } from "@/lib/api-utils";
 import { sendEmail } from "@/lib/nodemailer";
@@ -15,7 +15,7 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    return await withAuthAndRole(["ADMIN"], async (userId, userRole) => {
+    return await withPermission("PRODUCTION", async (userId, userRole) => {
       // Get payment installment with all related data
       const payment = await prisma.paymentInstallment.findUnique({
         where: { id: params.id },

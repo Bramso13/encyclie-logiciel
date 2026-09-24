@@ -69,6 +69,11 @@ model User {
   // Bordereau relations
   generatedBordereaux Bordereau[] @relation("GeneratedBordereaux")
 
+  permissions             UserPermission[]     @relation("UserPermissions")
+  grantedPermissions      UserPermission[]     @relation("GrantedPermissions")
+  permissionAuditsTarget  PermissionAuditLog[] @relation("PermissionAuditTarget")
+  permissionAuditsChanged PermissionAuditLog[] @relation("PermissionAuditActor")
+
   @@map("users")
 }
 
@@ -87,6 +92,53 @@ enum UserRole {
   BROKER
   ADMIN
   UNDERWRITER
+}
+
+enum AdminPermission {
+  USERS_ROLES
+  PRODUCTS_TARIFFS
+  QUOTES_VALIDATION
+  PRODUCTION
+  COMMISSIONS
+  MESSAGING
+}
+
+enum PermissionAuditAction {
+  GRANTED
+  REVOKED
+}
+
+model UserPermission {
+  userId      String          @map("user_id")
+  permission  AdminPermission
+  grantedById String?         @map("granted_by_id")
+  grantedAt   DateTime        @default(now()) @map("granted_at")
+
+  user      User  @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User? @relation("GrantedPermissions", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  @@id([userId, permission])
+  @@index([grantedById])
+  @@map("user_permissions")
+}
+
+model PermissionAuditLog {
+  id           String                @id @default(cuid())
+  targetUserId String                @map("target_user_id")
+  permission   AdminPermission
+  action       PermissionAuditAction
+  changedById  String                @map("changed_by_id")
+  createdAt    DateTime              @default(now())
+  ipAddress    String?               @map("ip_address")
+  userAgent    String?               @map("user_agent")
+
+  targetUser User @relation("PermissionAuditTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  changedBy  User @relation("PermissionAuditActor", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([targetUserId])
+  @@index([changedById])
+  @@index([createdAt])
+  @@map("permission_audit_logs")
 }
 
 enum ProjectType {

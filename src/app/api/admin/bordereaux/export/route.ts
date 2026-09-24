@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCSV, generateFileName, csvToUtf8Buffer } from "@/lib/bordereau";
 import type { FidelidadeRow } from "@/lib/bordereau";
+import { ApiError, handleApiError, withPermission } from "@/lib/api-utils";
 
 /**
  * POST /api/admin/bordereaux/export
@@ -9,6 +10,7 @@ import type { FidelidadeRow } from "@/lib/bordereau";
  */
 export async function POST(request: NextRequest) {
   try {
+    return await withPermission("PRODUCTION", async () => {
     const body = await request.json();
 
     // Extract the rows data (potentially edited by the user)
@@ -43,7 +45,9 @@ export async function POST(request: NextRequest) {
         "Content-Disposition": `attachment; filename="${csvFileName}"`,
       },
     });
+    });
   } catch (error) {
+    if (error instanceof ApiError) return handleApiError(error);
     console.error("Error in bordereau export:", error);
     return NextResponse.json(
       {

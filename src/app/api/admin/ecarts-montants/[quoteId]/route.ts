@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  withAuthAndRole,
+  withPermission,
   handleApiError,
   ApiError,
 } from "@/lib/api-utils";
@@ -16,7 +16,7 @@ export async function PATCH(
 ) {
   const params = await props.params;
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTION", async () => {
       const existing = await prisma.quote.findUnique({
         where: { id: params.quoteId },
         select: { id: true, modifieAlaMain: true },

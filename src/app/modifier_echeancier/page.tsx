@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { Copy, Trash2 } from "lucide-react";
 import type { PaymentInstallment, PaymentSchedule } from "@/lib/types";
+import { AdminPermissionGate } from "@/components/admin/AdminPermissionGate";
 import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
 import { quoteStatusLabel, contractStatusLabel } from "@/lib/ui/labels";
 
@@ -839,6 +840,7 @@ export default function ModifierEcheancierPage() {
 
   return (
     <AuthenticatedAppShell>
+      <AdminPermissionGate permission="PRODUCTION">
       <div className="space-y-4">
         <h1 className="text-xl font-semibold text-ink">
           Modifier un échéancier
@@ -1905,6 +1907,7 @@ export default function ModifierEcheancierPage() {
           </>
         )}
       </div>
+      </AdminPermissionGate>
     </AuthenticatedAppShell>
   );
 }

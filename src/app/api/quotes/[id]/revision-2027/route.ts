@@ -6,7 +6,7 @@ import {
   createApiResponse,
   handleApiError,
   withAuth,
-  withAuthAndRole,
+  withPermission,
 } from "@/lib/api-utils";
 import { calculateWithMapping } from "@/lib/utils";
 import {
@@ -32,6 +32,11 @@ const Revision2027Schema = z.object({
   year: z.number().int().min(2027).optional().default(REVISION_MILLESIME_YEAR),
   chiffreAffaires: z.string().min(1).optional(),
   activities: z.array(ActivitySchema).min(1).optional(),
+});
+
+const PatchVintageCalculationSchema = z.object({
+  year: z.number().int(),
+  calculatedPremium: z.unknown(),
 });
 
 async function loadQuoteOrThrow(quoteId: string) {
@@ -110,7 +115,7 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    return await withAuthAndRole(["ADMIN"], async (userId, userRole) => {
+    return await withPermission("PRODUCTS_TARIFFS", async (userId, userRole) => {
       const body = Revision2027Schema.parse(await request.json());
       const year = body.year;
       if (body.activities && Math.abs(activitiesShareSum(body.activities) - 100) > 0.01) {
@@ -347,6 +352,191 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return handleApiError(new ApiError(400, error.issues[0]?.message ?? "Données invalides"));
+    }
+    return handleApiError(error);
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> },
+) {
+  const params = await props.params;
+  try {
+    return await withPermission("PRODUCTS_TARIFFS", async () => {
+      const body = PatchVintageCalculationSchema.parse(await request.json());
+      const calculatedPremium = body.calculatedPremium as {
+        echeancier?: { echeances?: unknown[] };
+      };
+      const echeances = calculatedPremium?.echeancier?.echeances;
+      if (!Array.isArray(echeances) || echeances.length === 0) {
+        throw new ApiError(
+          400,
+          "Le calcul du millésime ne contient aucun échéancier",
+        );
+      }
+
+      const quote = await loadQuoteOrThrow(params.id);
+      const originalFormData = structuredClone(
+        quote.formData ?? {},
+      ) as unknown as FormData;
+      const originalPremium = quote.calculatedPremium;
+
+      const vintage = await prisma.quoteVintage.findUnique({
+        where: { quoteId_year: { quoteId: params.id, year: body.year } },
+      });
+      if (!vintage) {
+        throw new ApiError(
+          404,
+          "Millésime introuvable. Ajoutez l'exercice avant d'enregistrer le calcul.",
+        );
+      }
+
+      const adapted = adaptEcheancesForDatabase(
+        echeances as Parameters<typeof adaptEcheancesForDatabase>[0],
+      );
+      const totalAmountHT = adapted.reduce((sum, item) => sum + item.amountHT, 0);
+      const totalTaxAmount = adapted.reduce((sum, item) => sum + item.taxAmount, 0);
+      const totalAmountTTC = adapted.reduce(
+        (sum, item) => sum + item.amountTTC,
+        0,
+      );
+
+      const result = await prisma.$transaction(async (tx) => {
+        const stillOriginal = await tx.quote.findUnique({
+          where: { id: params.id },
+          select: { formData: true, calculatedPremium: true },
+        });
+        if (!stillOriginal) {
+          throw new ApiError(404, "Devis non trouvé");
+        }
+        assertFormDataUnchanged(
+          originalFormData,
+          stillOriginal.formData as unknown as FormData,
+        );
+        if (
+          JSON.stringify(stillOriginal.calculatedPremium) !==
+          JSON.stringify(originalPremium)
+        ) {
+          throw new ApiError(
+            409,
+            "La prime d'origine a changé pendant l'enregistrement",
+          );
+        }
+
+        const updatedVintage = await tx.quoteVintage.update({
+          where: { id: vintage.id },
+          data: { calculatedPremium: calculatedPremium as object },
+        });
+
+        const existing = await tx.paymentSchedule.findFirst({
+          where: { quoteId: params.id, vintageYear: body.year },
+          include: { payments: true },
+          orderBy: { createdAt: "asc" },
+        });
+
+        let schedule;
+        if (existing && existing.payments.length > 0) {
+          await tx.paymentSchedule.update({
+            where: { id: existing.id },
+            data: {
+              totalAmountHT,
+              totalTaxAmount,
+              totalAmountTTC,
+              startDate: adapted[0].periodStart,
+              endDate: adapted[adapted.length - 1].periodEnd,
+            },
+          });
+          await regenerateScheduleWithPaymentPreservation(
+            tx,
+            existing.id,
+            adapted,
+          );
+          schedule = await tx.paymentSchedule.findUnique({
+            where: { id: existing.id },
+            include: { payments: { orderBy: { installmentNumber: "asc" } } },
+          });
+        } else if (existing) {
+          schedule = await tx.paymentSchedule.update({
+            where: { id: existing.id },
+            data: {
+              totalAmountHT,
+              totalTaxAmount,
+              totalAmountTTC,
+              startDate: adapted[0].periodStart,
+              endDate: adapted[adapted.length - 1].periodEnd,
+              status: "PENDING",
+              payments: {
+                create: adapted.map((item) => ({
+                  ...item,
+                  status: "PENDING" as const,
+                })),
+              },
+            },
+            include: { payments: { orderBy: { installmentNumber: "asc" } } },
+          });
+        } else {
+          schedule = await tx.paymentSchedule.create({
+            data: {
+              quoteId: params.id,
+              vintageYear: body.year,
+              totalAmountHT,
+              totalTaxAmount,
+              totalAmountTTC,
+              startDate: adapted[0].periodStart,
+              endDate: adapted[adapted.length - 1].periodEnd,
+              status: "PENDING",
+              payments: {
+                create: adapted.map((item) => ({
+                  ...item,
+                  status: "PENDING" as const,
+                })),
+              },
+            },
+            include: { payments: { orderBy: { installmentNumber: "asc" } } },
+          });
+        }
+
+        const untouched = await tx.quote.findUnique({
+          where: { id: params.id },
+          select: { formData: true, calculatedPremium: true },
+        });
+        assertFormDataUnchanged(
+          originalFormData,
+          untouched?.formData as unknown as FormData,
+        );
+        if (
+          JSON.stringify(untouched?.calculatedPremium) !==
+          JSON.stringify(originalPremium)
+        ) {
+          throw new ApiError(
+            409,
+            "L'exercice d'origine a été modifié — opération annulée",
+          );
+        }
+
+        return { vintage: updatedVintage, schedule };
+      });
+
+      return createApiResponse(
+        {
+          year: body.year,
+          original: { calculatedPremium: originalPremium },
+          revision: {
+            id: result.vintage.id,
+            year: result.vintage.year,
+            calculatedPremium: result.vintage.calculatedPremium,
+            schedule: result.schedule,
+          },
+        },
+        `Calcul de l'exercice ${body.year} enregistré`,
+      );
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return handleApiError(
+        new ApiError(400, error.issues[0]?.message ?? "Données invalides"),
+      );
     }
     return handleApiError(error);
   }

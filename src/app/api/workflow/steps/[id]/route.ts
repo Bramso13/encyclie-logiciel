@@ -4,7 +4,7 @@ import {
   createApiResponse, 
   handleApiError, 
   withAuth, 
-  withAuthAndRole,
+  withPermission,
   ApiError 
 } from "@/lib/api-utils";
 
@@ -75,7 +75,7 @@ export async function PUT(
   try {
     const resolvedParams = await params;
     
-    return await withAuthAndRole(["ADMIN"], async (userId, userRole) => {
+    return await withPermission("QUOTES_VALIDATION", async (userId, userRole) => {
       const body = await request.json();
       const {
         title,
@@ -147,7 +147,7 @@ export async function DELETE(
   try {
     const resolvedParams = await params;
     
-    return await withAuthAndRole(["ADMIN"], async (userId, userRole) => {
+    return await withPermission("QUOTES_VALIDATION", async (userId, userRole) => {
       // Vérifier que l'étape existe
       const existingStep = await prisma.workflowStep.findUnique({
         where: { id: resolvedParams.id }

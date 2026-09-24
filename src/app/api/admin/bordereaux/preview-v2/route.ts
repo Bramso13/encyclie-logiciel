@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { withAuthAndRole } from "@/lib/api-utils";
+import { withPermission } from "@/lib/api-utils";
 import { getPolicesV2, getQuittancesV2 } from "@/lib/bordereau";
 import type { BordereauInclusionOptions } from "@/lib/bordereau";
 
@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
  * Pas de filtre courtiers. Nécessite le rôle ADMIN.
  */
 export async function POST(request: NextRequest) {
-  return withAuthAndRole(["ADMIN"], async () => {
+  return withPermission("PRODUCTION", async () => {
     try {
       const body = await request.json();
       const { dateRange, inclusionOptions } = body as {

@@ -1,9 +1,11 @@
 import React from "react";
 import { CalculationResult } from "@/lib/types";
 import { EmptyState } from "@/components/ui/Feedback";
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
 
 interface BrokerCommissionsTabProps {
-  calculationResult: CalculationResult;
+  calculationResult: CalculationResult | null;
+  selectedYear?: number;
 }
 
 interface Echeance {
@@ -22,7 +24,12 @@ interface Echeance {
 
 export default function BrokerCommissionsTab({
   calculationResult,
+  selectedYear,
 }: BrokerCommissionsTabProps) {
+  if (!calculationResult && selectedYear != null) {
+    return <ExerciseEmptyState year={selectedYear} />;
+  }
+
   // Vérifier si le calculationResult et l'échéancier sont disponibles
   if (!calculationResult || !calculationResult.echeancier) {
     return (

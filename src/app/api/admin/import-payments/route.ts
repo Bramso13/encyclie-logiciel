@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   createApiResponse,
   handleApiError,
-  withAuthAndRole,
+  withPermission,
   ApiError,
 } from "@/lib/api-utils";
 import { importCSV } from "@/lib/payment-csv-import";
@@ -18,7 +18,7 @@ import { importCSV } from "@/lib/payment-csv-import";
  */
 export async function POST(request: NextRequest) {
   try {
-    return await withAuthAndRole(["ADMIN"], async (userId, _userRole) => {
+    return await withPermission("PRODUCTION", async (userId, _userRole) => {
       // Récupérer le fichier CSV
       const formData = await request.formData();
       const file = formData.get("file") as File | null;

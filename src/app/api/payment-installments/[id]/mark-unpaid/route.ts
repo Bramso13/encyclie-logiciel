@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   createApiResponse,
   handleApiError,
-  withAuthAndRole,
+  withPermission,
   ApiError,
 } from "@/lib/api-utils";
 
@@ -14,7 +14,7 @@ export async function PATCH(
 ) {
   const params = await props.params;
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTION", async () => {
       const existingPayment = await prisma.paymentInstallment.findUnique({
         where: { id: params.id },
         include: {

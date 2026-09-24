@@ -1,5 +1,6 @@
 "use client";
 
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
 import { notify } from "@/lib/ui/notify";
 import { useState, useEffect } from "react";
 import { Quote, CalculationResult, QuoteDocument } from "@/lib/types";
@@ -8,6 +9,7 @@ import { useSession } from "@/lib/auth-client";
 interface OffreTabProps {
   quote: Quote;
   calculationResult: CalculationResult | null;
+  selectedYear?: number;
 }
 
 // Document obligatoire qui ne peut pas être modifié
@@ -131,7 +133,11 @@ const DOCUMENT_CHECKLIST = {
   },
 };
 
-export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
+export default function OffreTab({
+  quote,
+  calculationResult,
+  selectedYear,
+}: OffreTabProps) {
   const { data: session } = useSession();
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(
     new Set([REQUIRED_DOCUMENT.id])
@@ -656,6 +662,12 @@ export default function OffreTab({ quote, calculationResult }: OffreTabProps) {
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (!calculationResult) {
+    return (
+      <ExerciseEmptyState year={selectedYear ?? new Date().getFullYear()} />
     );
   }
 

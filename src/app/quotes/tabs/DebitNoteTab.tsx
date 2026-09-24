@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Controls";
-import { EmptyState, LoadingState } from "@/components/ui/Feedback";
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
+import { LoadingState } from "@/components/ui/Feedback";
 import { formatDateFr, formatEur } from "@/lib/ui/labels";
 import { notify } from "@/lib/ui/notify";
 import { calendarYear } from "@/lib/quotes/exercise-year-filter";
@@ -28,12 +29,18 @@ export default function DebitNoteTab({
   quoteId,
   isAdmin,
   preferredYear,
+  dossierYears,
 }: {
   quoteId: string;
   isAdmin: boolean;
   preferredYear?: number | null;
+  dossierYears?: number[];
 }) {
   const [year, setYear] = useState(preferredYear || calendarYear());
+  const selectableYears =
+    dossierYears && dossierYears.length > 0
+      ? dossierYears
+      : [year];
   const [notes, setNotes] = useState<DebitNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -62,6 +69,16 @@ export default function DebitNoteTab({
   useEffect(() => {
     if (preferredYear) setYear(preferredYear);
   }, [preferredYear]);
+
+  useEffect(() => {
+    if (!selectableYears.includes(year)) {
+      setYear(
+        preferredYear && selectableYears.includes(preferredYear)
+          ? preferredYear
+          : selectableYears[0],
+      );
+    }
+  }, [year, preferredYear, selectableYears]);
 
   const generate = async () => {
     setGenerating(true);
@@ -102,12 +119,17 @@ export default function DebitNoteTab({
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-sm text-ink-muted">
             Exercice
-            <input
-              type="number"
-              className="ml-2 w-24 rounded-md border border-line px-2 py-1.5"
+            <select
+              className="ml-2 rounded-md border border-line px-2 py-1.5"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-            />
+            >
+              {selectableYears.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </label>
           {isAdmin ? (
             <Button onClick={generate} disabled={generating}>
@@ -120,8 +142,8 @@ export default function DebitNoteTab({
       {loading ? (
         <LoadingState active label="Chargement des notes de débit" />
       ) : !current ? (
-        <EmptyState
-          title={`Aucune note de débit ${year}`}
+        <ExerciseEmptyState
+          year={year}
           description={
             isAdmin
               ? "Générez la note à partir des échéances de l'exercice."

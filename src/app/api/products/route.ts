@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { CreateInsuranceProductSchema } from "@/lib/validations";
+import { denyWithoutPermission } from "@/lib/api-utils";
 
 // GET /api/products - Récupérer tous les produits ou seulement les actifs
 export async function GET(request: NextRequest) {
@@ -70,6 +71,13 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    const denied = await denyWithoutPermission(
+      session.user.id,
+      session.user.role,
+      "PRODUCTS_TARIFFS",
+    );
+    if (denied) return denied;
 
     const body = await request.json();
     const validatedData = CreateInsuranceProductSchema.parse(body);

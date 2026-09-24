@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { ApiError, denyWithoutPermission, handleApiError, withPermission } from "@/lib/api-utils";
 
 export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
+    return await withPermission("PRODUCTS_TARIFFS", async () => {
     const { id } = params;
     const body = await request.json();
     const { formFields, stepConfig, mappingFields, ...otherFields } = body;
@@ -47,7 +49,9 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       success: true,
       data: updatedProduct,
     });
+    });
   } catch (error) {
+    if (error instanceof ApiError) return handleApiError(error);
     console.error("Erreur lors de la mise à jour du produit:", error);
     return NextResponse.json(
       { success: false, error: "Erreur interne du serveur" },
@@ -119,6 +123,13 @@ export async function PUT(
       );
     }
 
+    const denied = await denyWithoutPermission(
+      session.user.id,
+      session.user.role,
+      "PRODUCTS_TARIFFS",
+    );
+    if (denied) return denied;
+
     const body = await request.json();
 
     const product = await prisma.insuranceProduct.update({
@@ -184,6 +195,13 @@ export async function DELETE(
         { status: 403 }
       );
     }
+
+    const denied = await denyWithoutPermission(
+      session.user.id,
+      session.user.role,
+      "PRODUCTS_TARIFFS",
+    );
+    if (denied) return denied;
 
     // Vérifier s'il y a des devis liés à ce produit
     const quotesCount = await prisma.quote.count({

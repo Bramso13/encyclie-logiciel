@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import archiver from "archiver";
-import { withAuthAndRole } from "@/lib/api-utils";
+import { withPermission } from "@/lib/api-utils";
 import {
   getPolicesV2,
   getQuittancesV2,
@@ -23,7 +23,7 @@ const prisma = new PrismaClient();
  * Nécessite le rôle ADMIN.
  */
 export async function POST(request: NextRequest) {
-  return withAuthAndRole(["ADMIN"], async (userId) => {
+  return withPermission("PRODUCTION", async (userId) => {
     try {
       const body = await request.json();
       const {

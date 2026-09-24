@@ -5,6 +5,7 @@ import {
   handleApiError,
   withAuth,
   ApiError,
+  ensurePermission,
 } from "@/lib/api-utils";
 
 // GET - Récupérer l'offre d'un devis
@@ -21,6 +22,7 @@ export async function GET(
           "Seuls les administrateurs peuvent accéder aux offres"
         );
       }
+      await ensurePermission(userId, userRole, "QUOTES_VALIDATION");
 
       const quote = await prisma.quote.findUnique({
         where: { id: params.id },
@@ -62,6 +64,7 @@ export async function POST(
           "Seuls les administrateurs peuvent envoyer des offres"
         );
       }
+      await ensurePermission(userId, userRole, "QUOTES_VALIDATION");
 
       const body = await request.json();
       const { requiredDocuments, calculationResult, formData, companyData } =
@@ -159,6 +162,7 @@ export async function PUT(
           "Seuls les administrateurs peuvent modifier les offres"
         );
       }
+      await ensurePermission(userId, userRole, "QUOTES_VALIDATION");
 
       const body = await request.json();
       const { requiredDocuments } = body;

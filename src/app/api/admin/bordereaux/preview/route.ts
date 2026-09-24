@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { getBordereauData } from "@/lib/bordereau";
 import type { BordereauFilters } from "@/lib/bordereau";
-
-const prisma = new PrismaClient();
+import { ApiError, handleApiError, withPermission } from "@/lib/api-utils";
 
 /**
  * POST /api/admin/bordereaux/preview
@@ -12,6 +11,7 @@ const prisma = new PrismaClient();
  */
 export async function POST(request: NextRequest) {
   try {
+    return await withPermission("PRODUCTION", async () => {
     const body = await request.json();
 
     // Extract and validate filters
@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
         generatedAt: result.metadata.generatedAt,
       },
     });
+    });
   } catch (error) {
+    if (error instanceof ApiError) return handleApiError(error);
     console.error("Error in bordereau preview:", error);
     return NextResponse.json(
       {
@@ -69,7 +71,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

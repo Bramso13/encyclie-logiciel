@@ -5,6 +5,7 @@ import {
   handleApiError,
   withAuth,
   ApiError,
+  ensurePermission,
 } from "@/lib/api-utils";
 
 /**
@@ -31,6 +32,9 @@ export async function POST(
       if (!quote) throw new ApiError(404, "Devis non trouvé");
       if (userRole === "BROKER" && quote.brokerId !== userId) {
         throw new ApiError(403, "Accès refusé à ce devis");
+      }
+      if (userRole === "ADMIN") {
+        await ensurePermission(userId, userRole, "PRODUCTION");
       }
 
       const body = await request.json();

@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { tableauTax, getTaxeByRegion } from "@/lib/tarificateurs/rcd";
 import { Quote, CalculationResult } from "@/lib/types";
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
+import { installmentMatchesExerciseYear } from "@/lib/quotes/dossier-exercise";
 
 // ─── Local types (no Prisma imports) ────────────────────────────────────────
 
@@ -668,10 +670,14 @@ export default function BordereauTab({
   quote,
   calculationResult,
   session,
+  selectedYear,
+  isOriginalYear = true,
 }: {
   quote: Quote;
   calculationResult: CalculationResult | null;
   session: any;
+  selectedYear?: number;
+  isOriginalYear?: boolean;
 }) {
   const [editFd, setEditFd] = useState<Record<string, any>>({});
   const [editCd, setEditCd] = useState<Record<string, any>>({});
@@ -705,7 +711,8 @@ export default function BordereauTab({
   useEffect(() => {
     setEditFd((quote.formData as Record<string, any>) ?? {});
     setEditCd((quote.companyData as Record<string, any>) ?? {});
-  }, [quote.id]);
+    setIsDirty(false);
+  }, [quote.id, selectedYear]);
 
   // ── Fetch payment schedule & contract ────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -720,8 +727,19 @@ export default function BordereauTab({
         const raw = await schedRes.json();
         const sched = raw.data ?? raw;
         if (sched?.payments) {
-          setInstallments(sched.payments.map(mapApiInstallment));
-          setHasSchedule(true);
+          const forYear = (sched.payments as Array<Record<string, unknown>>).filter(
+            (payment) =>
+              selectedYear == null ||
+              installmentMatchesExerciseYear(
+                {
+                  vintageYear: payment.vintageYear as number | null | undefined,
+                  dueDate: payment.dueDate as string | null | undefined,
+                },
+                selectedYear,
+              ),
+          );
+          setInstallments(forYear.map(mapApiInstallment));
+          setHasSchedule(forYear.length > 0);
           // Charger la date de résiliation si définie
           if (sched.resiliationDate) {
             const rd = new Date(sched.resiliationDate)
@@ -749,7 +767,7 @@ export default function BordereauTab({
     } finally {
       setLoading(false);
     }
-  }, [quote.id]);
+  }, [quote.id, selectedYear]);
 
   useEffect(() => {
     fetchData();
@@ -1006,18 +1024,20 @@ export default function BordereauTab({
     setSaving(true);
     setSaveMsg(null);
     try {
-      // 1. Save formData / companyData changes
-      const quoteRes = await fetch(`/api/quotes/${quote.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          formData: editFd,
-          companyData: editCd,
-          changeReason: "Mise à jour depuis l'onglet Bordereau",
-        }),
-      });
-      if (!quoteRes.ok)
-        throw new Error("Erreur lors de la mise à jour du devis");
+      // Hors exercice d'origine, ne jamais réécrire le formulaire du dossier.
+      if (isOriginalYear) {
+        const quoteRes = await fetch(`/api/quotes/${quote.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            formData: editFd,
+            companyData: editCd,
+            changeReason: "Mise à jour depuis l'onglet Bordereau",
+          }),
+        });
+        if (!quoteRes.ok)
+          throw new Error("Erreur lors de la mise à jour du devis");
+      }
 
       // 2. Save installments (only if schedule exists or we have installments)
       if (hasSchedule || installments.length > 0) {
@@ -1027,6 +1047,7 @@ export default function BordereauTab({
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              ...(selectedYear != null ? { vintageYear: selectedYear } : {}),
               payments: installments.map((inst) => ({
                 id: inst.id,
                 dueDate: inst.dueDate,
@@ -1070,7 +1091,15 @@ export default function BordereauTab({
   const generateSchedule = async (empty = false) => {
     setGenerating(true);
     try {
-      const body = empty ? { createEmpty: true } : { calculationResult };
+      const body = empty
+        ? {
+            createEmpty: true,
+            ...(selectedYear != null ? { vintageYear: selectedYear } : {}),
+          }
+        : {
+            calculationResult,
+            ...(selectedYear != null ? { vintageYear: selectedYear } : {}),
+          };
 
       const res = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
         method: "POST",
@@ -1487,11 +1516,19 @@ export default function BordereauTab({
             )}
 
             {installments.length === 0 ? (
+              selectedYear != null ? (
+                <ExerciseEmptyState
+                  year={selectedYear}
+                  kind="echeancier"
+                  adminHint={!isOriginalYear}
+                />
+              ) : (
               <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 text-sm">
                 <Calendar className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 Aucun échéancier — les lignes Police seront générées après
                 création des échéances ci-dessous.
               </div>
+              )
             ) : (
               <>
                 {/* ─ Champs partagés (société / contrat) ─ */}

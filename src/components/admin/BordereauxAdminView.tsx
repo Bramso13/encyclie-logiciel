@@ -8,6 +8,7 @@ import type {
 import { getBordereauDateRangeForMonthYear } from "@/lib/bordereau/dateRange";
 import { POLICES_COLUMNS, QUITTANCES_COLUMNS } from "@/lib/bordereau";
 import { AuthenticatedAppShell } from "@/components/ui/AuthenticatedAppShell";
+import { AdminPermissionGate } from "@/components/admin/AdminPermissionGate";
 import { useExerciseYearStore } from "@/lib/stores/exercise-year-store";
 
 function Toggle({
@@ -1012,6 +1013,9 @@ export function BordereauxAdminView({
     </div>
   );
 
-  if (embedded) return body;
-  return <AuthenticatedAppShell>{body}</AuthenticatedAppShell>;
+  const gated = (
+    <AdminPermissionGate permission="PRODUCTION">{body}</AdminPermissionGate>
+  );
+  if (embedded) return gated;
+  return <AuthenticatedAppShell>{gated}</AuthenticatedAppShell>;
 }

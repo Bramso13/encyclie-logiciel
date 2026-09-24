@@ -1,5 +1,8 @@
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
+import { installmentMatchesExerciseYear } from "@/lib/quotes/dossier-exercise";
 import { notify } from "@/lib/ui/notify";
 import { useSession } from "@/lib/auth-client";
+import { usePermissions } from "@/lib/stores/permissions-store";
 import {
   CalculationResult,
   Quote,
@@ -8,7 +11,7 @@ import {
   PaymentForm,
   User,
 } from "@/lib/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { pdf } from "@react-pdf/renderer";
 import AttestationRCDPDF from "@/components/pdf/AttestationRCDPDF";
 import {
@@ -38,14 +41,21 @@ interface ExtendedPaymentInstallment extends PaymentInstallment {
 export default function PaymentTrackingTab({
   quote,
   calculationResult,
+  selectedYear,
+  isOriginalYear = true,
+  refreshTrigger = 0,
 }: {
   quote: Quote;
-  calculationResult: CalculationResult;
+  calculationResult: CalculationResult | null;
+  selectedYear?: number;
+  isOriginalYear?: boolean;
+  refreshTrigger?: number;
 }) {
   const [allInstallments, setAllInstallments] = useState<
     ExtendedPaymentInstallment[]
   >([]);
   const [loading, setLoading] = useState(false);
+  const [installmentsLoaded, setInstallmentsLoaded] = useState(false);
   const [selectedInstallment, setSelectedInstallment] =
     useState<ExtendedPaymentInstallment | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -97,12 +107,33 @@ export default function PaymentTrackingTab({
   const [savingBulk, setSavingBulk] = useState(false);
 
   const { data: session } = useSession();
+  const autoCreatedKey = useRef<string>("");
+  const loadedQuoteId = useRef<string | null>(null);
+
+  const visibleInstallments =
+    selectedYear == null
+      ? allInstallments
+      : allInstallments.filter((installment) =>
+          installmentMatchesExerciseYear(
+            {
+              vintageYear: (
+                installment.schedule as { vintageYear?: number | null }
+              )?.vintageYear,
+              dueDate: installment.dueDate,
+            },
+            selectedYear,
+          ),
+        );
 
   useEffect(() => {
     setReferenceInput(quote?.reference ?? "");
   }, [quote?.id, quote?.reference]);
 
-  const isAdmin = session?.user?.role === "ADMIN";
+  const { hasPermission, loaded: permissionsLoaded } = usePermissions();
+  const isAdmin =
+    session?.user?.role === "ADMIN" &&
+    permissionsLoaded &&
+    hasPermission("PRODUCTION");
 
   // Charger TOUS les PaymentInstallment
   useEffect(() => {
@@ -115,37 +146,59 @@ export default function PaymentTrackingTab({
         const response = await fetch(`/api/payment-installments?${params}`);
         if (response.ok) {
           const data = await response.json();
-          console.log(data, "data");
           setAllInstallments(data.data.installments || []);
-          if (data.data.installments.length === 0) {
-            console.log("createPaymentScheduleFromCalculation");
-            await createPaymentScheduleFromCalculation();
-          }
-        } else if (response.status === 404) {
-          // Pas d'échéances en base, créer à partir de calculationResult
-          await createPaymentScheduleFromCalculation();
         }
       } catch (error) {
         console.error("Erreur lors du chargement des échéances:", error);
-        // En cas d'erreur, créer depuis calculationResult
-        await createPaymentScheduleFromCalculation();
       } finally {
+        loadedQuoteId.current = quote?.id ?? null;
         setLoading(false);
+        setInstallmentsLoaded(true);
       }
     };
 
     fetchAllInstallments();
-  }, [isAdmin, quote?.id]);
+  }, [quote?.id, refreshTrigger]);
 
-  // Créer l'échéancier en base à partir de calculationResult
-  const createPaymentScheduleFromCalculation = async () => {
+  useEffect(() => {
+    if (
+      !installmentsLoaded ||
+      loadedQuoteId.current !== quote?.id ||
+      loading ||
+      isOriginalYear === false ||
+      selectedYear == null
+    )
+      return;
+    if (!calculationResult?.echeancier?.echeances?.length || !quote?.id) return;
+    if (visibleInstallments.length > 0) return;
+    const key = `${quote.id}:${selectedYear}`;
+    if (autoCreatedKey.current === key) return;
+    autoCreatedKey.current = key;
+    void createPaymentScheduleFromCalculation(selectedYear);
+  }, [
+    installmentsLoaded,
+    loading,
+    isOriginalYear,
+    selectedYear,
+    visibleInstallments.length,
+    calculationResult,
+    quote?.id,
+  ]);
+
+  // Créer l'échéancier en base à partir du calcul de l'exercice consulté.
+  // Hors origine : pas d'auto-création (état vide, action admin explicite).
+  const createPaymentScheduleFromCalculation = async (year?: number) => {
     if (!calculationResult?.echeancier?.echeances || !quote?.id) return;
+    if (isOriginalYear === false) return;
 
     try {
       const response = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ calculationResult }),
+        body: JSON.stringify({
+          calculationResult,
+          ...(year != null ? { vintageYear: year } : {}),
+        }),
       });
 
       if (response.ok) {
@@ -206,7 +259,17 @@ export default function PaymentTrackingTab({
   const handleApplyBulkToAll = async () => {
     if (!quote?.id) return;
     const installmentsForQuote = allInstallments.filter(
-      (i) => i.schedule?.quote?.id === quote.id
+      (i) =>
+        i.schedule?.quote?.id === quote.id &&
+        (selectedYear == null ||
+          installmentMatchesExerciseYear(
+            {
+              vintageYear: (i.schedule as { vintageYear?: number | null })
+                ?.vintageYear,
+              dueDate: i.dueDate,
+            },
+            selectedYear,
+          ))
     );
     if (installmentsForQuote.length === 0) {
       notify("Aucune échéance pour ce devis.");
@@ -230,7 +293,10 @@ export default function PaymentTrackingTab({
       const res = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payments }),
+        body: JSON.stringify({
+          payments,
+          ...(selectedYear != null ? { vintageYear: selectedYear } : {}),
+        }),
       });
       if (res.ok) {
         await refreshData();
@@ -426,7 +492,17 @@ export default function PaymentTrackingTab({
     setSavingEdit(true);
     try {
       const installmentsForQuote = allInstallments.filter(
-        (i) => i.schedule?.quote?.id === quote.id
+        (i) =>
+        i.schedule?.quote?.id === quote.id &&
+        (selectedYear == null ||
+          installmentMatchesExerciseYear(
+            {
+              vintageYear: (i.schedule as { vintageYear?: number | null })
+                ?.vintageYear,
+              dueDate: i.dueDate,
+            },
+            selectedYear,
+          ))
       );
       const payments = installmentsForQuote.map((p) => {
         if (p.id === selectedInstallmentForEdit.id) {
@@ -467,7 +543,10 @@ export default function PaymentTrackingTab({
       const res = await fetch(`/api/quotes/${quote.id}/payment-schedule`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payments }),
+        body: JSON.stringify({
+          payments,
+          ...(selectedYear != null ? { vintageYear: selectedYear } : {}),
+        }),
       });
 
       if (res.ok) {
@@ -768,8 +847,8 @@ export default function PaymentTrackingTab({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {allInstallments && allInstallments.length > 0 ? (
-                allInstallments.map((installment) => (
+              {visibleInstallments.length > 0 ? (
+                visibleInstallments.map((installment) => (
                   <tr key={installment.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
@@ -879,7 +958,15 @@ export default function PaymentTrackingTab({
                     colSpan={isAdmin ? 9 : 7}
                     className="px-6 py-12 text-center text-gray-500"
                   >
-                    Aucune échéance trouvée
+                    {selectedYear != null ? (
+                      <ExerciseEmptyState
+                        year={selectedYear}
+                        kind="echeancier"
+                        adminHint={isOriginalYear === false && isAdmin}
+                      />
+                    ) : (
+                      "Aucune échéance trouvée"
+                    )}
                   </td>
                 </tr>
               )}

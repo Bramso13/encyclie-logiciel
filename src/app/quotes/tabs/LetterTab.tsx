@@ -1,3 +1,4 @@
+import { ExerciseEmptyState } from "../components/ExerciseEmptyState";
 import { notify } from "@/lib/ui/notify";
 import LetterOfIntentPDF from "@/components/pdf/LetterOfIntentPDF";
 import { CalculationResult, Quote } from "@/lib/types";
@@ -9,10 +10,12 @@ export default function LetterTab({
   quote,
   calculationResult,
   session,
+  selectedYear,
 }: {
   quote: Quote;
-  calculationResult: CalculationResult;
+  calculationResult: CalculationResult | null;
   session: any;
+  selectedYear?: number;
 }) {
   const [generatingLetterPDF, setGeneratingLetterPDF] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -191,6 +194,12 @@ export default function LetterTab({
       notify("Erreur lors de l'envoi de l'email");
     }
   };
+  if (!calculationResult) {
+    return (
+      <ExerciseEmptyState year={selectedYear ?? new Date().getFullYear()} />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Actions */}

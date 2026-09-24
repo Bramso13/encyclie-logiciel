@@ -41,9 +41,19 @@ export type RecapQuoteInput = {
   brokerId: string;
   brokerName: string;
   annualPremium: number;
+  /** Frais de gestion TTC de l'exercice (non taxés). Déduits de la prime annuelle. */
+  managementFees?: number;
   commissionsTotal?: number;
   installments: RecapInstallment[];
   debitNotes: RecapDebitNote[];
+};
+
+export type ManagementFeeInstallment = {
+  amountHT: number;
+  rcdAmount?: number | null;
+  pjAmount?: number | null;
+  feesAmount?: number | null;
+  resumeAmount?: number | null;
 };
 
 export type RecapBreakdownRow = {
@@ -51,6 +61,7 @@ export type RecapBreakdownRow = {
   label: string;
   count: number;
   annualPremium: number;
+  annualPremiumExcludingFees: number;
   share: number;
   dueElapsed: number;
   paidElapsed: number;
@@ -71,6 +82,7 @@ export type PortfolioRecap = {
   asOf: string;
   activeCount: number;
   annualPremium: number;
+  annualPremiumExcludingFees: number;
   paidElapsed: number;
   dueElapsed: number;
   ratioElapsed: number | null;
@@ -102,6 +114,50 @@ function ratio(paid: number, due: number): number | null {
   return roundMoney((paid / due) * 100);
 }
 
+function quoteFees(quote: RecapQuoteInput): number {
+  return quote.managementFees ?? 0;
+}
+
+function deriveFraisGestion(item: ManagementFeeInstallment): number | null {
+  const parts = [item.rcdAmount, item.pjAmount, item.feesAmount, item.resumeAmount];
+  if (parts.some((part) => part == null || Number.isNaN(Number(part)))) return null;
+  return (
+    item.amountHT -
+    Number(item.rcdAmount) -
+    Number(item.pjAmount) -
+    Number(item.feesAmount) -
+    Number(item.resumeAmount)
+  );
+}
+
+/** Frais de gestion de l'exercice : dérivés des échéances, sinon repli JSON. */
+export function managementFeesFromInstallments(
+  installments: ManagementFeeInstallment[],
+  fallbackFraisGestion: number[] = [],
+): number {
+  const total = installments.reduce((sum, item, index) => {
+    const derived = deriveFraisGestion(item);
+    const fee = derived ?? fallbackFraisGestion[index] ?? 0;
+    return sum + Math.max(0, fee);
+  }, 0);
+  return roundMoney(total);
+}
+
+export function fraisGestionListFromCalculatedPremium(value: unknown): number[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const echeancier = (value as Record<string, unknown>).echeancier;
+  if (!echeancier || typeof echeancier !== "object" || Array.isArray(echeancier)) {
+    return [];
+  }
+  const echeances = (echeancier as Record<string, unknown>).echeances;
+  if (!Array.isArray(echeances)) return [];
+  return echeances.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return 0;
+    const fee = (item as Record<string, unknown>).fraisGestion;
+    return typeof fee === "number" && Number.isFinite(fee) ? fee : 0;
+  });
+}
+
 function breakdown(
   quotes: RecapQuoteInput[],
   year: number,
@@ -114,6 +170,7 @@ function breakdown(
       label: string;
       count: number;
       annualPremium: number;
+      managementFees: number;
       dueElapsed: number;
       paidElapsed: number;
     }
@@ -125,11 +182,13 @@ function breakdown(
       label,
       count: 0,
       annualPremium: 0,
+      managementFees: 0,
       dueElapsed: 0,
       paidElapsed: 0,
     };
     row.count += 1;
     row.annualPremium = roundMoney(row.annualPremium + quote.annualPremium);
+    row.managementFees = roundMoney(row.managementFees + quoteFees(quote));
     for (const installment of quote.installments) {
       if (!inYear(installment.dueDate, year)) continue;
       const elapsed = installment.dueDate <= now;
@@ -151,6 +210,7 @@ function breakdown(
       label: row.label,
       count: row.count,
       annualPremium: row.annualPremium,
+      annualPremiumExcludingFees: roundMoney(row.annualPremium - row.managementFees),
       share: annualTotal > 0 ? roundMoney((row.annualPremium / annualTotal) * 100) : 0,
       dueElapsed: row.dueElapsed,
       paidElapsed: row.paidElapsed,
@@ -217,6 +277,10 @@ export function buildPortfolioRecap(
   const annualPremium = roundMoney(
     quotes.reduce((sum, quote) => sum + quote.annualPremium, 0),
   );
+  const managementFees = roundMoney(
+    quotes.reduce((sum, quote) => sum + quoteFees(quote), 0),
+  );
+  const annualPremiumExcludingFees = roundMoney(annualPremium - managementFees);
 
   let debitNotesDue = 0;
   let debitNotesReceived = 0;
@@ -254,8 +318,13 @@ export function buildPortfolioRecap(
   const topBroker = brokers[0];
   const topFrac = fractionnement[0];
 
+  const horsFraisLabel = annualPremiumExcludingFees.toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   const summary = [
     `Portefeuille en RC Décennale pour un montant de prime annuelle ${year} de ${annualPremium.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €.`,
+    `soit ${horsFraisLabel} € hors frais de gestion.`,
     `${paidElapsed.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} € réglés sur les mois échus, soit un taux de règlement de ${ratioElapsed == null ? "N/A" : `${ratioElapsed} %`} sur les échéances déjà exigibles.`,
     topGeo
       ? `Concentration géographique : ${topGeo.label} (${topGeo.share} % de la prime annuelle, ${topGeo.count} affaire${topGeo.count > 1 ? "s" : ""}).`
@@ -273,6 +342,7 @@ export function buildPortfolioRecap(
     asOf: now.toISOString(),
     activeCount: quotes.length,
     annualPremium,
+    annualPremiumExcludingFees,
     paidElapsed,
     dueElapsed,
     ratioElapsed,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { runEcheancierUnitTests } from "@/lib/tarificateurs/runEcheancierTests";
-import { withAuthAndRole } from "@/lib/api-utils";
+import { withPermission } from "@/lib/api-utils";
 
 /**
  * GET /api/admin/run-echeancier-tests
@@ -8,7 +8,7 @@ import { withAuthAndRole } from "@/lib/api-utils";
  */
 export async function GET() {
   try {
-    return await withAuthAndRole(["ADMIN"], async () => {
+    return await withPermission("PRODUCTS_TARIFFS", async () => {
       const results = runEcheancierUnitTests();
       const passed = results.filter((r) => r.ok).length;
       const total = results.length;
